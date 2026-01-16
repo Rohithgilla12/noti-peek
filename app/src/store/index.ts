@@ -8,6 +8,7 @@ interface AppState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  lastSyncTime: Date | null;
 
   notifications: Notification[];
   connections: Connection[];
@@ -43,6 +44,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   isAuthenticated: false,
   isLoading: false,
   error: null,
+  lastSyncTime: null,
 
   notifications: [],
   connections: [],
@@ -80,7 +82,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const { notifications, errors } = await api.getNotifications();
-      set({ notifications });
+      set({ notifications, lastSyncTime: new Date() });
       if (errors && errors.length > 0) {
         set({ error: errors.map(e => `${e.provider}: ${e.error}`).join(', ') });
       }
