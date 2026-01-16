@@ -37,9 +37,38 @@ LINEAR_CLIENT_SECRET=
 APP_URL=https://api.notipeek.dev
 ```
 
+## Phase 2: Desktop App Setup (2025-01-16)
+
+### Decisions Made
+
+1. **Tauri v2**: Using latest Tauri v2 with React + TypeScript frontend
+2. **Plugins Used**:
+   - `tauri-plugin-opener` - Opening URLs in system browser
+   - `tauri-plugin-http` - Making HTTP requests to backend
+   - `tauri-plugin-store` - Secure storage for device token
+3. **State Management**: Zustand for global state with derived selectors for filtered notifications
+4. **Styling**: Tailwind CSS v4 with dark mode support via `dark:` classes
+5. **App Window**: 400x600 default size, resizable with min 350x400
+
+### Components Created
+
+- `App.tsx` - Main app with initialization, keyboard shortcuts, auto-refresh
+- `Header.tsx` - Filter tabs (All/GitHub/Linear), unread toggle, refresh/mark-all buttons
+- `NotificationList.tsx` - Notification list with loading/empty/error states
+- `NotificationItem.tsx` - Single notification with source/type icons, relative time
+- `Settings.tsx` - Modal with connected accounts management and refresh interval
+
+### Keyboard Shortcuts
+
+- `R` - Refresh notifications
+- `⌘,` - Open settings
+- `Escape` - Close settings
+
 ### Next Steps
 
-1. Create D1 database via Wrangler CLI
-2. Set up OAuth apps on GitHub and Linear
-3. Deploy to Cloudflare (dev environment)
-4. Start Tauri desktop app setup
+1. Set up OAuth apps on GitHub and Linear
+2. Deploy backend to Cloudflare Workers
+3. Create D1 database
+4. Test full OAuth flow
+5. Add system tray badge updates
+6. Add OAuth deep link handling

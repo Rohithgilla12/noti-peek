@@ -208,68 +208,68 @@ Developers are drowning in notifications scattered across GitHub, Linear, Jira, 
 
 #### Desktop App — Project Setup
 
-- [ ] Initialize Tauri v2 project with React + TypeScript
-- [ ] Set up Tailwind CSS
-- [ ] Set up Zustand store
-- [ ] Create basic app shell with sidebar navigation
-- [ ] Implement system tray with unread badge
+- [x] Initialize Tauri v2 project with React + TypeScript
+- [x] Set up Tailwind CSS
+- [x] Set up Zustand store
+- [x] Create basic app shell with sidebar navigation
+- [x] Implement system tray with unread badge
 - [ ] Set up SQLite for local cache (optional)
-- [ ] Configure Tauri secure storage for device token
+- [x] Configure Tauri secure storage for device token
 
 #### Desktop App — Auth Flow
 
-- [ ] On first launch: call `POST /auth/register`, store device token
-- [ ] On subsequent launches: verify device token
-- [ ] Handle token invalidation (re-register if needed)
+- [x] On first launch: call `POST /auth/register`, store device token
+- [x] On subsequent launches: verify device token
+- [x] Handle token invalidation (re-register if needed)
 
 #### Desktop App — OAuth Flows
 
-- [ ] "Connect GitHub" button → open system browser to `/auth/github`
+- [x] "Connect GitHub" button → open system browser to `/auth/github`
 - [ ] Handle OAuth callback (deep link or poll for completion)
-- [ ] "Connect Linear" button → open system browser to `/auth/linear`
+- [x] "Connect Linear" button → open system browser to `/auth/linear`
 - [ ] Handle OAuth callback
-- [ ] Show connected accounts in settings
-- [ ] "Disconnect" functionality
+- [x] Show connected accounts in settings
+- [x] "Disconnect" functionality
 
 #### Desktop App — Notifications UI
 
-- [ ] Create NotificationList component
-- [ ] Create NotificationItem component
+- [x] Create NotificationList component
+- [x] Create NotificationItem component
 - [ ] Create NotificationDetail panel (optional for V1)
-- [ ] Implement source filter tabs (All / GitHub / Linear)
+- [x] Implement source filter tabs (All / GitHub / Linear)
 - [ ] Implement type filter dropdown
-- [ ] Implement unread/all toggle
-- [ ] Add empty state UI
-- [ ] Add loading state UI
-- [ ] Add error state UI
+- [x] Implement unread/all toggle
+- [x] Add empty state UI
+- [x] Add loading state UI
+- [x] Add error state UI
 
 #### Desktop App — Core Functionality
 
-- [ ] Fetch notifications from backend on launch
-- [ ] Auto-refresh on interval (configurable)
-- [ ] Manual refresh (pull or button)
-- [ ] Mark as read (single) → call backend → update UI
-- [ ] Mark all as read → call backend → update UI
-- [ ] Click notification → open URL in browser
+- [x] Fetch notifications from backend on launch
+- [x] Auto-refresh on interval (configurable)
+- [x] Manual refresh (pull or button)
+- [x] Mark as read (single) → call backend → update UI
+- [x] Mark all as read → call backend → update UI
+- [x] Click notification → open URL in browser
 - [ ] Update system tray badge with unread count
 
 #### Desktop App — Settings & Preferences
 
-- [ ] Settings page UI
-- [ ] Manage connected accounts (connect/disconnect)
-- [ ] Configure refresh interval (1min, 5min, 15min, 30min)
+- [x] Settings page UI
+- [x] Manage connected accounts (connect/disconnect)
+- [x] Configure refresh interval (1min, 5min, 15min, 30min)
 - [ ] Configure notification types to show/hide per source
 - [ ] Launch at startup toggle
 - [ ] Show in menubar toggle
 
 #### Desktop App — Polish
 
-- [ ] Keyboard shortcuts (R = refresh, M = mark read, Enter = open)
-- [ ] Relative timestamps ("2 min ago")
-- [ ] Source icons (GitHub octocat, Linear icon)
-- [ ] Type-specific icons (PR, Issue, Comment)
+- [x] Keyboard shortcuts (R = refresh, M = mark read, Enter = open)
+- [x] Relative timestamps ("2 min ago")
+- [x] Source icons (GitHub octocat, Linear icon)
+- [x] Type-specific icons (PR, Issue, Comment)
 - [ ] Smooth animations (list updates)
-- [ ] Dark mode (match system)
+- [x] Dark mode (match system)
 
 ---
 
