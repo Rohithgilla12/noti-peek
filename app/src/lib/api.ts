@@ -51,6 +51,16 @@ class ApiClient {
     return `${API_URL}/auth/linear?token=${encodeURIComponent(this.deviceToken)}`;
   }
 
+  getJiraAuthUrl(): string {
+    if (!this.deviceToken) throw new Error('Not authenticated');
+    return `${API_URL}/auth/jira?token=${encodeURIComponent(this.deviceToken)}`;
+  }
+
+  getBitbucketAuthUrl(): string {
+    if (!this.deviceToken) throw new Error('Not authenticated');
+    return `${API_URL}/auth/bitbucket?token=${encodeURIComponent(this.deviceToken)}`;
+  }
+
   async connectGitHubWithToken(token: string): Promise<{ success: boolean; accountName: string; accountAvatar: string }> {
     return this.request('/auth/github/token', {
       method: 'POST',
@@ -64,6 +74,14 @@ class ApiClient {
 
   async disconnectLinear(): Promise<void> {
     await this.request('/auth/linear', { method: 'DELETE' });
+  }
+
+  async disconnectJira(): Promise<void> {
+    await this.request('/auth/jira', { method: 'DELETE' });
+  }
+
+  async disconnectBitbucket(): Promise<void> {
+    await this.request('/auth/bitbucket', { method: 'DELETE' });
   }
 
   async getConnections(): Promise<{ connections: Connection[] }> {
@@ -80,6 +98,14 @@ class ApiClient {
 
   async getLinearNotifications(): Promise<{ notifications: Notification[] }> {
     return this.request('/notifications/linear');
+  }
+
+  async getJiraNotifications(): Promise<{ notifications: Notification[] }> {
+    return this.request('/notifications/jira');
+  }
+
+  async getBitbucketNotifications(): Promise<{ notifications: Notification[] }> {
+    return this.request('/notifications/bitbucket');
   }
 
   async markAsRead(notificationId: string): Promise<void> {

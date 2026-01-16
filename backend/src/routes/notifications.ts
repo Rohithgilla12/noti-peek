@@ -5,6 +5,8 @@ import { authMiddleware } from '../middleware/auth';
 import { rateLimitMiddleware } from '../middleware/rateLimiter';
 import { fetchGitHubNotifications, markGitHubNotificationAsRead, markAllGitHubNotificationsAsRead } from '../services/github';
 import { fetchLinearNotifications, markLinearNotificationAsRead, markAllLinearNotificationsAsRead } from '../services/linear';
+import { fetchJiraNotifications, markJiraNotificationAsRead, markAllJiraNotificationsAsRead } from '../services/jira';
+import { fetchBitbucketNotifications, markBitbucketNotificationAsRead, markAllBitbucketNotificationsAsRead } from '../services/bitbucket';
 
 const notifications = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -23,9 +25,11 @@ notifications.get('/', async (c) => {
   const errors: Array<{ provider: string; error: string; resetAt?: number }> = [];
   let githubRateLimit: RateLimitInfo | undefined;
 
-  const [githubConn, linearConn] = await Promise.all([
+  const [githubConn, linearConn, jiraConn, bitbucketConn] = await Promise.all([
     getConnection(c.env.DB, user.id, 'github'),
     getConnection(c.env.DB, user.id, 'linear'),
+    getConnection(c.env.DB, user.id, 'jira'),
+    getConnection(c.env.DB, user.id, 'bitbucket'),
   ]);
 
   const fetchPromises: Promise<void>[] = [];
@@ -56,6 +60,22 @@ notifications.get('/', async (c) => {
       fetchLinearNotifications(linearConn, c.env, c.env.DB)
         .then((result) => { allNotifications.push(...result.notifications); })
         .catch((err) => { errors.push({ provider: 'linear', error: err.message }); })
+    );
+  }
+
+  if (jiraConn) {
+    fetchPromises.push(
+      fetchJiraNotifications(jiraConn, c.env, c.env.DB)
+        .then((result) => { allNotifications.push(...result.notifications); })
+        .catch((err) => { errors.push({ provider: 'jira', error: err.message }); })
+    );
+  }
+
+  if (bitbucketConn) {
+    fetchPromises.push(
+      fetchBitbucketNotifications(bitbucketConn, c.env, c.env.DB)
+        .then((result) => { allNotifications.push(...result.notifications); })
+        .catch((err) => { errors.push({ provider: 'bitbucket', error: err.message }); })
     );
   }
 
@@ -114,6 +134,38 @@ notifications.get('/linear', async (c) => {
   }
 });
 
+notifications.get('/jira', async (c) => {
+  const user = c.get('user');
+  const connection = await getConnection(c.env.DB, user.id, 'jira');
+
+  if (!connection) {
+    return c.json({ error: 'Jira not connected' }, 400);
+  }
+
+  try {
+    const result = await fetchJiraNotifications(connection, c.env, c.env.DB);
+    return c.json({ notifications: result.notifications });
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Unknown error' }, 500);
+  }
+});
+
+notifications.get('/bitbucket', async (c) => {
+  const user = c.get('user');
+  const connection = await getConnection(c.env.DB, user.id, 'bitbucket');
+
+  if (!connection) {
+    return c.json({ error: 'Bitbucket not connected' }, 400);
+  }
+
+  try {
+    const result = await fetchBitbucketNotifications(connection, c.env, c.env.DB);
+    return c.json({ notifications: result.notifications });
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Unknown error' }, 500);
+  }
+});
+
 notifications.post('/:id/read', async (c) => {
   const user = c.get('user');
   const notificationId = c.req.param('id');
@@ -132,6 +184,18 @@ notifications.post('/:id/read', async (c) => {
       return c.json({ error: 'Linear not connected' }, 400);
     }
     await markLinearNotificationAsRead(connection, notificationId);
+  } else if (source === 'jira') {
+    const connection = await getConnection(c.env.DB, user.id, 'jira');
+    if (!connection) {
+      return c.json({ error: 'Jira not connected' }, 400);
+    }
+    await markJiraNotificationAsRead(connection, notificationId, c.env, c.env.DB);
+  } else if (source === 'bitbucket') {
+    const connection = await getConnection(c.env.DB, user.id, 'bitbucket');
+    if (!connection) {
+      return c.json({ error: 'Bitbucket not connected' }, 400);
+    }
+    await markBitbucketNotificationAsRead(connection, notificationId);
   } else {
     return c.json({ error: 'Unknown notification source' }, 400);
   }
@@ -162,6 +226,26 @@ notifications.post('/read-all', async (c) => {
       markPromises.push(
         markAllLinearNotificationsAsRead(connection)
           .catch((err) => { errors.push({ provider: 'linear', error: err.message }); })
+      );
+    }
+  }
+
+  if (!body.source || body.source === 'jira') {
+    const connection = await getConnection(c.env.DB, user.id, 'jira');
+    if (connection) {
+      markPromises.push(
+        markAllJiraNotificationsAsRead(connection, c.env, c.env.DB)
+          .catch((err) => { errors.push({ provider: 'jira', error: err.message }); })
+      );
+    }
+  }
+
+  if (!body.source || body.source === 'bitbucket') {
+    const connection = await getConnection(c.env.DB, user.id, 'bitbucket');
+    if (connection) {
+      markPromises.push(
+        markAllBitbucketNotificationsAsRead(connection)
+          .catch((err) => { errors.push({ provider: 'bitbucket', error: err.message }); })
       );
     }
   }
