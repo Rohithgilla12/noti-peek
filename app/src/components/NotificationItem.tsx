@@ -1,9 +1,11 @@
 import { openUrl } from '@tauri-apps/plugin-opener';
 import type { Notification } from '../lib/types';
 import { useAppStore } from '../store';
+import { useState, useEffect } from 'react';
 
 interface NotificationItemProps {
   notification: Notification;
+  index: number;
 }
 
 function SourceIcon({ source }: { source: string }) {
@@ -96,10 +98,32 @@ function formatTimeAgo(dateString: string): string {
   return date.toLocaleDateString();
 }
 
-export function NotificationItem({ notification }: NotificationItemProps) {
+export function NotificationItem({ notification, index }: NotificationItemProps) {
   const markAsRead = useAppStore((state) => state.markAsRead);
+  const setSelectedNotification = useAppStore((state) => state.setSelectedNotification);
+  const selectedNotificationId = useAppStore((state) => state.selectedNotificationId);
+  const [isUnreadFading, setIsUnreadFading] = useState(false);
+  const [wasUnread, setWasUnread] = useState(notification.unread);
 
-  const handleClick = async () => {
+  const isSelected = selectedNotificationId === notification.id;
+
+  useEffect(() => {
+    if (wasUnread && !notification.unread) {
+      setIsUnreadFading(true);
+      const timer = setTimeout(() => {
+        setIsUnreadFading(false);
+        setWasUnread(false);
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+    setWasUnread(notification.unread);
+  }, [notification.unread, wasUnread]);
+
+  const handleClick = () => {
+    setSelectedNotification(notification.id);
+  };
+
+  const handleDoubleClick = async () => {
     await openUrl(notification.url);
     if (notification.unread) {
       await markAsRead(notification.id);
@@ -109,6 +133,10 @@ export function NotificationItem({ notification }: NotificationItemProps) {
   return (
     <div
       onClick={handleClick}
+      onDoubleClick={handleDoubleClick}
+      style={{
+        animationDelay: `${index * 30}ms`
+      }}
       className={`
         group flex items-start gap-3
         px-3 py-2.5
@@ -119,13 +147,19 @@ export function NotificationItem({ notification }: NotificationItemProps) {
         transition-colors duration-150
         notification-enter
         ${notification.unread ? 'bg-[var(--accent-muted)]' : ''}
+        ${isSelected ? 'border-l-4 border-l-[var(--accent)] bg-[var(--bg-highlight)]' : ''}
       `}
     >
-      {notification.unread && (
-        <div className="w-2 h-2 mt-2 rounded-full bg-[var(--unread)] unread-dot flex-shrink-0" />
+      {(notification.unread || isUnreadFading) && (
+        <div
+          className={`
+            w-2 h-2 mt-2 rounded-full bg-[var(--unread)] flex-shrink-0
+            ${isUnreadFading ? 'unread-dot-fadeout' : 'unread-dot'}
+          `}
+        />
       )}
 
-      <div className="w-8 h-8 flex items-center justify-center rounded-[var(--radius-md)] bg-[var(--bg-overlay)] flex-shrink-0">
+      <div className="w-8 h-8 flex items-center justify-center rounded-[var(--radius-md)] bg-[var(--bg-overlay)] flex-shrink-0 transition-transform hover:scale-105 duration-150">
         <SourceIcon source={notification.source} />
       </div>
 
@@ -144,13 +178,14 @@ export function NotificationItem({ notification }: NotificationItemProps) {
             text-[length:var(--text-sm)]
             text-[var(--text-primary)]
             truncate
+            transition-all duration-150
             ${notification.unread ? 'font-medium' : 'font-normal'}
           `}
         >
           {notification.title}
         </p>
         {notification.body && (
-          <p className="text-[length:var(--text-xs)] text-[var(--text-secondary)] mt-0.5 line-clamp-1">
+          <p className="text-[length:var(--text-xs)] text-[var(--text-secondary)] mt-0.5 line-clamp-1 transition-opacity duration-150">
             {notification.body}
           </p>
         )}
@@ -159,7 +194,7 @@ export function NotificationItem({ notification }: NotificationItemProps) {
             <img
               src={notification.author.avatar}
               alt={notification.author.name}
-              className="w-4 h-4 rounded-full"
+              className="w-4 h-4 rounded-full transition-transform hover:scale-110 duration-150"
             />
           )}
           <span className="text-[length:var(--text-xs)] text-[var(--text-tertiary)]">

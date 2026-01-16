@@ -1,4 +1,5 @@
-import type { NotificationResponse, Connection } from '../types';
+import type { NotificationResponse, Connection, RateLimitInfo, NotificationFetchResult } from '../types';
+import { RateLimitError } from '../types';
 
 interface GitHubNotification {
   id: string;
@@ -24,6 +25,11 @@ interface GitHubNotification {
   url: string;
 }
 
+interface GitHubFetchOptions {
+  maxPages?: number;
+  perPage?: number;
+}
+
 function mapNotificationType(type: string): string {
   const typeMap: Record<string, string> = {
     'PullRequest': 'pull_request',
@@ -46,28 +52,77 @@ function getHtmlUrl(notification: GitHubNotification): string {
     .replace('/issues/', '/issues/');
 }
 
-export async function fetchGitHubNotifications(connection: Connection): Promise<NotificationResponse[]> {
-  // all=true shows both read and unread notifications
-  // without participating filter, shows all subscribed notifications
-  const response = await fetch('https://api.github.com/notifications?all=true&per_page=50', {
-    headers: {
-      'Authorization': `Bearer ${connection.access_token}`,
-      'User-Agent': 'noti-peek',
-      'Accept': 'application/vnd.github+json',
-      'X-GitHub-Api-Version': '2022-11-28',
-    },
-  });
+function parseRateLimitHeaders(headers: Headers): RateLimitInfo | undefined {
+  const remaining = headers.get('X-RateLimit-Remaining');
+  const reset = headers.get('X-RateLimit-Reset');
+  const limit = headers.get('X-RateLimit-Limit');
 
-  if (!response.ok) {
-    if (response.status === 401) {
-      throw new Error('GitHub token expired or revoked');
-    }
-    throw new Error(`GitHub API error: ${response.status}`);
+  if (!remaining || !reset || !limit) {
+    return undefined;
   }
 
-  const notifications = await response.json() as GitHubNotification[];
+  return {
+    remaining: parseInt(remaining, 10),
+    reset: parseInt(reset, 10),
+    limit: parseInt(limit, 10),
+  };
+}
 
-  return notifications.map((n): NotificationResponse => ({
+function parseLinkHeader(linkHeader: string | null): string | null {
+  if (!linkHeader) return null;
+
+  const nextMatch = linkHeader.match(/<([^>]+)>;\s*rel="next"/);
+  return nextMatch ? nextMatch[1] : null;
+}
+
+export async function fetchGitHubNotifications(
+  connection: Connection,
+  options: GitHubFetchOptions = {}
+): Promise<NotificationFetchResult> {
+  const { maxPages = 5, perPage = 50 } = options;
+  const allNotifications: GitHubNotification[] = [];
+  let rateLimitInfo: RateLimitInfo | undefined;
+  let currentUrl: string | null = `https://api.github.com/notifications?all=true&per_page=${perPage}`;
+  let pagesFetched = 0;
+
+  while (currentUrl && pagesFetched < maxPages) {
+    const response = await fetch(currentUrl, {
+      headers: {
+        'Authorization': `Bearer ${connection.access_token}`,
+        'User-Agent': 'noti-peek',
+        'Accept': 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+    });
+
+    rateLimitInfo = parseRateLimitHeaders(response.headers);
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('GitHub token expired or revoked');
+      }
+      if (response.status === 403 && rateLimitInfo) {
+        throw new RateLimitError(
+          'GitHub API rate limit exceeded',
+          rateLimitInfo.reset,
+          rateLimitInfo.remaining
+        );
+      }
+      throw new Error(`GitHub API error: ${response.status}`);
+    }
+
+    const pageNotifications = await response.json() as GitHubNotification[];
+    allNotifications.push(...pageNotifications);
+
+    if (pageNotifications.length < perPage) {
+      break;
+    }
+
+    currentUrl = parseLinkHeader(response.headers.get('Link'));
+    pagesFetched++;
+  }
+
+  const notifications = allNotifications.map((n): NotificationResponse => ({
     id: `github:${n.id}`,
     source: 'github',
     type: mapNotificationType(n.subject.type),
@@ -83,6 +138,11 @@ export async function fetchGitHubNotifications(connection: Connection): Promise<
     createdAt: n.updated_at,
     updatedAt: n.updated_at,
   }));
+
+  return {
+    notifications,
+    rateLimitInfo,
+  };
 }
 
 export async function markGitHubNotificationAsRead(

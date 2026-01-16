@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
+    "build": "tsc --noEmit",
     "db:migrate": "wrangler d1 execute noti-peek-db --local --file=./migrations/0001_initial.sql",
     "db:migrate:remote": "wrangler d1 execute noti-peek-db --remote --file=./migrations/0001_initial.sql"
   },

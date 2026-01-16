@@ -53,3 +53,32 @@ export interface Env {
 export interface Variables {
   user: User;
 }
+
+export interface RateLimitInfo {
+  remaining: number;
+  reset: number;
+  limit: number;
+}
+
+export interface NotificationFetchResult {
+  notifications: NotificationResponse[];
+  rateLimitInfo?: RateLimitInfo;
+}
+
+export class RateLimitError extends Error {
+  constructor(
+    message: string,
+    public readonly resetAt: number,
+    public readonly remaining: number = 0
+  ) {
+    super(message);
+    this.name = 'RateLimitError';
+  }
+}
+
+export class TokenExpiredError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'TokenExpiredError';
+  }
+}

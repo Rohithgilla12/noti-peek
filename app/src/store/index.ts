@@ -25,7 +25,10 @@ interface AppState {
   filter: {
     source: Provider | 'all';
     unreadOnly: boolean;
+    type: string | 'all';
   };
+
+  selectedNotificationId: string | null;
 
   refreshInterval: number;
 
@@ -37,6 +40,7 @@ interface AppState {
 
   setFilter: (filter: Partial<AppState['filter']>) => void;
   setRefreshInterval: (interval: number) => void;
+  setSelectedNotification: (id: string | null) => void;
 
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -61,7 +65,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   filter: {
     source: 'all',
     unreadOnly: false,
+    type: 'all',
   },
+
+  selectedNotificationId: null,
 
   refreshInterval: 5 * 60 * 1000,
 
@@ -83,6 +90,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   })),
 
   setRefreshInterval: (refreshInterval) => set({ refreshInterval }),
+  setSelectedNotification: (selectedNotificationId) => set({ selectedNotificationId }),
 
   setLoading: (isLoading) => set({ isLoading }),
   setError: (error) => set({ error }),
@@ -156,8 +164,15 @@ export const useFilteredNotifications = () => {
   return notifications.filter((n) => {
     if (filter.source !== 'all' && n.source !== filter.source) return false;
     if (filter.unreadOnly && !n.unread) return false;
+    if (filter.type !== 'all' && n.type !== filter.type) return false;
     return true;
   });
+};
+
+export const useNotificationTypes = () => {
+  const notifications = useAppStore((state) => state.notifications);
+  const types = new Set(notifications.map((n) => n.type));
+  return Array.from(types).sort();
 };
 
 export const useUnreadCount = () => {

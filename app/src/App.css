@@ -463,8 +463,44 @@ body {
   }
 }
 
-.notification-enter {
-  animation: slideIn 150ms ease-out;
+@keyframes slideOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 @keyframes pulse {
@@ -477,13 +513,93 @@ body {
   }
 }
 
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.notification-enter {
+  animation: slideIn 200ms ease-out;
+}
+
+.notification-exit {
+  animation: slideOut 150ms ease-in;
+}
+
+.fade-in {
+  animation: fadeIn 200ms ease-out;
+}
+
+.fade-out {
+  animation: fadeOut 150ms ease-in;
+}
+
+.scale-in {
+  animation: scaleIn 200ms ease-out;
+}
+
 .unread-dot {
   animation: pulse 2s ease-in-out infinite;
+}
+
+.unread-dot-fadeout {
+  animation: fadeOut 200ms ease-out forwards;
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-surface) 0%,
+    var(--bg-overlay) 50%,
+    var(--bg-surface) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.spinner {
+  animation: spin 0.8s linear infinite;
 }
 
 /* Transition defaults */
 .transition-default {
   transition: all 150ms ease-out;
+}
+
+.transition-colors {
+  transition: background-color 150ms ease-out, color 150ms ease-out;
+}
+
+.transition-opacity {
+  transition: opacity 200ms ease-out;
+}
+
+.transition-transform {
+  transition: transform 200ms ease-out;
+}
+
+/* Select styling */
+select {
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+select option {
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
 }
 
 /* Scrollbar styling */

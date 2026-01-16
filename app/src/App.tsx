@@ -7,6 +7,7 @@ import { Header } from './components/Header';
 import { NotificationList } from './components/NotificationList';
 import { Settings } from './components/Settings';
 import { StatusBar } from './components/StatusBar';
+import { NotificationDetail } from './components/NotificationDetail';
 
 const STORE_KEY = 'auth';
 
@@ -19,6 +20,11 @@ function App() {
   const fetchNotifications = useAppStore((state) => state.fetchNotifications);
   const fetchConnections = useAppStore((state) => state.fetchConnections);
   const refreshInterval = useAppStore((state) => state.refreshInterval);
+  const selectedNotificationId = useAppStore((state) => state.selectedNotificationId);
+  const setSelectedNotification = useAppStore((state) => state.setSelectedNotification);
+  const notifications = useAppStore((state) => state.notifications);
+
+  const selectedNotification = notifications.find((n) => n.id === selectedNotificationId);
 
   const initialize = useCallback(async () => {
     try {
@@ -77,13 +83,20 @@ function App() {
         setShowSettings(true);
       }
       if (e.key === 'Escape') {
-        setShowSettings(false);
+        if (showSettings) {
+          setShowSettings(false);
+        } else if (selectedNotificationId) {
+          setSelectedNotification(null);
+        }
+      }
+      if (e.key === 'Enter' && selectedNotificationId && selectedNotification) {
+        window.open(selectedNotification.url, '_blank');
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [fetchNotifications]);
+  }, [fetchNotifications, showSettings, selectedNotificationId, selectedNotification, setSelectedNotification]);
 
   if (isInitializing) {
     return (
@@ -100,9 +113,21 @@ function App() {
 
   return (
     <div className="menubar-container">
-      <Header />
-      <NotificationList />
-      <StatusBar onOpenSettings={() => setShowSettings(true)} />
+      <div className="flex flex-1 overflow-hidden">
+        <div className={`flex flex-col flex-1 ${selectedNotification ? 'w-1/2' : 'w-full'} transition-all duration-300`}>
+          <Header />
+          <NotificationList />
+          <StatusBar onOpenSettings={() => setShowSettings(true)} />
+        </div>
+        {selectedNotification && (
+          <div className="w-1/2 flex-shrink-0">
+            <NotificationDetail
+              notification={selectedNotification}
+              onClose={() => setSelectedNotification(null)}
+            />
+          </div>
+        )}
+      </div>
       {showSettings && <Settings onClose={() => setShowSettings(false)} />}
     </div>
   );

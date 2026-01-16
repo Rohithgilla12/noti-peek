@@ -1,12 +1,15 @@
 import { Hono } from 'hono';
-import type { Env, Variables, Connection, NotificationResponse, Provider } from '../types';
+import type { Env, Variables, Connection, NotificationResponse, Provider, RateLimitInfo } from '../types';
+import { RateLimitError } from '../types';
 import { authMiddleware } from '../middleware/auth';
+import { rateLimitMiddleware } from '../middleware/rateLimiter';
 import { fetchGitHubNotifications, markGitHubNotificationAsRead, markAllGitHubNotificationsAsRead } from '../services/github';
 import { fetchLinearNotifications, markLinearNotificationAsRead, markAllLinearNotificationsAsRead } from '../services/linear';
 
 const notifications = new Hono<{ Bindings: Env; Variables: Variables }>();
 
 notifications.use('*', authMiddleware);
+notifications.use('*', rateLimitMiddleware);
 
 async function getConnection(db: D1Database, userId: string, provider: Provider): Promise<Connection | null> {
   return db.prepare(
@@ -17,7 +20,8 @@ async function getConnection(db: D1Database, userId: string, provider: Provider)
 notifications.get('/', async (c) => {
   const user = c.get('user');
   const allNotifications: NotificationResponse[] = [];
-  const errors: Array<{ provider: string; error: string }> = [];
+  const errors: Array<{ provider: string; error: string; resetAt?: number }> = [];
+  let githubRateLimit: RateLimitInfo | undefined;
 
   const [githubConn, linearConn] = await Promise.all([
     getConnection(c.env.DB, user.id, 'github'),
@@ -29,15 +33,28 @@ notifications.get('/', async (c) => {
   if (githubConn) {
     fetchPromises.push(
       fetchGitHubNotifications(githubConn)
-        .then((notifs) => { allNotifications.push(...notifs); })
-        .catch((err) => { errors.push({ provider: 'github', error: err.message }); })
+        .then((result) => {
+          allNotifications.push(...result.notifications);
+          githubRateLimit = result.rateLimitInfo;
+        })
+        .catch((err) => {
+          if (err instanceof RateLimitError) {
+            errors.push({
+              provider: 'github',
+              error: err.message,
+              resetAt: err.resetAt,
+            });
+          } else {
+            errors.push({ provider: 'github', error: err.message });
+          }
+        })
     );
   }
 
   if (linearConn) {
     fetchPromises.push(
-      fetchLinearNotifications(linearConn)
-        .then((notifs) => { allNotifications.push(...notifs); })
+      fetchLinearNotifications(linearConn, c.env, c.env.DB)
+        .then((result) => { allNotifications.push(...result.notifications); })
         .catch((err) => { errors.push({ provider: 'linear', error: err.message }); })
     );
   }
@@ -51,6 +68,7 @@ notifications.get('/', async (c) => {
   return c.json({
     notifications: allNotifications,
     errors: errors.length > 0 ? errors : undefined,
+    rateLimitInfo: githubRateLimit,
   });
 });
 
@@ -63,9 +81,19 @@ notifications.get('/github', async (c) => {
   }
 
   try {
-    const notifs = await fetchGitHubNotifications(connection);
-    return c.json({ notifications: notifs });
+    const result = await fetchGitHubNotifications(connection);
+    return c.json({
+      notifications: result.notifications,
+      rateLimitInfo: result.rateLimitInfo,
+    });
   } catch (err) {
+    if (err instanceof RateLimitError) {
+      return c.json({
+        error: err.message,
+        resetAt: err.resetAt,
+        remaining: err.remaining,
+      }, 429);
+    }
     return c.json({ error: err instanceof Error ? err.message : 'Unknown error' }, 500);
   }
 });
@@ -79,8 +107,8 @@ notifications.get('/linear', async (c) => {
   }
 
   try {
-    const notifs = await fetchLinearNotifications(connection);
-    return c.json({ notifications: notifs });
+    const result = await fetchLinearNotifications(connection, c.env, c.env.DB);
+    return c.json({ notifications: result.notifications });
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Unknown error' }, 500);
   }

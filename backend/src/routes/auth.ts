@@ -241,11 +241,20 @@ auth.get('/linear/callback', async (c) => {
     }),
   });
 
-  const tokenData = await tokenResponse.json() as { access_token?: string; error?: string };
+  const tokenData = await tokenResponse.json() as {
+    access_token?: string;
+    refresh_token?: string;
+    expires_in?: number;
+    error?: string;
+  };
 
   if (!tokenData.access_token) {
     return c.json({ error: 'Failed to exchange code for token', details: tokenData.error }, 400);
   }
+
+  const expiresAt = tokenData.expires_in
+    ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
+    : null;
 
   const userResponse = await fetch('https://api.linear.app/graphql', {
     method: 'POST',
@@ -263,10 +272,12 @@ auth.get('/linear/callback', async (c) => {
 
   const connectionId = generateId();
   await c.env.DB.prepare(`
-    INSERT INTO connections (id, user_id, provider, access_token, account_id, account_name, account_avatar)
-    VALUES (?, ?, 'linear', ?, ?, ?, ?)
+    INSERT INTO connections (id, user_id, provider, access_token, refresh_token, token_expires_at, account_id, account_name, account_avatar)
+    VALUES (?, ?, 'linear', ?, ?, ?, ?, ?, ?)
     ON CONFLICT (user_id, provider) DO UPDATE SET
       access_token = excluded.access_token,
+      refresh_token = excluded.refresh_token,
+      token_expires_at = excluded.token_expires_at,
       account_id = excluded.account_id,
       account_name = excluded.account_name,
       account_avatar = excluded.account_avatar,
@@ -275,6 +286,8 @@ auth.get('/linear/callback', async (c) => {
     connectionId,
     userId,
     tokenData.access_token,
+    tokenData.refresh_token ?? null,
+    expiresAt,
     userData?.id ?? null,
     userData?.name ?? null,
     userData?.avatarUrl ?? null
