@@ -42,11 +42,13 @@ class ApiClient {
   }
 
   getGitHubAuthUrl(): string {
-    return `${API_URL}/auth/github`;
+    if (!this.deviceToken) throw new Error('Not authenticated');
+    return `${API_URL}/auth/github?token=${encodeURIComponent(this.deviceToken)}`;
   }
 
   getLinearAuthUrl(): string {
-    return `${API_URL}/auth/linear`;
+    if (!this.deviceToken) throw new Error('Not authenticated');
+    return `${API_URL}/auth/linear?token=${encodeURIComponent(this.deviceToken)}`;
   }
 
   async disconnectGitHub(): Promise<void> {

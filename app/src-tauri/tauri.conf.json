@@ -39,17 +39,5 @@
       "icons/icon.ico"
     ]
   },
-  "plugins": {
-    "opener": {},
-    "http": {
-      "scope": {
-        "allow": [
-          { "url": "http://localhost:*/**" },
-          { "url": "https://api.notipeek.dev/**" },
-          { "url": "https://*.workers.dev/**" }
-        ]
-      }
-    },
-    "store": {}
-  }
+  "plugins": {}
 }

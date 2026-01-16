@@ -36,8 +36,20 @@ auth.post('/verify', authMiddleware, async (c) => {
   });
 });
 
-auth.get('/github', authMiddleware, async (c) => {
-  const user = c.get('user');
+auth.get('/github', async (c) => {
+  const token = c.req.query('token');
+  if (!token) {
+    return c.json({ error: 'Missing token parameter' }, 400);
+  }
+
+  const user = await c.env.DB.prepare(
+    'SELECT * FROM users WHERE device_token = ?'
+  ).bind(token).first<User>();
+
+  if (!user) {
+    return c.json({ error: 'Invalid token' }, 401);
+  }
+
   const clientId = c.env.GITHUB_CLIENT_ID;
   const redirectUri = `${c.env.APP_URL}/auth/github/callback`;
   const state = `${user.id}:${generateId()}`;
@@ -129,8 +141,20 @@ auth.delete('/github', authMiddleware, async (c) => {
   return c.json({ success: true });
 });
 
-auth.get('/linear', authMiddleware, async (c) => {
-  const user = c.get('user');
+auth.get('/linear', async (c) => {
+  const token = c.req.query('token');
+  if (!token) {
+    return c.json({ error: 'Missing token parameter' }, 400);
+  }
+
+  const user = await c.env.DB.prepare(
+    'SELECT * FROM users WHERE device_token = ?'
+  ).bind(token).first<User>();
+
+  if (!user) {
+    return c.json({ error: 'Invalid token' }, 401);
+  }
+
   const clientId = c.env.LINEAR_CLIENT_ID;
   const redirectUri = `${c.env.APP_URL}/auth/linear/callback`;
   const state = `${user.id}:${generateId()}`;
