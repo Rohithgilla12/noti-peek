@@ -141,6 +141,53 @@ auth.delete('/github', authMiddleware, async (c) => {
   return c.json({ success: true });
 });
 
+auth.post('/github/token', authMiddleware, async (c) => {
+  const user = c.get('user');
+  const body = await c.req.json<{ token: string }>();
+
+  if (!body.token) {
+    return c.json({ error: 'Missing token' }, 400);
+  }
+
+  const userResponse = await fetch('https://api.github.com/user', {
+    headers: {
+      'Authorization': `Bearer ${body.token}`,
+      'User-Agent': 'noti-peek',
+    },
+  });
+
+  if (!userResponse.ok) {
+    return c.json({ error: 'Invalid GitHub token' }, 401);
+  }
+
+  const userData = await userResponse.json() as { id: number; login: string; avatar_url: string };
+
+  const connectionId = generateId();
+  await c.env.DB.prepare(`
+    INSERT INTO connections (id, user_id, provider, access_token, account_id, account_name, account_avatar)
+    VALUES (?, ?, 'github', ?, ?, ?, ?)
+    ON CONFLICT (user_id, provider) DO UPDATE SET
+      access_token = excluded.access_token,
+      account_id = excluded.account_id,
+      account_name = excluded.account_name,
+      account_avatar = excluded.account_avatar,
+      updated_at = CURRENT_TIMESTAMP
+  `).bind(
+    connectionId,
+    user.id,
+    body.token,
+    String(userData.id),
+    userData.login,
+    userData.avatar_url
+  ).run();
+
+  return c.json({
+    success: true,
+    accountName: userData.login,
+    accountAvatar: userData.avatar_url,
+  });
+});
+
 auth.get('/linear', async (c) => {
   const token = c.req.query('token');
   if (!token) {

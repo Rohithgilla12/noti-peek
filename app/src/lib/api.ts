@@ -51,6 +51,13 @@ class ApiClient {
     return `${API_URL}/auth/linear?token=${encodeURIComponent(this.deviceToken)}`;
   }
 
+  async connectGitHubWithToken(token: string): Promise<{ success: boolean; accountName: string; accountAvatar: string }> {
+    return this.request('/auth/github/token', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    });
+  }
+
   async disconnectGitHub(): Promise<void> {
     await this.request('/auth/github', { method: 'DELETE' });
   }

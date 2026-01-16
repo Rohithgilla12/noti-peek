@@ -64,11 +64,53 @@ APP_URL=https://api.notipeek.dev
 - `⌘,` - Open settings
 - `Escape` - Close settings
 
+## Testing & Bug Fixes (2025-01-16)
+
+### OAuth Flow Fix
+
+**Problem**: Browser-based OAuth redirects can't send custom headers (Authorization). The initial implementation required auth header, causing "Missing authorization header" errors.
+
+**Solution**: Changed OAuth endpoints (`GET /auth/github`, `GET /auth/linear`) to accept the device token via query parameter instead:
+```
+GET /auth/github?token={deviceToken}
+```
+
+The backend validates the token from query param instead of header for these specific endpoints.
+
+### GitHub PAT Support (2025-01-16)
+
+**Problem**: GitHub OAuth apps require organization admin approval to access private/org repositories. Users can be members of org repos but still can't get notifications without admin granting access to the OAuth app.
+
+**Solution**: Added Personal Access Token (PAT) as an alternative authentication method:
+
+1. New endpoint: `POST /auth/github/token`
+   - Accepts `{ token: "ghp_xxx" }` in request body
+   - Validates token against GitHub API
+   - Stores token same as OAuth flow
+
+2. Frontend changes:
+   - Settings UI shows "OAuth" and "Token" buttons
+   - Token input with link to create PAT with correct scopes
+   - Same disconnect flow works for both methods
+
+**Required PAT Scopes**:
+- `notifications` - Read notifications
+- `read:user` - Get user profile info
+
+**Direct link to create PAT**:
+```
+https://github.com/settings/tokens/new?scopes=notifications,read:user&description=noti-peek
+```
+
+### API Endpoints Added
+
+- `POST /auth/github/token` - Connect GitHub with Personal Access Token
+
 ### Next Steps
 
-1. Set up OAuth apps on GitHub and Linear
+1. ~~Set up OAuth apps on GitHub and Linear~~ ✓
 2. Deploy backend to Cloudflare Workers
-3. Create D1 database
-4. Test full OAuth flow
+3. ~~Create D1 database~~ ✓
+4. ~~Test full OAuth flow~~ ✓
 5. Add system tray badge updates
 6. Add OAuth deep link handling
