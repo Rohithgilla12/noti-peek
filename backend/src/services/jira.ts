@@ -6,6 +6,7 @@ interface JiraNotification {
   title: string;
   content: string;
   created: string;
+  updated?: string;
   readState: 'read' | 'unread';
   category: string;
   metadata?: {
@@ -13,17 +14,13 @@ interface JiraNotification {
     issueId?: string;
     projectKey?: string;
     issueSummary?: string;
+    jiraBaseUrl?: string;
   };
   user?: {
     accountId: string;
     displayName: string;
     avatarUrl?: string;
   };
-}
-
-interface JiraNotificationsResponse {
-  data: JiraNotification[];
-  nextPageToken?: string;
 }
 
 interface JiraTokenResponse {
@@ -111,26 +108,6 @@ export async function refreshJiraToken(
   return tokenData.access_token;
 }
 
-async function getCloudId(accessToken: string): Promise<string> {
-  const response = await fetch('https://api.atlassian.com/oauth/token/accessible-resources', {
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'Accept': 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to get Jira cloud resources: ${response.status}`);
-  }
-
-  const resources = await response.json() as JiraCloudResource[];
-  if (resources.length === 0) {
-    throw new Error('No Jira cloud resources available');
-  }
-
-  return resources[0].id;
-}
-
 export async function fetchJiraNotifications(
   connection: Connection,
   env: Env,
@@ -144,33 +121,31 @@ export async function fetchJiraNotifications(
     accessToken = await refreshJiraToken(connection, env, db);
   }
 
-  const cloudId = await getCloudId(accessToken);
+  // Get cloud resources to find the cloud ID and base URL
+  const resourcesResponse = await fetch('https://api.atlassian.com/oauth/token/accessible-resources', {
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Accept': 'application/json',
+    },
+  });
+
+  if (!resourcesResponse.ok) {
+    throw new Error(`Failed to get Jira cloud resources: ${resourcesResponse.status}`);
+  }
+
+  const resources = await resourcesResponse.json() as JiraCloudResource[];
+  if (resources.length === 0) {
+    throw new Error('No Jira cloud resources available');
+  }
+
+  const cloudId = resources[0].id;
+  const jiraBaseUrl = resources[0].url; // e.g., https://mycompany.atlassian.net
+
   const allNotifications: JiraNotification[] = [];
-  let pageToken: string | undefined;
   let pagesFetched = 0;
 
   while (pagesFetched < maxPages) {
-    const url = new URL(`https://api.atlassian.com/ex/jira/${cloudId}/rest/api/3/notificationscheme`);
-
-    // Try to use the notifications REST API - if not available, fall back to issues assigned to user
-    const notifUrl = `https://api.atlassian.com/ex/jira/${cloudId}/rest/api/3/myself`;
-
-    const response = await fetch(notifUrl, {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Accept': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        throw new TokenExpiredError('Jira token expired or revoked');
-      }
-      throw new Error(`Jira API error: ${response.status}`);
-    }
-
-    // Since Jira doesn't have a dedicated notifications API like GitHub,
-    // we'll fetch issues assigned to the user and recently updated issues they're watching
+    // Fetch issues assigned to the user or issues they're watching
     const issuesUrl = `https://api.atlassian.com/ex/jira/${cloudId}/rest/api/3/search`;
     const jql = 'assignee = currentUser() OR watcher = currentUser() ORDER BY updated DESC';
 
@@ -182,6 +157,9 @@ export async function fetchJiraNotifications(
     });
 
     if (!issuesResponse.ok) {
+      if (issuesResponse.status === 401) {
+        throw new TokenExpiredError('Jira token expired or revoked');
+      }
       throw new Error(`Jira issues API error: ${issuesResponse.status}`);
     }
 
@@ -212,6 +190,7 @@ export async function fetchJiraNotifications(
         title: `${issue.key}: ${issue.fields.summary}`,
         content: issue.fields.description || '',
         created: issue.fields.created,
+        updated: issue.fields.updated,
         readState: 'unread', // Jira doesn't track read state the same way
         category: issue.fields.assignee ? 'assigned' : 'watching',
         metadata: {
@@ -219,6 +198,7 @@ export async function fetchJiraNotifications(
           issueId: issue.id,
           projectKey: issue.fields.project.key,
           issueSummary: issue.fields.summary,
+          jiraBaseUrl: jiraBaseUrl,
         },
         user: issue.fields.reporter ? {
           accountId: issue.fields.reporter.accountId,
@@ -241,7 +221,7 @@ export async function fetchJiraNotifications(
     type: mapNotificationType(n.category),
     title: n.title,
     body: n.content.slice(0, 200) || `${n.metadata?.projectKey} - ${n.category}`,
-    url: `https://jira.atlassian.com/browse/${n.metadata?.issueKey}`,
+    url: `${n.metadata?.jiraBaseUrl}/browse/${n.metadata?.issueKey}`,
     project: n.metadata?.projectKey,
     author: {
       name: n.user?.displayName || 'Jira',
@@ -249,7 +229,7 @@ export async function fetchJiraNotifications(
     },
     unread: n.readState === 'unread',
     createdAt: n.created,
-    updatedAt: n.created,
+    updatedAt: n.updated || n.created,
   }));
 
   return {

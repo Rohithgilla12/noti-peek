@@ -61,12 +61,6 @@ describe('Jira Service', () => {
         json: async () => [{ id: 'cloud-123', url: 'https://test.atlassian.net', name: 'Test Site' }],
       });
 
-      // Mock myself response
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ accountId: 'user-123', displayName: 'Test User' }),
-      });
-
       // Mock issues search response
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -118,12 +112,15 @@ describe('Jira Service', () => {
         type: 'assigned',
         title: 'TEST-123: Fix login bug',
         project: 'TEST',
+        url: 'https://test.atlassian.net/browse/TEST-123',
+        updatedAt: '2024-01-15T10:30:00Z',
       });
       expect(result.notifications[1]).toMatchObject({
         id: 'jira:10002',
         source: 'jira',
         type: 'watching',
         title: 'TEST-124: Add dark mode',
+        url: 'https://test.atlassian.net/browse/TEST-124',
       });
     });
 
@@ -131,11 +128,6 @@ describe('Jira Service', () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => [{ id: 'cloud-123', url: 'https://test.atlassian.net', name: 'Test Site' }],
-      });
-
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ accountId: 'user-123' }),
       });
 
       mockFetch.mockResolvedValueOnce({
@@ -265,12 +257,6 @@ describe('Jira Service', () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => [{ id: 'cloud-123', url: 'https://test.atlassian.net', name: 'Test' }],
-      });
-
-      // Mock myself
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ accountId: 'user-123' }),
       });
 
       // Mock issues
