@@ -1,0 +1,11 @@
+name = "noti-peek-api"
+main = "src/index.ts"
+compatibility_date = "2025-01-15"
+
+[vars]
+ENVIRONMENT = "development"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "noti-peek-db"
+database_id = "placeholder-will-be-replaced-after-d1-create"

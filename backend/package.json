@@ -1,0 +1,19 @@
+{
+  "name": "noti-peek-backend",
+  "version": "0.1.0",
+  "description": "Backend API for noti-peek - unified notification hub",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:migrate": "wrangler d1 execute noti-peek-db --local --file=./migrations/0001_initial.sql",
+    "db:migrate:remote": "wrangler d1 execute noti-peek-db --remote --file=./migrations/0001_initial.sql"
+  },
+  "dependencies": {
+    "hono": "^4.7.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250109.0",
+    "typescript": "^5.7.0",
+    "wrangler": "^4.0.0"
+  }
+}
