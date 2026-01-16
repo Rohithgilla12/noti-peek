@@ -32,9 +32,7 @@ fn setup_macos_window(window: &tauri::WebviewWindow) {
         ns_window.setCollectionBehavior(
             NSWindowCollectionBehavior::CanJoinAllSpaces
             | NSWindowCollectionBehavior::FullScreenAuxiliary
-            | NSWindowCollectionBehavior::Stationary
         );
-        ns_window.setLevel(25); // NSPopUpMenuWindowLevel
     }
 }
 
