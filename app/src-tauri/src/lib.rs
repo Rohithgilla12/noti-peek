@@ -1,8 +1,25 @@
 use tauri::{
-    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Manager, WindowEvent,
+    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent, TrayIcon},
+    Manager, WindowEvent, State,
 };
 use tauri_plugin_positioner::{Position, WindowExt};
+use std::sync::Mutex;
+
+struct TrayState(Mutex<Option<TrayIcon>>);
+
+#[tauri::command]
+fn set_badge_count(count: u32, state: State<TrayState>) -> Result<(), String> {
+    let tray_guard = state.0.lock().map_err(|e| e.to_string())?;
+    if let Some(tray) = tray_guard.as_ref() {
+        let title = if count > 0 {
+            Some(count.to_string())
+        } else {
+            None
+        };
+        tray.set_title(title).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -11,9 +28,9 @@ pub fn run() {
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_positioner::init())
+        .manage(TrayState(Mutex::new(None)))
         .setup(|app| {
-            // Build the tray icon
-            let _tray = TrayIconBuilder::new()
+            let tray = TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
                 .icon_as_template(true)
                 .on_tray_icon_event(|tray, event| {
@@ -39,12 +56,12 @@ pub fn run() {
                 })
                 .build(app)?;
 
-            // Get the main window and configure it
+            let tray_state: State<TrayState> = app.state();
+            *tray_state.0.lock().unwrap() = Some(tray);
+
             if let Some(window) = app.get_webview_window("main") {
-                // Hide on startup - will show when tray clicked
                 let _ = window.hide();
 
-                // Handle focus loss - hide the window
                 let window_clone = window.clone();
                 window.on_window_event(move |event| {
                     if let WindowEvent::Focused(false) = event {
@@ -55,6 +72,7 @@ pub fn run() {
 
             Ok(())
         })
+        .invoke_handler(tauri::generate_handler![set_badge_count])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
