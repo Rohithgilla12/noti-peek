@@ -16,12 +16,12 @@ export function Header() {
   ];
 
   return (
-    <header className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 p-3">
+    <header className="sticky top-0 z-10 bg-[var(--bg-base)] border-b border-[var(--border-muted)] p-3">
       <div className="flex items-center justify-between mb-3">
-        <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
+        <h1 className="text-[length:var(--text-lg)] font-semibold text-[var(--text-primary)]">
           Notifications
           {unreadCount > 0 && (
-            <span className="ml-2 px-2 py-0.5 text-xs bg-blue-500 text-white rounded-full">
+            <span className="ml-2 px-2 py-0.5 text-[length:var(--text-xs)] bg-[var(--accent)] text-[var(--bg-base)] rounded-full font-medium">
               {unreadCount}
             </span>
           )}
@@ -30,31 +30,35 @@ export function Header() {
           <button
             onClick={() => fetchNotifications()}
             disabled={isLoading}
-            className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 disabled:opacity-50"
-            title="Refresh"
+            className="p-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-50 transition-colors duration-150"
+            title="Refresh (R)"
           >
-            <span className={isLoading ? 'animate-spin inline-block' : ''}>🔄</span>
+            <svg className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
           </button>
           <button
             onClick={() => markAllAsRead()}
             disabled={unreadCount === 0}
-            className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 disabled:opacity-50"
+            className="p-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-50 transition-colors duration-150"
             title="Mark all as read"
           >
-            ✓
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
           </button>
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <div className="flex gap-1">
+        <div className="flex gap-1 p-1 bg-[var(--bg-surface)] rounded-[var(--radius-md)]">
           {sources.map((source) => (
             <button
               key={source.value}
               onClick={() => setFilter({ source: source.value })}
-              className={`px-3 py-1 text-xs rounded-full transition-colors ${
+              className={`px-3 py-1.5 text-[length:var(--text-sm)] rounded-[var(--radius-sm)] transition-colors duration-150 ${
                 filter.source === source.value
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  ? 'bg-[var(--bg-overlay)] text-[var(--text-primary)]'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
               }`}
             >
               {source.label}
@@ -63,10 +67,10 @@ export function Header() {
         </div>
         <button
           onClick={() => setFilter({ unreadOnly: !filter.unreadOnly })}
-          className={`ml-auto px-3 py-1 text-xs rounded-full transition-colors ${
+          className={`ml-auto px-3 py-1.5 text-[length:var(--text-sm)] rounded-[var(--radius-md)] transition-colors duration-150 ${
             filter.unreadOnly
-              ? 'bg-blue-500 text-white'
-              : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+              ? 'bg-[var(--accent-muted)] text-[var(--accent)]'
+              : 'bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
           }`}
         >
           Unread only

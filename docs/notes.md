@@ -106,6 +106,80 @@ https://github.com/settings/tokens/new?scopes=notifications,read:user&descriptio
 
 - `POST /auth/github/token` - Connect GitHub with Personal Access Token
 
+## Design System Implementation (2025-01-16)
+
+### Philosophy
+
+1. **Match the IDE** - Developers spend hours in their editor; noti-peek should feel native
+2. **Dense but readable** - Information-rich without feeling cramped
+3. **Themeable first** - Every color is a CSS variable, no hardcoded colors
+4. **Subtle motion** - Animations should feel snappy, not sluggish
+5. **Desktop-native** - Tighter spacing, smaller radii than typical web apps
+
+### Architecture
+
+```
+ThemeProvider (React Context)
+    ↓
+CSS Variables Layer (--bg-base, --text-primary, etc.)
+    ↓
+Theme Definitions ([data-theme="catppuccin-mocha"], etc.)
+```
+
+### Available Themes (13 total)
+
+**Dark themes:**
+- Catppuccin Mocha (default)
+- Tokyo Night / Tokyo Night Storm
+- Dracula
+- Nord
+- Gruvbox Dark
+- One Dark Pro
+- GitHub Dark
+- Rose Pine / Rose Pine Moon
+- Ayu Dark
+- Synthwave '84
+
+**Light theme:**
+- Catppuccin Latte
+
+### CSS Variables
+
+**Backgrounds:**
+- `--bg-base` - Main app background
+- `--bg-surface` - Cards, list items, panels
+- `--bg-overlay` - Modals, dropdowns
+- `--bg-highlight` - Hover states
+
+**Text:**
+- `--text-primary` - Main text
+- `--text-secondary` - Muted text, timestamps
+- `--text-tertiary` - Disabled, placeholders
+
+**Accents & Semantic:**
+- `--accent`, `--accent-hover`, `--accent-muted`
+- `--success`, `--warning`, `--error`, `--info`
+
+**Source-specific (integration branding):**
+- `--github`, `--linear`, `--jira`, `--bitbucket`
+- `--unread` - Unread indicator color
+
+### Files Created
+
+- `app/src/App.css` - All CSS variables and theme definitions
+- `app/src/context/theme.tsx` - ThemeProvider context with localStorage persistence
+- `app/src/components/ThemeSwitcher.tsx` - Theme selector dropdown
+- `design-system.md` - Full design system documentation
+
+### Changes to Components
+
+- Replaced all Tailwind `dark:` classes with CSS variable references
+- Replaced emoji icons with proper SVG icons (GitHub, Linear, notification types)
+- Added smooth transitions (150ms ease-out)
+- Added notification enter animation (slideIn)
+- Added unread dot pulse animation
+- Custom scrollbar styling per theme
+
 ### Next Steps
 
 1. ~~Set up OAuth apps on GitHub and Linear~~ ✓
@@ -114,3 +188,4 @@ https://github.com/settings/tokens/new?scopes=notifications,read:user&descriptio
 4. ~~Test full OAuth flow~~ ✓
 5. Add system tray badge updates
 6. Add OAuth deep link handling
+7. ~~Implement themeable design system~~ ✓
