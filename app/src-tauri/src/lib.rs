@@ -5,6 +5,9 @@ use tauri::{
 use tauri_plugin_positioner::{Position, WindowExt};
 use std::sync::Mutex;
 
+#[cfg(target_os = "macos")]
+use objc2_app_kit::{NSWindow, NSWindowCollectionBehavior};
+
 struct TrayState(Mutex<Option<TrayIcon>>);
 
 #[tauri::command]
@@ -19,6 +22,20 @@ fn set_badge_count(count: u32, state: State<TrayState>) -> Result<(), String> {
         tray.set_title(title).map_err(|e| e.to_string())?;
     }
     Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn setup_macos_window(window: &tauri::WebviewWindow) {
+    if let Ok(ns_window_ptr) = window.ns_window() {
+        let ns_window: &NSWindow = unsafe { &*(ns_window_ptr as *const NSWindow) };
+
+        ns_window.setCollectionBehavior(
+            NSWindowCollectionBehavior::CanJoinAllSpaces
+            | NSWindowCollectionBehavior::FullScreenAuxiliary
+            | NSWindowCollectionBehavior::Stationary
+        );
+        ns_window.setLevel(25); // NSPopUpMenuWindowLevel
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -60,6 +77,9 @@ pub fn run() {
             *tray_state.0.lock().unwrap() = Some(tray);
 
             if let Some(window) = app.get_webview_window("main") {
+                #[cfg(target_os = "macos")]
+                setup_macos_window(&window);
+
                 let _ = window.hide();
 
                 let window_clone = window.clone();

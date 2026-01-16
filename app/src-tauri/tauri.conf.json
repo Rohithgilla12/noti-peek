@@ -22,7 +22,8 @@
         "decorations": false,
         "alwaysOnTop": true,
         "shadow": true,
-        "focus": true
+        "focus": true,
+        "visibleOnAllWorkspaces": true
       }
     ],
     "security": {
