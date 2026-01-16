@@ -87,17 +87,19 @@ function App() {
 
   if (isInitializing) {
     return (
-      <div className="h-screen flex items-center justify-center bg-[var(--bg-base)]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--accent)] mx-auto mb-4" />
-          <p className="text-[length:var(--text-sm)] text-[var(--text-secondary)]">Starting up...</p>
+      <div className="menubar-container">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--accent)] mx-auto mb-4" />
+            <p className="text-[length:var(--text-sm)] text-[var(--text-secondary)]">Starting up...</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-screen flex flex-col bg-[var(--bg-base)]">
+    <div className="menubar-container">
       <Header />
       <NotificationList />
       <StatusBar onOpenSettings={() => setShowSettings(true)} />

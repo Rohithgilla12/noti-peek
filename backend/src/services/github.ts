@@ -47,7 +47,9 @@ function getHtmlUrl(notification: GitHubNotification): string {
 }
 
 export async function fetchGitHubNotifications(connection: Connection): Promise<NotificationResponse[]> {
-  const response = await fetch('https://api.github.com/notifications?all=false&per_page=50', {
+  // all=true shows both read and unread notifications
+  // without participating filter, shows all subscribed notifications
+  const response = await fetch('https://api.github.com/notifications?all=true&per_page=50', {
     headers: {
       'Authorization': `Bearer ${connection.access_token}`,
       'User-Agent': 'noti-peek',
