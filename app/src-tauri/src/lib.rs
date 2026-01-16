@@ -5,21 +5,7 @@ use tauri::{
 use tauri_plugin_positioner::{Position, WindowExt};
 use std::sync::Mutex;
 
-#[cfg(target_os = "macos")]
-use objc2_app_kit::NSApplication;
-#[cfg(target_os = "macos")]
-use objc2_foundation::MainThreadMarker;
-
 struct TrayState(Mutex<Option<TrayIcon>>);
-
-#[cfg(target_os = "macos")]
-fn activate_app() {
-    if let Some(mtm) = MainThreadMarker::new() {
-        let app = NSApplication::sharedApplication(mtm);
-        #[allow(deprecated)]
-        app.activateIgnoringOtherApps(true);
-    }
-}
 
 #[tauri::command]
 fn set_badge_count(count: u32, state: State<TrayState>) -> Result<(), String> {
@@ -61,9 +47,6 @@ pub fn run() {
                             if window.is_visible().unwrap_or(false) {
                                 let _ = window.hide();
                             } else {
-                                #[cfg(target_os = "macos")]
-                                activate_app();
-
                                 let _ = window.move_window(Position::TrayBottomCenter);
                                 let _ = window.show();
                                 let _ = window.set_focus();
