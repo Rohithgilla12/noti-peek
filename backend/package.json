@@ -6,6 +6,9 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "build": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "db:migrate": "wrangler d1 execute noti-peek-db --local --file=./migrations/0001_initial.sql",
     "db:migrate:remote": "wrangler d1 execute noti-peek-db --remote --file=./migrations/0001_initial.sql"
   },
@@ -15,6 +18,7 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250109.0",
     "typescript": "^5.7.0",
+    "vitest": "^2.1.0",
     "wrangler": "^4.0.0"
   }
 }

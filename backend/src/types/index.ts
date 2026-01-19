@@ -47,6 +47,10 @@ export interface Env {
   GITHUB_CLIENT_SECRET: string;
   LINEAR_CLIENT_ID: string;
   LINEAR_CLIENT_SECRET: string;
+  JIRA_CLIENT_ID: string;
+  JIRA_CLIENT_SECRET: string;
+  BITBUCKET_CLIENT_ID: string;
+  BITBUCKET_CLIENT_SECRET: string;
   APP_URL: string;
 }
 

@@ -24,6 +24,22 @@ function LinearIcon() {
   );
 }
 
+function JiraIcon() {
+  return (
+    <svg className="w-5 h-5" style={{ color: '#0052CC' }} fill="currentColor" viewBox="0 0 24 24">
+      <path d="M11.571 11.513H0a5.218 5.218 0 0 0 5.232 5.215h2.13v2.057A5.215 5.215 0 0 0 12.575 24V12.518a1.005 1.005 0 0 0-1.005-1.005zm5.723-5.756H5.736a5.215 5.215 0 0 0 5.215 5.214h2.129v2.058a5.218 5.218 0 0 0 5.215 5.214V6.758a1.001 1.001 0 0 0-1.001-1.001zM23.013 0H11.455a5.215 5.215 0 0 0 5.215 5.215h2.129v2.057A5.215 5.215 0 0 0 24 12.483V1.005A1.005 1.005 0 0 0 23.013 0z"/>
+    </svg>
+  );
+}
+
+function BitbucketIcon() {
+  return (
+    <svg className="w-5 h-5" style={{ color: '#0052CC' }} fill="currentColor" viewBox="0 0 24 24">
+      <path d="M.778 1.213a.768.768 0 0 0-.768.892l3.263 19.81c.084.5.515.868 1.022.873H19.95a.772.772 0 0 0 .77-.646l3.27-20.03a.768.768 0 0 0-.768-.891zM14.52 15.53H9.522L8.17 8.466h7.561z"/>
+    </svg>
+  );
+}
+
 export function Settings({ onClose }: SettingsProps) {
   const connections = useAppStore((state) => state.connections);
   const fetchConnections = useAppStore((state) => state.fetchConnections);
@@ -37,6 +53,8 @@ export function Settings({ onClose }: SettingsProps) {
 
   const isGitHubConnected = connections.some((c) => c.provider === 'github');
   const isLinearConnected = connections.some((c) => c.provider === 'linear');
+  const isJiraConnected = connections.some((c) => c.provider === 'jira');
+  const isBitbucketConnected = connections.some((c) => c.provider === 'bitbucket');
 
   const handleConnectGitHub = async () => {
     await openUrl(api.getGitHubAuthUrl());
@@ -71,6 +89,24 @@ export function Settings({ onClose }: SettingsProps) {
 
   const handleDisconnectLinear = async () => {
     await api.disconnectLinear();
+    await fetchConnections();
+  };
+
+  const handleConnectJira = async () => {
+    await openUrl(api.getJiraAuthUrl());
+  };
+
+  const handleDisconnectJira = async () => {
+    await api.disconnectJira();
+    await fetchConnections();
+  };
+
+  const handleConnectBitbucket = async () => {
+    await openUrl(api.getBitbucketAuthUrl());
+  };
+
+  const handleDisconnectBitbucket = async () => {
+    await api.disconnectBitbucket();
     await fetchConnections();
   };
 
@@ -217,6 +253,68 @@ export function Settings({ onClose }: SettingsProps) {
                 ) : (
                   <button
                     onClick={handleConnectLinear}
+                    className="px-3 py-1 text-[length:var(--text-xs)] bg-[var(--accent)] text-[var(--bg-base)] rounded-[var(--radius-sm)] hover:bg-[var(--accent-hover)] transition-colors duration-150"
+                  >
+                    Connect
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-[var(--bg-surface)] rounded-[var(--radius-md)] border border-[var(--border-muted)]">
+                <div className="flex items-center gap-3">
+                  <JiraIcon />
+                  <div>
+                    <p className="text-[length:var(--text-sm)] font-medium text-[var(--text-primary)]">
+                      Jira
+                    </p>
+                    {isJiraConnected && (
+                      <p className="text-[length:var(--text-xs)] text-[var(--text-secondary)]">
+                        {connections.find((c) => c.provider === 'jira')?.accountName}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                {isJiraConnected ? (
+                  <button
+                    onClick={handleDisconnectJira}
+                    className="px-3 py-1 text-[length:var(--text-xs)] text-[var(--error)] hover:bg-[var(--error)]/10 rounded-[var(--radius-sm)] transition-colors duration-150"
+                  >
+                    Disconnect
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleConnectJira}
+                    className="px-3 py-1 text-[length:var(--text-xs)] bg-[var(--accent)] text-[var(--bg-base)] rounded-[var(--radius-sm)] hover:bg-[var(--accent-hover)] transition-colors duration-150"
+                  >
+                    Connect
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-[var(--bg-surface)] rounded-[var(--radius-md)] border border-[var(--border-muted)]">
+                <div className="flex items-center gap-3">
+                  <BitbucketIcon />
+                  <div>
+                    <p className="text-[length:var(--text-sm)] font-medium text-[var(--text-primary)]">
+                      Bitbucket
+                    </p>
+                    {isBitbucketConnected && (
+                      <p className="text-[length:var(--text-xs)] text-[var(--text-secondary)]">
+                        {connections.find((c) => c.provider === 'bitbucket')?.accountName}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                {isBitbucketConnected ? (
+                  <button
+                    onClick={handleDisconnectBitbucket}
+                    className="px-3 py-1 text-[length:var(--text-xs)] text-[var(--error)] hover:bg-[var(--error)]/10 rounded-[var(--radius-sm)] transition-colors duration-150"
+                  >
+                    Disconnect
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleConnectBitbucket}
                     className="px-3 py-1 text-[length:var(--text-xs)] bg-[var(--accent)] text-[var(--bg-base)] rounded-[var(--radius-sm)] hover:bg-[var(--accent-hover)] transition-colors duration-150"
                   >
                     Connect
