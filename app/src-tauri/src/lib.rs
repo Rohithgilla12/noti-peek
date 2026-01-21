@@ -3,9 +3,68 @@ use tauri::{
     Manager, WindowEvent, State,
 };
 use tauri_plugin_positioner::{Position, WindowExt};
+use tauri_plugin_sql::{Migration, MigrationKind};
 use std::sync::Mutex;
 
 struct TrayState(Mutex<Option<TrayIcon>>);
+
+fn get_migrations() -> Vec<Migration> {
+    vec![
+        Migration {
+            version: 1,
+            description: "create_notifications_table",
+            sql: r#"
+                CREATE TABLE IF NOT EXISTS notifications (
+                    id TEXT PRIMARY KEY,
+                    source TEXT NOT NULL,
+                    type TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    body TEXT,
+                    url TEXT NOT NULL,
+                    repo TEXT,
+                    project TEXT,
+                    author_name TEXT NOT NULL,
+                    author_avatar TEXT,
+                    unread INTEGER NOT NULL DEFAULT 1,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    cached_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+                CREATE INDEX IF NOT EXISTS idx_notifications_source ON notifications(source);
+                CREATE INDEX IF NOT EXISTS idx_notifications_unread ON notifications(unread);
+                CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at);
+            "#,
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 2,
+            description: "create_connections_table",
+            sql: r#"
+                CREATE TABLE IF NOT EXISTS connections (
+                    provider TEXT PRIMARY KEY,
+                    account_id TEXT,
+                    account_name TEXT,
+                    account_avatar TEXT,
+                    connected_at TEXT NOT NULL,
+                    cached_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+            "#,
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 3,
+            description: "create_sync_metadata_table",
+            sql: r#"
+                CREATE TABLE IF NOT EXISTS sync_metadata (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL,
+                    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+            "#,
+            kind: MigrationKind::Up,
+        },
+    ]
+}
 
 #[tauri::command]
 fn set_badge_count(count: u32, state: State<TrayState>) -> Result<(), String> {
@@ -28,6 +87,11 @@ pub fn run() {
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_positioner::init())
+        .plugin(
+            tauri_plugin_sql::Builder::default()
+                .add_migrations("sqlite:noti-peek.db", get_migrations())
+                .build(),
+        )
         .manage(TrayState(Mutex::new(None)))
         .setup(|app| {
             let tray = TrayIconBuilder::new()

@@ -19,6 +19,7 @@ function App() {
   const setAuth = useAppStore((state) => state.setAuth);
   const fetchNotifications = useAppStore((state) => state.fetchNotifications);
   const fetchConnections = useAppStore((state) => state.fetchConnections);
+  const initializeFromCache = useAppStore((state) => state.initializeFromCache);
   const refreshInterval = useAppStore((state) => state.refreshInterval);
   const selectedNotificationId = useAppStore((state) => state.selectedNotificationId);
   const setSelectedNotification = useAppStore((state) => state.setSelectedNotification);
@@ -28,6 +29,8 @@ function App() {
 
   const initialize = useCallback(async () => {
     try {
+      await initializeFromCache();
+
       const store = await load('config.json');
       const authData = await store.get<{ deviceToken: string; userId: string }>(STORE_KEY);
 
@@ -54,7 +57,7 @@ function App() {
     } finally {
       setIsInitializing(false);
     }
-  }, [setAuth]);
+  }, [setAuth, initializeFromCache]);
 
   useEffect(() => {
     initialize();

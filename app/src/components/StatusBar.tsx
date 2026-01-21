@@ -64,9 +64,24 @@ function SyncIcon({ syncing }: { syncing: boolean }) {
   );
 }
 
+function OfflineIcon() {
+  return (
+    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3"
+      />
+    </svg>
+  );
+}
+
 export function StatusBar({ onOpenSettings }: StatusBarProps) {
   const connections = useAppStore((state) => state.connections);
   const isLoading = useAppStore((state) => state.isLoading);
+  const isSyncing = useAppStore((state) => state.isSyncing);
+  const isOffline = useAppStore((state) => state.isOffline);
   const error = useAppStore((state) => state.error);
   const lastSyncTime = useAppStore((state) => state.lastSyncTime);
   const fetchNotifications = useAppStore((state) => state.fetchNotifications);
@@ -80,6 +95,7 @@ export function StatusBar({ onOpenSettings }: StatusBarProps) {
   const isLinearConnected = connections.some((c) => c.provider === 'linear');
   const connectedCount = connections.length;
   const currentTheme = themes.find((t) => t.id === theme);
+  const isBusy = isLoading || isSyncing;
 
   useEffect(() => {
     setLastSyncDisplay(formatLastSync(lastSyncTime));
@@ -160,12 +176,18 @@ export function StatusBar({ onOpenSettings }: StatusBarProps) {
         {/* Sync status */}
         <button
           onClick={() => fetchNotifications()}
-          disabled={isLoading}
-          className="flex items-center gap-1.5 px-1.5 py-0.5 rounded hover:bg-[var(--bg-highlight)] text-[var(--text-secondary)] transition-colors disabled:opacity-50"
-          title={`Last sync: ${lastSyncDisplay}\nClick to refresh`}
+          disabled={isBusy}
+          className={`flex items-center gap-1.5 px-1.5 py-0.5 rounded hover:bg-[var(--bg-highlight)] transition-colors disabled:opacity-50 ${
+            isOffline ? 'text-[var(--warning)]' : 'text-[var(--text-secondary)]'
+          }`}
+          title={isOffline ? 'Offline - showing cached data' : `Last sync: ${lastSyncDisplay}\nClick to refresh`}
         >
-          <SyncIcon syncing={isLoading} />
-          <span>{lastSyncDisplay}</span>
+          {isOffline ? (
+            <OfflineIcon />
+          ) : (
+            <SyncIcon syncing={isBusy} />
+          )}
+          <span>{isSyncing ? 'Syncing...' : lastSyncDisplay}</span>
         </button>
 
         {/* Theme indicator */}

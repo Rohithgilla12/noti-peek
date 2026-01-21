@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { invoke } from '@tauri-apps/api/core';
 import type { Notification, Connection, Provider } from '../lib/types';
 import { api } from '../lib/api';
+import * as db from '../lib/db';
 
 const updateBadgeCount = async (count: number) => {
   try {
@@ -16,8 +17,10 @@ interface AppState {
   userId: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isSyncing: boolean;
   error: string | null;
   lastSyncTime: Date | null;
+  isOffline: boolean;
 
   notifications: Notification[];
   connections: Connection[];
@@ -45,10 +48,12 @@ interface AppState {
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
 
+  initializeFromCache: () => Promise<void>;
   fetchNotifications: () => Promise<void>;
   fetchConnections: () => Promise<void>;
   markAsRead: (id: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
+  clearCache: () => Promise<void>;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -56,8 +61,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   userId: null,
   isAuthenticated: false,
   isLoading: false,
+  isSyncing: false,
   error: null,
   lastSyncTime: null,
+  isOffline: false,
 
   notifications: [],
   connections: [],
@@ -95,20 +102,67 @@ export const useAppStore = create<AppState>((set, get) => ({
   setLoading: (isLoading) => set({ isLoading }),
   setError: (error) => set({ error }),
 
+  initializeFromCache: async () => {
+    try {
+      await db.initDatabase();
+      const [cachedNotifications, cachedConnections, lastSync] = await Promise.all([
+        db.getCachedNotifications(),
+        db.getCachedConnections(),
+        db.getLastSyncTime(),
+      ]);
+
+      if (cachedNotifications.length > 0) {
+        set({ notifications: cachedNotifications });
+        const unreadCount = cachedNotifications.filter(n => n.unread).length;
+        await updateBadgeCount(unreadCount);
+      }
+
+      if (cachedConnections.length > 0) {
+        set({ connections: cachedConnections });
+      }
+
+      if (lastSync) {
+        set({ lastSyncTime: lastSync });
+      }
+    } catch (err) {
+      console.error('Failed to load from cache:', err);
+    }
+  },
+
   fetchNotifications: async () => {
-    set({ isLoading: true, error: null });
+    const { notifications: existingNotifications } = get();
+    const hasCache = existingNotifications.length > 0;
+
+    set({
+      isLoading: !hasCache,
+      isSyncing: hasCache,
+      error: null,
+      isOffline: false,
+    });
+
     try {
       const { notifications, errors } = await api.getNotifications();
       set({ notifications, lastSyncTime: new Date() });
+
       const unreadCount = notifications.filter(n => n.unread).length;
       await updateBadgeCount(unreadCount);
+
+      await db.cacheNotifications(notifications);
+
       if (errors && errors.length > 0) {
         set({ error: errors.map(e => `${e.provider}: ${e.error}`).join(', ') });
       }
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : 'Failed to fetch notifications' });
+      const isNetworkError = err instanceof Error &&
+        (err.message.includes('fetch') || err.message.includes('network'));
+
+      if (isNetworkError && existingNotifications.length > 0) {
+        set({ isOffline: true, error: 'Offline - showing cached data' });
+      } else {
+        set({ error: err instanceof Error ? err.message : 'Failed to fetch notifications' });
+      }
     } finally {
-      set({ isLoading: false });
+      set({ isLoading: false, isSyncing: false });
     }
   },
 
@@ -116,44 +170,58 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       const { connections } = await api.getConnections();
       set({ connections });
+      await db.cacheConnections(connections);
     } catch (err) {
       console.error('Failed to fetch connections:', err);
     }
   },
 
   markAsRead: async (id) => {
+    set((state) => {
+      const notifications = state.notifications.map((n) =>
+        n.id === id ? { ...n, unread: false } : n
+      );
+      const unreadCount = notifications.filter(n => n.unread).length;
+      updateBadgeCount(unreadCount);
+      return { notifications };
+    });
+
+    await db.updateNotificationReadStatus(id, false);
+
     try {
       await api.markAsRead(id);
-      set((state) => {
-        const notifications = state.notifications.map((n) =>
-          n.id === id ? { ...n, unread: false } : n
-        );
-        const unreadCount = notifications.filter(n => n.unread).length;
-        updateBadgeCount(unreadCount);
-        return { notifications };
-      });
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : 'Failed to mark as read' });
+      console.error('Failed to sync read status:', err);
     }
   },
 
   markAllAsRead: async () => {
     const { filter } = get();
+    const source = filter.source === 'all' ? undefined : filter.source;
+
+    set((state) => {
+      const notifications = state.notifications.map((n) =>
+        filter.source === 'all' || n.source === filter.source
+          ? { ...n, unread: false }
+          : n
+      );
+      const unreadCount = notifications.filter(n => n.unread).length;
+      updateBadgeCount(unreadCount);
+      return { notifications };
+    });
+
+    await db.markAllNotificationsRead(source);
+
     try {
-      await api.markAllAsRead(filter.source === 'all' ? undefined : filter.source);
-      set((state) => {
-        const notifications = state.notifications.map((n) =>
-          filter.source === 'all' || n.source === filter.source
-            ? { ...n, unread: false }
-            : n
-        );
-        const unreadCount = notifications.filter(n => n.unread).length;
-        updateBadgeCount(unreadCount);
-        return { notifications };
-      });
+      await api.markAllAsRead(source);
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : 'Failed to mark all as read' });
+      console.error('Failed to sync mark all as read:', err);
     }
+  },
+
+  clearCache: async () => {
+    await db.clearAllCache();
+    set({ notifications: [], connections: [], lastSyncTime: null });
   },
 }));
 
