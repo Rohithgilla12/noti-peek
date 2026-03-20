@@ -158,8 +158,8 @@ BITBUCKET_CLIENT_SECRET = "..."
 
 ```bash
 cd backend
-npm install
-npm test
+bun install
+bun run test
 ```
 
 ### Manual Testing
@@ -174,9 +174,15 @@ npm test
    curl -X POST http://localhost:8787/auth/register
    ```
 
-3. Test OAuth flow by visiting:
-   - Jira: `http://localhost:8787/auth/jira?token=YOUR_DEVICE_TOKEN`
-   - Bitbucket: `http://localhost:8787/auth/bitbucket?token=YOUR_DEVICE_TOKEN`
+3. Start OAuth from authenticated API calls:
+   ```bash
+   curl -X POST http://localhost:8787/auth/jira/start \
+     -H "Authorization: Bearer YOUR_DEVICE_TOKEN"
+
+   curl -X POST http://localhost:8787/auth/bitbucket/start \
+     -H "Authorization: Bearer YOUR_DEVICE_TOKEN"
+   ```
+   Copy the returned `url` into your browser to complete the provider flow.
 
 ---
 
@@ -226,4 +232,4 @@ npm test
 1. **Never commit secrets** to version control
 2. Use `wrangler secret put` for production secrets
 3. Rotate credentials if compromised
-4. Use environment-specific OAuth apps for dev/staging/prod
+4. Use environment-specific OAuth apps for local dev and production

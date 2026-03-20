@@ -41,24 +41,27 @@ class ApiClient {
     return this.request('/auth/verify', { method: 'POST' });
   }
 
-  getGitHubAuthUrl(): string {
-    if (!this.deviceToken) throw new Error('Not authenticated');
-    return `${API_URL}/auth/github?token=${encodeURIComponent(this.deviceToken)}`;
+  private async startOAuth(provider: 'github' | 'linear' | 'jira' | 'bitbucket'): Promise<string> {
+    const response = await this.request<{ url: string; expiresAt: string }>(`/auth/${provider}/start`, {
+      method: 'POST',
+    });
+    return response.url;
   }
 
-  getLinearAuthUrl(): string {
-    if (!this.deviceToken) throw new Error('Not authenticated');
-    return `${API_URL}/auth/linear?token=${encodeURIComponent(this.deviceToken)}`;
+  async getGitHubAuthUrl(): Promise<string> {
+    return this.startOAuth('github');
   }
 
-  getJiraAuthUrl(): string {
-    if (!this.deviceToken) throw new Error('Not authenticated');
-    return `${API_URL}/auth/jira?token=${encodeURIComponent(this.deviceToken)}`;
+  async getLinearAuthUrl(): Promise<string> {
+    return this.startOAuth('linear');
   }
 
-  getBitbucketAuthUrl(): string {
-    if (!this.deviceToken) throw new Error('Not authenticated');
-    return `${API_URL}/auth/bitbucket?token=${encodeURIComponent(this.deviceToken)}`;
+  async getJiraAuthUrl(): Promise<string> {
+    return this.startOAuth('jira');
+  }
+
+  async getBitbucketAuthUrl(): Promise<string> {
+    return this.startOAuth('bitbucket');
   }
 
   async connectGitHubWithToken(token: string): Promise<{ success: boolean; accountName: string; accountAvatar: string }> {

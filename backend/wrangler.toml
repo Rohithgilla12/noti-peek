@@ -4,8 +4,20 @@ compatibility_date = "2025-01-15"
 
 [vars]
 ENVIRONMENT = "development"
+APP_URL = "http://localhost:8787"
+ENABLE_EXPERIMENTAL_PROVIDERS = "false"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "noti-peek-db"
 database_id = "placeholder-will-be-replaced-after-d1-create"
+
+[env.production.vars]
+ENVIRONMENT = "production"
+APP_URL = "https://api.notipeek.dev"
+ENABLE_EXPERIMENTAL_PROVIDERS = "false"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "noti-peek-db-production"
+database_id = "386fa500-ee68-4d6d-8dff-4fee70b5a7a1"

@@ -6,7 +6,27 @@ use tauri_plugin_positioner::{Position, WindowExt};
 use tauri_plugin_sql::{Migration, MigrationKind};
 use std::sync::Mutex;
 
+#[cfg(target_os = "macos")]
+use objc2_app_kit::{NSWindow, NSWindowCollectionBehavior};
+
 struct TrayState(Mutex<Option<TrayIcon>>);
+
+#[cfg(target_os = "macos")]
+fn configure_macos_panel(window: &tauri::WebviewWindow) {
+    const NS_FLOATING_WINDOW_LEVEL: isize = 3;
+
+    let ns_window = window.ns_window().unwrap() as *mut objc2::runtime::AnyObject;
+    let ns_window: &NSWindow = unsafe { &*(ns_window as *const NSWindow) };
+
+    ns_window.setLevel(NS_FLOATING_WINDOW_LEVEL);
+
+    let mut behavior = ns_window.collectionBehavior();
+    behavior.insert(NSWindowCollectionBehavior::FullScreenAuxiliary);
+    behavior.insert(NSWindowCollectionBehavior::Transient);
+    ns_window.setCollectionBehavior(behavior);
+
+    ns_window.setHidesOnDeactivate(false);
+}
 
 fn get_migrations() -> Vec<Migration> {
     vec![
@@ -124,6 +144,9 @@ pub fn run() {
             *tray_state.0.lock().unwrap() = Some(tray);
 
             if let Some(window) = app.get_webview_window("main") {
+                #[cfg(target_os = "macos")]
+                configure_macos_panel(&window);
+
                 let _ = window.hide();
 
                 let window_clone = window.clone();

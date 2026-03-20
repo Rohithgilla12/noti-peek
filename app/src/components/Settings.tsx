@@ -41,6 +41,7 @@ function BitbucketIcon() {
 }
 
 export function Settings({ onClose }: SettingsProps) {
+  const enableExperimentalProviders = import.meta.env.VITE_ENABLE_EXPERIMENTAL_PROVIDERS === 'true';
   const connections = useAppStore((state) => state.connections);
   const fetchConnections = useAppStore((state) => state.fetchConnections);
   const refreshInterval = useAppStore((state) => state.refreshInterval);
@@ -56,8 +57,18 @@ export function Settings({ onClose }: SettingsProps) {
   const isJiraConnected = connections.some((c) => c.provider === 'jira');
   const isBitbucketConnected = connections.some((c) => c.provider === 'bitbucket');
 
+  const startOAuthFlow = async (getAuthUrl: () => Promise<string>) => {
+    setError(null);
+    try {
+      const authUrl = await getAuthUrl();
+      await openUrl(authUrl);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to start OAuth flow');
+    }
+  };
+
   const handleConnectGitHub = async () => {
-    await openUrl(api.getGitHubAuthUrl());
+    await startOAuthFlow(() => api.getGitHubAuthUrl());
   };
 
   const handleConnectGitHubWithToken = async () => {
@@ -79,7 +90,7 @@ export function Settings({ onClose }: SettingsProps) {
   };
 
   const handleConnectLinear = async () => {
-    await openUrl(api.getLinearAuthUrl());
+    await startOAuthFlow(() => api.getLinearAuthUrl());
   };
 
   const handleDisconnectGitHub = async () => {
@@ -93,7 +104,7 @@ export function Settings({ onClose }: SettingsProps) {
   };
 
   const handleConnectJira = async () => {
-    await openUrl(api.getJiraAuthUrl());
+    await startOAuthFlow(() => api.getJiraAuthUrl());
   };
 
   const handleDisconnectJira = async () => {
@@ -102,7 +113,7 @@ export function Settings({ onClose }: SettingsProps) {
   };
 
   const handleConnectBitbucket = async () => {
-    await openUrl(api.getBitbucketAuthUrl());
+    await startOAuthFlow(() => api.getBitbucketAuthUrl());
   };
 
   const handleDisconnectBitbucket = async () => {
@@ -152,6 +163,9 @@ export function Settings({ onClose }: SettingsProps) {
             <h3 className="text-[length:var(--text-sm)] font-medium text-[var(--text-primary)] mb-3">
               Connected Accounts
             </h3>
+            {error && (
+              <p className="mb-3 text-[length:var(--text-xs)] text-[var(--error)]">{error}</p>
+            )}
             <div className="space-y-3">
               <div className="p-3 bg-[var(--bg-surface)] rounded-[var(--radius-md)] border border-[var(--border-muted)]">
                 <div className="flex items-center justify-between">
@@ -215,9 +229,6 @@ export function Settings({ onClose }: SettingsProps) {
                       placeholder="ghp_xxxxxxxxxxxx"
                       className="w-full p-2 text-[length:var(--text-sm)] bg-[var(--bg-base)] border border-[var(--border-default)] rounded-[var(--radius-sm)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-[var(--accent)]"
                     />
-                    {error && (
-                      <p className="text-[length:var(--text-xs)] text-[var(--error)]">{error}</p>
-                    )}
                     <button
                       onClick={handleConnectGitHubWithToken}
                       disabled={isConnecting || !githubToken.trim()}
@@ -260,67 +271,73 @@ export function Settings({ onClose }: SettingsProps) {
                 )}
               </div>
 
-              <div className="flex items-center justify-between p-3 bg-[var(--bg-surface)] rounded-[var(--radius-md)] border border-[var(--border-muted)]">
-                <div className="flex items-center gap-3">
-                  <JiraIcon />
-                  <div>
-                    <p className="text-[length:var(--text-sm)] font-medium text-[var(--text-primary)]">
-                      Jira
-                    </p>
-                    {isJiraConnected && (
-                      <p className="text-[length:var(--text-xs)] text-[var(--text-secondary)]">
-                        {connections.find((c) => c.provider === 'jira')?.accountName}
+              {(enableExperimentalProviders || isJiraConnected) && (
+                <div className="flex items-center justify-between p-3 bg-[var(--bg-surface)] rounded-[var(--radius-md)] border border-[var(--border-muted)]">
+                  <div className="flex items-center gap-3">
+                    <JiraIcon />
+                    <div>
+                      <p className="text-[length:var(--text-sm)] font-medium text-[var(--text-primary)]">
+                        Jira
                       </p>
-                    )}
+                      {isJiraConnected && (
+                        <p className="text-[length:var(--text-xs)] text-[var(--text-secondary)]">
+                          {connections.find((c) => c.provider === 'jira')?.accountName}
+                        </p>
+                      )}
+                    </div>
                   </div>
+                  {isJiraConnected && (
+                    <button
+                      onClick={handleDisconnectJira}
+                      className="px-3 py-1 text-[length:var(--text-xs)] text-[var(--error)] hover:bg-[var(--error)]/10 rounded-[var(--radius-sm)] transition-colors duration-150"
+                    >
+                      Disconnect
+                    </button>
+                  )}
+                  {!isJiraConnected && enableExperimentalProviders && (
+                    <button
+                      onClick={handleConnectJira}
+                      className="px-3 py-1 text-[length:var(--text-xs)] bg-[var(--accent)] text-[var(--bg-base)] rounded-[var(--radius-sm)] hover:bg-[var(--accent-hover)] transition-colors duration-150"
+                    >
+                      Connect
+                    </button>
+                  )}
                 </div>
-                {isJiraConnected ? (
-                  <button
-                    onClick={handleDisconnectJira}
-                    className="px-3 py-1 text-[length:var(--text-xs)] text-[var(--error)] hover:bg-[var(--error)]/10 rounded-[var(--radius-sm)] transition-colors duration-150"
-                  >
-                    Disconnect
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleConnectJira}
-                    className="px-3 py-1 text-[length:var(--text-xs)] bg-[var(--accent)] text-[var(--bg-base)] rounded-[var(--radius-sm)] hover:bg-[var(--accent-hover)] transition-colors duration-150"
-                  >
-                    Connect
-                  </button>
-                )}
-              </div>
+              )}
 
-              <div className="flex items-center justify-between p-3 bg-[var(--bg-surface)] rounded-[var(--radius-md)] border border-[var(--border-muted)]">
-                <div className="flex items-center gap-3">
-                  <BitbucketIcon />
-                  <div>
-                    <p className="text-[length:var(--text-sm)] font-medium text-[var(--text-primary)]">
-                      Bitbucket
-                    </p>
-                    {isBitbucketConnected && (
-                      <p className="text-[length:var(--text-xs)] text-[var(--text-secondary)]">
-                        {connections.find((c) => c.provider === 'bitbucket')?.accountName}
+              {(enableExperimentalProviders || isBitbucketConnected) && (
+                <div className="flex items-center justify-between p-3 bg-[var(--bg-surface)] rounded-[var(--radius-md)] border border-[var(--border-muted)]">
+                  <div className="flex items-center gap-3">
+                    <BitbucketIcon />
+                    <div>
+                      <p className="text-[length:var(--text-sm)] font-medium text-[var(--text-primary)]">
+                        Bitbucket
                       </p>
-                    )}
+                      {isBitbucketConnected && (
+                        <p className="text-[length:var(--text-xs)] text-[var(--text-secondary)]">
+                          {connections.find((c) => c.provider === 'bitbucket')?.accountName}
+                        </p>
+                      )}
+                    </div>
                   </div>
+                  {isBitbucketConnected && (
+                    <button
+                      onClick={handleDisconnectBitbucket}
+                      className="px-3 py-1 text-[length:var(--text-xs)] text-[var(--error)] hover:bg-[var(--error)]/10 rounded-[var(--radius-sm)] transition-colors duration-150"
+                    >
+                      Disconnect
+                    </button>
+                  )}
+                  {!isBitbucketConnected && enableExperimentalProviders && (
+                    <button
+                      onClick={handleConnectBitbucket}
+                      className="px-3 py-1 text-[length:var(--text-xs)] bg-[var(--accent)] text-[var(--bg-base)] rounded-[var(--radius-sm)] hover:bg-[var(--accent-hover)] transition-colors duration-150"
+                    >
+                      Connect
+                    </button>
+                  )}
                 </div>
-                {isBitbucketConnected ? (
-                  <button
-                    onClick={handleDisconnectBitbucket}
-                    className="px-3 py-1 text-[length:var(--text-xs)] text-[var(--error)] hover:bg-[var(--error)]/10 rounded-[var(--radius-sm)] transition-colors duration-150"
-                  >
-                    Disconnect
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleConnectBitbucket}
-                    className="px-3 py-1 text-[length:var(--text-xs)] bg-[var(--accent)] text-[var(--bg-base)] rounded-[var(--radius-sm)] hover:bg-[var(--accent-hover)] transition-colors duration-150"
-                  >
-                    Connect
-                  </button>
-                )}
-              </div>
+              )}
             </div>
           </section>
 

@@ -70,12 +70,15 @@ APP_URL=https://api.notipeek.dev
 
 **Problem**: Browser-based OAuth redirects can't send custom headers (Authorization). The initial implementation required auth header, causing "Missing authorization header" errors.
 
-**Solution**: Changed OAuth endpoints (`GET /auth/github`, `GET /auth/linear`) to accept the device token via query parameter instead:
+**Solution (historical)**: Changed OAuth endpoints (`GET /auth/github`, `GET /auth/linear`) to accept the device token via query parameter.
+
+**Current status (2026 update)**: This flow is deprecated for security reasons. OAuth now starts from authenticated endpoints:
 ```
-GET /auth/github?token={deviceToken}
+POST /auth/github/start
+POST /auth/linear/start
 ```
 
-The backend validates the token from query param instead of header for these specific endpoints.
+These endpoints issue one-time OAuth state records server-side and return provider URLs without embedding device tokens in query params.
 
 ### GitHub PAT Support (2025-01-16)
 

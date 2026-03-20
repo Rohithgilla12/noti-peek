@@ -52,6 +52,7 @@ export interface Env {
   BITBUCKET_CLIENT_ID: string;
   BITBUCKET_CLIENT_SECRET: string;
   APP_URL: string;
+  ENABLE_EXPERIMENTAL_PROVIDERS?: string;
 }
 
 export interface Variables {

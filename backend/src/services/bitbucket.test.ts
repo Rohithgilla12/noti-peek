@@ -3,7 +3,7 @@ import type { Connection, Env } from '../types';
 
 // Mock fetch globally
 const mockFetch = vi.fn();
-global.fetch = mockFetch;
+globalThis.fetch = mockFetch;
 
 // Import after mocking
 import {

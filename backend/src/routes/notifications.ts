@@ -19,8 +19,13 @@ async function getConnection(db: D1Database, userId: string, provider: Provider)
   ).bind(userId, provider).first<Connection>();
 }
 
+function experimentalProvidersEnabled(env: Env): boolean {
+  return env.ENABLE_EXPERIMENTAL_PROVIDERS === 'true';
+}
+
 notifications.get('/', async (c) => {
   const user = c.get('user');
+  const enableExperimental = experimentalProvidersEnabled(c.env);
   const allNotifications: NotificationResponse[] = [];
   const errors: Array<{ provider: string; error: string; resetAt?: number }> = [];
   let githubRateLimit: RateLimitInfo | undefined;
@@ -28,8 +33,8 @@ notifications.get('/', async (c) => {
   const [githubConn, linearConn, jiraConn, bitbucketConn] = await Promise.all([
     getConnection(c.env.DB, user.id, 'github'),
     getConnection(c.env.DB, user.id, 'linear'),
-    getConnection(c.env.DB, user.id, 'jira'),
-    getConnection(c.env.DB, user.id, 'bitbucket'),
+    enableExperimental ? getConnection(c.env.DB, user.id, 'jira') : Promise.resolve(null),
+    enableExperimental ? getConnection(c.env.DB, user.id, 'bitbucket') : Promise.resolve(null),
   ]);
 
   const fetchPromises: Promise<void>[] = [];
@@ -135,6 +140,10 @@ notifications.get('/linear', async (c) => {
 });
 
 notifications.get('/jira', async (c) => {
+  if (!experimentalProvidersEnabled(c.env)) {
+    return c.json({ error: 'Provider not available in this environment' }, 404);
+  }
+
   const user = c.get('user');
   const connection = await getConnection(c.env.DB, user.id, 'jira');
 
@@ -151,6 +160,10 @@ notifications.get('/jira', async (c) => {
 });
 
 notifications.get('/bitbucket', async (c) => {
+  if (!experimentalProvidersEnabled(c.env)) {
+    return c.json({ error: 'Provider not available in this environment' }, 404);
+  }
+
   const user = c.get('user');
   const connection = await getConnection(c.env.DB, user.id, 'bitbucket');
 
@@ -168,6 +181,7 @@ notifications.get('/bitbucket', async (c) => {
 
 notifications.post('/:id/read', async (c) => {
   const user = c.get('user');
+  const enableExperimental = experimentalProvidersEnabled(c.env);
   const notificationId = c.req.param('id');
 
   const [source] = notificationId.split(':');
@@ -185,12 +199,18 @@ notifications.post('/:id/read', async (c) => {
     }
     await markLinearNotificationAsRead(connection, notificationId);
   } else if (source === 'jira') {
+    if (!enableExperimental) {
+      return c.json({ error: 'Provider not available in this environment' }, 404);
+    }
     const connection = await getConnection(c.env.DB, user.id, 'jira');
     if (!connection) {
       return c.json({ error: 'Jira not connected' }, 400);
     }
     await markJiraNotificationAsRead(connection, notificationId, c.env, c.env.DB);
   } else if (source === 'bitbucket') {
+    if (!enableExperimental) {
+      return c.json({ error: 'Provider not available in this environment' }, 404);
+    }
     const connection = await getConnection(c.env.DB, user.id, 'bitbucket');
     if (!connection) {
       return c.json({ error: 'Bitbucket not connected' }, 400);
@@ -205,8 +225,13 @@ notifications.post('/:id/read', async (c) => {
 
 notifications.post('/read-all', async (c) => {
   const user = c.get('user');
+  const enableExperimental = experimentalProvidersEnabled(c.env);
   const body = await c.req.json<{ source?: Provider }>().catch(() => ({ source: undefined }));
   const errors: Array<{ provider: string; error: string }> = [];
+
+  if (!enableExperimental && (body.source === 'jira' || body.source === 'bitbucket')) {
+    return c.json({ error: 'Provider not available in this environment' }, 404);
+  }
 
   const markPromises: Promise<void>[] = [];
 
@@ -230,7 +255,7 @@ notifications.post('/read-all', async (c) => {
     }
   }
 
-  if (!body.source || body.source === 'jira') {
+  if (enableExperimental && (!body.source || body.source === 'jira')) {
     const connection = await getConnection(c.env.DB, user.id, 'jira');
     if (connection) {
       markPromises.push(
@@ -240,7 +265,7 @@ notifications.post('/read-all', async (c) => {
     }
   }
 
-  if (!body.source || body.source === 'bitbucket') {
+  if (enableExperimental && (!body.source || body.source === 'bitbucket')) {
     const connection = await getConnection(c.env.DB, user.id, 'bitbucket');
     if (connection) {
       markPromises.push(

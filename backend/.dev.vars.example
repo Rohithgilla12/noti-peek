@@ -1,0 +1,14 @@
+# Copy to `.dev.vars` for local `wrangler dev`.
+# Do not commit real secrets.
+
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=
+
+LINEAR_CLIENT_ID=
+LINEAR_CLIENT_SECRET=
+
+JIRA_CLIENT_ID=
+JIRA_CLIENT_SECRET=
+
+BITBUCKET_CLIENT_ID=
+BITBUCKET_CLIENT_SECRET=
