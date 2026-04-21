@@ -12,11 +12,9 @@ export function TopNav({ onOpenSettings }: Props) {
   const setActiveTab = useAppStore((s) => s.setActiveTab);
 
   return (
-    <header className="topnav">
-      <div className="brand">
-        noti&#8209;peek<em>.</em>
-      </div>
-      <nav className="tabs" role="tablist">
+    <header className="topnav" data-tauri-drag-region>
+      <div className="topnav-gutter" aria-hidden="true" data-tauri-drag-region />
+      <nav className="topnav-tabs" role="tablist">
         <button
           aria-current={activeTab === 'inbox'}
           role="tab"
@@ -26,9 +24,7 @@ export function TopNav({ onOpenSettings }: Props) {
         >
           inbox
           {unread > 0 && (
-            <span style={{ marginLeft: 6, color: 'var(--accent)' }}>
-              {String(unread).padStart(2, '0')}
-            </span>
+            <span className="topnav-tab-badge">{String(unread).padStart(2, '0')}</span>
           )}
         </button>
         <button
@@ -41,7 +37,7 @@ export function TopNav({ onOpenSettings }: Props) {
           pulse
         </button>
       </nav>
-      <div className="actions">
+      <div className="topnav-actions">
         <button
           onClick={() => fetchNotifications()}
           disabled={isSyncing}
@@ -51,8 +47,8 @@ export function TopNav({ onOpenSettings }: Props) {
         >
           <svg
             className={isSyncing ? 'spinner' : undefined}
-            width="12"
-            height="12"
+            width="13"
+            height="13"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -65,8 +61,8 @@ export function TopNav({ onOpenSettings }: Props) {
         </button>
         <button onClick={onOpenSettings} title="Settings (⌘,)" aria-label="Settings" type="button">
           <svg
-            width="12"
-            height="12"
+            width="13"
+            height="13"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"

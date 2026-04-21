@@ -346,6 +346,43 @@ kbd {
   cursor: default;
 }
 
+.topnav-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 100%;
+}
+.topnav-tabs button {
+  -webkit-app-region: no-drag;
+  font: inherit;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--ink-3);
+  background: transparent;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+}
+.topnav-tabs button:hover {
+  color: var(--ink-1);
+}
+.topnav-tabs button[aria-current='true'] {
+  color: var(--ink-1);
+  background: var(--bg-1);
+}
+.topnav-tab-badge {
+  font-variant-numeric: tabular-nums;
+  font-size: 10px;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+}
+
 /* -------------------------------------------------------- */
 /*  Update banner                                           */
 /* -------------------------------------------------------- */
