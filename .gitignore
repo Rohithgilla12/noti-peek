@@ -4,3 +4,6 @@ dist/
 .dev.vars
 *.log
 .DS_Store
+
+# Internal plans, setup guides, and working notes — not for the public repo.
+docs/
