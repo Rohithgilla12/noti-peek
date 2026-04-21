@@ -1,0 +1,72 @@
+name: Deploy backend
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy-backend.yml'
+  workflow_dispatch:
+    inputs:
+      skip_tests:
+        description: 'Skip tests (emergency deploy only)'
+        type: boolean
+        default: false
+
+# Prevent two deploys racing against the same Worker.
+concurrency:
+  group: deploy-backend-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Optional: tie to a GitHub Environment so you can add a required-reviewer
+    # gate later. Create "production" in repo Settings → Environments if you
+    # want that; otherwise this line is a no-op.
+    environment: production
+    defaults:
+      run:
+        working-directory: backend
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install deps
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        run: bun run build
+
+      - name: Tests
+        if: ${{ inputs.skip_tests != true }}
+        run: bun run test
+
+      - name: Deploy to Cloudflare Workers (production)
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: backend
+          command: deploy --env production
+          packageManager: bun
+
+      - name: Smoke test /health
+        run: |
+          for i in 1 2 3 4 5; do
+            code=$(curl -s -o /tmp/body -w "%{http_code}" https://noti-peek-api-production.rohithgilla.workers.dev/health || true)
+            if [ "$code" = "200" ]; then
+              echo "health OK: $(cat /tmp/body)"
+              exit 0
+            fi
+            echo "attempt $i: HTTP $code, retrying..."
+            sleep 3
+          done
+          echo "health check failed after 5 attempts"
+          cat /tmp/body || true
+          exit 1
