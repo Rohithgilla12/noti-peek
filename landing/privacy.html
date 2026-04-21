@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Privacy — noti-peek</title>
+    <meta
+      name="description"
+      content="What noti-peek stores, where it stores it, and how to delete it."
+    />
+    <meta name="color-scheme" content="dark light" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231e1e2e'/%3E%3Ccircle cx='32' cy='32' r='14' fill='none' stroke='%2389b4fa' stroke-width='4'/%3E%3Ccircle cx='32' cy='32' r='5' fill='%23f9e2af'/%3E%3C/svg%3E" />
+    <style>
+      :root {
+        --base: #1e1e2e;
+        --mantle: #181825;
+        --crust: #11111b;
+        --surface0: #313244;
+        --surface1: #45475a;
+        --text: #cdd6f4;
+        --subtext1: #bac2de;
+        --subtext0: #a6adc8;
+        --overlay0: #6c7086;
+        --blue: #89b4fa;
+        --yellow: #f9e2af;
+        --red: #f38ba8;
+        --green: #a6e3a1;
+        --radius: 12px;
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--base);
+        color: var(--text);
+        font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Inter",
+          "Segoe UI", Helvetica, Arial, sans-serif;
+        line-height: 1.65;
+        -webkit-font-smoothing: antialiased;
+      }
+      a { color: var(--blue); text-decoration: none; }
+      a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+      .container {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+
+      header.nav {
+        padding: 24px 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 600;
+        color: var(--text);
+      }
+      .brand .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--yellow);
+      }
+      .brand:hover { text-decoration: none; }
+
+      nav.links a {
+        color: var(--subtext0);
+        margin-left: 20px;
+        font-size: 14px;
+      }
+      nav.links a:hover { color: var(--text); text-decoration: none; }
+
+      h1 {
+        font-size: clamp(32px, 5vw, 44px);
+        line-height: 1.08;
+        letter-spacing: -0.02em;
+        margin: 32px 0 8px;
+      }
+      .stamp {
+        color: var(--overlay0);
+        font-size: 13px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        margin-bottom: 36px;
+        display: inline-block;
+      }
+
+      h2 {
+        font-size: 20px;
+        margin: 40px 0 10px;
+        letter-spacing: -0.01em;
+      }
+      p, li {
+        color: var(--subtext1);
+        font-size: 15px;
+      }
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 13px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        background: var(--surface0);
+        color: var(--yellow);
+      }
+
+      .callout {
+        background: var(--mantle);
+        border: 1px solid var(--surface0);
+        border-left: 3px solid var(--blue);
+        padding: 16px 18px;
+        border-radius: var(--radius);
+        margin: 24px 0;
+      }
+      .callout strong { color: var(--text); }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 16px 0 24px;
+        font-size: 14px;
+      }
+      th, td {
+        text-align: left;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--surface0);
+        vertical-align: top;
+      }
+      th {
+        color: var(--subtext0);
+        font-weight: 500;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      td code { font-size: 12px; }
+
+      footer {
+        border-top: 1px solid var(--surface0);
+        padding: 28px 0 48px;
+        color: var(--overlay0);
+        font-size: 13px;
+        margin-top: 64px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <header class="nav">
+        <a class="brand" href="/">
+          <span class="dot" aria-hidden="true"></span>
+          <span>noti-peek</span>
+        </a>
+        <nav class="links">
+          <a href="/">Home</a>
+          <a href="https://github.com/Rohithgilla12/noti-peek" rel="noopener">GitHub</a>
+        </nav>
+      </header>
+
+      <h1>Privacy, plainly.</h1>
+      <span class="stamp">Last updated: 2026-04-20</span>
+
+      <div class="callout">
+        <strong>The short version.</strong> noti-peek fetches notifications from
+        providers you explicitly connect (GitHub, Linear, Jira, Bitbucket),
+        stores your OAuth tokens in a Cloudflare D1 database scoped to an
+        anonymous device token, and does not sell, share, or analyze your
+        data. Notification bodies live only in your app's memory — never in our
+        database. You can revoke and delete everything from Settings → Disconnect.
+      </div>
+
+      <h2>1. What we store</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Field</th>
+            <th>Where</th>
+            <th>Why</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>device_token</code></td>
+            <td>D1 (server), local store (app)</td>
+            <td>Anonymous identifier so your device can fetch its own notifications. No email, no name.</td>
+          </tr>
+          <tr>
+            <td>OAuth access &amp; refresh tokens</td>
+            <td>D1, per-provider row</td>
+            <td>Needed to call GitHub/Linear/Jira/Bitbucket on your behalf.</td>
+          </tr>
+          <tr>
+            <td>Provider account name / avatar URL</td>
+            <td>D1, per-provider row</td>
+            <td>So the app can show <em>which</em> GitHub account is connected.</td>
+          </tr>
+          <tr>
+            <td>OAuth <code>state</code> nonces</td>
+            <td>D1, auto-deleted after ~10 min</td>
+            <td>CSRF protection during sign-in.</td>
+          </tr>
+          <tr>
+            <td>Rate-limit counters</td>
+            <td>D1, rolling window</td>
+            <td>So one runaway device doesn't burn the shared quota.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>2. What we do NOT store</h2>
+      <ul>
+        <li>Your name, email, or any provider account data beyond display name + avatar URL.</li>
+        <li>Notification bodies, issue titles, PR diffs, or comment text — those pass through the Worker at request time and are never persisted.</li>
+        <li>Analytics events tied to you personally. No behavioral profile.</li>
+        <li>Your IP address beyond what Cloudflare's edge normally logs for abuse prevention.</li>
+        <li>Any data from providers you haven't explicitly connected.</li>
+      </ul>
+
+      <h2>3. How data flows</h2>
+      <p>
+        When the app asks for notifications, the flow is:
+      </p>
+      <ol>
+        <li>App sends its <code>device_token</code> to <code>api.notipeek.dev</code>.</li>
+        <li>Worker looks up which providers that device has connected and fetches from each provider's API, in parallel, using your access token.</li>
+        <li>Results are merged, optionally bundled, and returned to the app.</li>
+        <li>Nothing is written back to D1 except bookkeeping: rate-limit counters and (if a token was refreshed) the new token.</li>
+      </ol>
+      <p>
+        Requests to <code>api.notipeek.dev</code> are served by Cloudflare Workers,
+        which may log request metadata for abuse prevention. See
+        <a href="https://www.cloudflare.com/privacypolicy/" rel="noopener">Cloudflare's privacy policy</a>
+        for their retention.
+      </p>
+
+      <h2>4. Telemetry &amp; crash reports</h2>
+      <p>
+        The desktop app can optionally send anonymous crash reports via
+        Sentry, scrubbed of notification content. This is
+        <strong>off by default in release builds</strong> and on-by-default only
+        in explicitly labelled beta builds; you can toggle it in Settings →
+        Diagnostics at any time. We never log provider names, titles, bodies,
+        URLs, or user identifiers in telemetry — only stack traces and app
+        version.
+      </p>
+
+      <h2>5. Deletion</h2>
+      <p>
+        In the app, <strong>Settings → Disconnect</strong> on any provider
+        revokes the access token with the provider (where their API supports it)
+        and deletes the corresponding D1 row.
+        <strong>Settings → Delete my account</strong> deletes the
+        <code>device_token</code> and every associated connection row. After
+        deletion, the server cannot re-identify you; the data is gone.
+      </p>
+      <p>
+        If you can't reach the app (lost device, etc.), email
+        <a href="mailto:privacy@notipeek.dev">privacy@notipeek.dev</a> with your
+        device token and we will purge it on request.
+      </p>
+
+      <h2>6. Third parties</h2>
+      <p>
+        Two categories of third parties receive data:
+      </p>
+      <ul>
+        <li>
+          <strong>The providers you connect</strong> (GitHub, Linear, Jira,
+          Bitbucket). These receive your API calls because they have to — that
+          is the point. Review their policies for their handling.
+        </li>
+        <li>
+          <strong>Infrastructure</strong>: Cloudflare (Workers + D1) for the API
+          and database, GitHub Releases for app downloads, and optionally
+          Sentry for crash reports if you opt in.
+        </li>
+      </ul>
+      <p>
+        We do not share data with advertisers, data brokers, or analytics
+        vendors. We do not sell data, ever.
+      </p>
+
+      <h2>7. Security</h2>
+      <p>
+        OAuth tokens in D1 are transmitted only over TLS and scoped to a single
+        device token. A stolen device token lets someone read your notifications
+        but not reset your device-token-to-provider binding without your OAuth
+        consent. We recommend revoking in-app if you suspect any compromise;
+        this invalidates the tokens with the provider directly.
+      </p>
+
+      <h2>8. Changes to this policy</h2>
+      <p>
+        Material changes will be announced in-app on next launch and in the
+        release notes on GitHub. Dates above reflect the last substantive edit.
+      </p>
+
+      <h2>9. Contact</h2>
+      <p>
+        Privacy questions: <a href="mailto:privacy@notipeek.dev">privacy@notipeek.dev</a>.<br />
+        Bugs or feature requests:
+        <a href="https://github.com/Rohithgilla12/noti-peek/issues" rel="noopener">the issue tracker</a>.
+      </p>
+    </div>
+
+    <footer>
+      <div class="container">
+        <a href="/">← back to noti-peek</a>
+      </div>
+    </footer>
+  </body>
+</html>

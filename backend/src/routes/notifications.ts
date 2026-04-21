@@ -7,6 +7,7 @@ import { fetchGitHubNotifications, markGitHubNotificationAsRead, markAllGitHubNo
 import { fetchLinearNotifications, markLinearNotificationAsRead, markAllLinearNotificationsAsRead } from '../services/linear';
 import { fetchJiraNotifications, markJiraNotificationAsRead, markAllJiraNotificationsAsRead } from '../services/jira';
 import { fetchBitbucketNotifications, markBitbucketNotificationAsRead, markAllBitbucketNotificationsAsRead } from '../services/bitbucket';
+import { bundleNotifications, BUNDLING_VERSION } from '../services/bundling';
 
 const notifications = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -90,8 +91,20 @@ notifications.get('/', async (c) => {
     new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
   );
 
+  // Bundling is on by default. Client may opt out with ?bundle=false (useful
+  // for debugging / A-B comparison). Heuristic is pure and cheap — runs on the
+  // already-aggregated in-memory list, never persisted.
+  const bundleParam = c.req.query('bundle');
+  const bundlingEnabled = bundleParam !== 'false' && bundleParam !== '0';
+
+  const rows = bundlingEnabled ? bundleNotifications(allNotifications) : undefined;
+
   return c.json({
+    // Flat list retained for back-compat with older app builds. New app builds
+    // should prefer `rows` (NotificationRow[]) when present.
     notifications: allNotifications,
+    rows,
+    bundling_version: bundlingEnabled ? BUNDLING_VERSION : undefined,
     errors: errors.length > 0 ? errors : undefined,
     rateLimitInfo: githubRateLimit,
   });

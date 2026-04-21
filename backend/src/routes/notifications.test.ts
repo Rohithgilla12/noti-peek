@@ -85,6 +85,56 @@ describe('Notifications route provider gating', () => {
     expect(response.status).toBe(404);
   });
 
+  it('returns bundling_version and rows in the envelope by default', async () => {
+    const mockDb = createMockDb();
+    mockDb.usersByToken.set('device-token-1', { id: 'user-1', device_token: 'device-token-1' });
+    const env = createEnv(mockDb.db);
+
+    const response = await notifications.request(
+      '/',
+      {
+        method: 'GET',
+        headers: { Authorization: 'Bearer device-token-1' },
+      },
+      env
+    );
+
+    expect(response.status).toBe(200);
+    const body = await response.json<{
+      notifications: unknown[];
+      rows: unknown[] | undefined;
+      bundling_version: number | undefined;
+    }>();
+    expect(Array.isArray(body.notifications)).toBe(true);
+    expect(Array.isArray(body.rows)).toBe(true);
+    expect(body.bundling_version).toBe(1);
+  });
+
+  it('omits bundling fields when ?bundle=false is passed', async () => {
+    const mockDb = createMockDb();
+    mockDb.usersByToken.set('device-token-1', { id: 'user-1', device_token: 'device-token-1' });
+    const env = createEnv(mockDb.db);
+
+    const response = await notifications.request(
+      '/?bundle=false',
+      {
+        method: 'GET',
+        headers: { Authorization: 'Bearer device-token-1' },
+      },
+      env
+    );
+
+    expect(response.status).toBe(200);
+    const body = await response.json<{
+      notifications: unknown[];
+      rows: unknown;
+      bundling_version: unknown;
+    }>();
+    expect(Array.isArray(body.notifications)).toBe(true);
+    expect(body.rows).toBeUndefined();
+    expect(body.bundling_version).toBeUndefined();
+  });
+
   it('returns 404 when marking all Jira notifications as read while experimental providers are disabled', async () => {
     const mockDb = createMockDb();
     mockDb.usersByToken.set('device-token-1', { id: 'user-1', device_token: 'device-token-1' });

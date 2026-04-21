@@ -112,6 +112,8 @@ pub fn run() {
                 .add_migrations("sqlite:noti-peek.db", get_migrations())
                 .build(),
         )
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .manage(TrayState(Mutex::new(None)))
         .setup(|app| {
             let tray = TrayIconBuilder::new()

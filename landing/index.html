@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>noti-peek — one menubar, every dev notification</title>
+    <meta
+      name="description"
+      content="A fast macOS menubar app that unifies GitHub, Linear, Jira and Bitbucket notifications, intelligently bundled so you don't drown."
+    />
+    <meta name="color-scheme" content="dark light" />
+    <meta property="og:title" content="noti-peek" />
+    <meta
+      property="og:description"
+      content="One menubar, every dev notification — intelligently bundled."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://notipeek.dev" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231e1e2e'/%3E%3Ccircle cx='32' cy='32' r='14' fill='none' stroke='%2389b4fa' stroke-width='4'/%3E%3Ccircle cx='32' cy='32' r='5' fill='%23f9e2af'/%3E%3C/svg%3E" />
+    <style>
+      :root {
+        /* Catppuccin Mocha — matches the app default theme. */
+        --base: #1e1e2e;
+        --mantle: #181825;
+        --crust: #11111b;
+        --surface0: #313244;
+        --surface1: #45475a;
+        --text: #cdd6f4;
+        --subtext1: #bac2de;
+        --subtext0: #a6adc8;
+        --overlay0: #6c7086;
+        --blue: #89b4fa;
+        --mauve: #cba6f7;
+        --green: #a6e3a1;
+        --peach: #fab387;
+        --yellow: #f9e2af;
+        --red: #f38ba8;
+        --radius: 12px;
+      }
+
+      * { box-sizing: border-box; }
+      html { -webkit-text-size-adjust: 100%; }
+
+      body {
+        margin: 0;
+        background: var(--base);
+        color: var(--text);
+        font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Inter",
+          "Segoe UI", Helvetica, Arial, sans-serif;
+        font-feature-settings: "ss01", "cv11";
+        line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      a { color: var(--blue); text-decoration: none; }
+      a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+      .container {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+
+      header.nav {
+        padding: 24px 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 600;
+        color: var(--text);
+      }
+      .brand .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--yellow);
+        box-shadow: 0 0 0 4px rgba(249, 226, 175, 0.15);
+      }
+      .brand:hover { text-decoration: none; }
+
+      nav.links a {
+        color: var(--subtext0);
+        margin-left: 20px;
+        font-size: 14px;
+      }
+      nav.links a:hover { color: var(--text); text-decoration: none; }
+
+      /* Hero */
+      .hero {
+        padding: 72px 0 64px;
+        text-align: left;
+      }
+      .hero h1 {
+        font-size: clamp(36px, 6vw, 60px);
+        line-height: 1.05;
+        letter-spacing: -0.02em;
+        margin: 0 0 20px;
+      }
+      .hero h1 .accent { color: var(--yellow); }
+      .hero p.lede {
+        font-size: 18px;
+        color: var(--subtext1);
+        max-width: 620px;
+        margin: 0 0 32px;
+      }
+
+      .cta-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 18px;
+        border-radius: var(--radius);
+        border: 1px solid transparent;
+        font-weight: 500;
+        font-size: 15px;
+        transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+      }
+      .btn:hover { text-decoration: none; transform: translateY(-1px); }
+      .btn-primary {
+        background: var(--blue);
+        color: var(--crust);
+      }
+      .btn-primary:hover { background: #a6c8ff; }
+      .btn-ghost {
+        background: transparent;
+        color: var(--text);
+        border-color: var(--surface1);
+      }
+      .btn-ghost:hover { background: var(--surface0); border-color: var(--overlay0); }
+      .btn .kbd {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        background: rgba(0,0,0,0.18);
+      }
+
+      .sub-note {
+        color: var(--overlay0);
+        font-size: 13px;
+        margin-top: 14px;
+      }
+
+      /* Mock panel */
+      .mock {
+        margin: 16px 0 0;
+        background: var(--mantle);
+        border: 1px solid var(--surface0);
+        border-radius: 16px;
+        padding: 14px;
+        box-shadow:
+          0 0 0 1px rgba(0,0,0,0.2),
+          0 24px 60px -24px rgba(0,0,0,0.6);
+      }
+      .mock .titlebar {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 6px 12px;
+        border-bottom: 1px solid var(--surface0);
+      }
+      .mock .titlebar .stoplight {
+        width: 10px; height: 10px; border-radius: 50%;
+      }
+      .mock .titlebar .stoplight.r { background: var(--red); }
+      .mock .titlebar .stoplight.y { background: var(--yellow); }
+      .mock .titlebar .stoplight.g { background: var(--green); }
+      .mock .titlebar .title {
+        margin-left: 12px; color: var(--subtext0); font-size: 13px;
+      }
+
+      .row {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 12px;
+        padding: 12px 10px;
+        border-bottom: 1px solid var(--surface0);
+        align-items: center;
+      }
+      .row:last-child { border-bottom: none; }
+      .avatar {
+        width: 28px; height: 28px; border-radius: 50%;
+        background: linear-gradient(135deg, var(--mauve), var(--blue));
+        color: var(--crust);
+        display: inline-flex; align-items: center; justify-content: center;
+        font-weight: 600; font-size: 12px;
+      }
+      .avatar.stack {
+        position: relative; width: 52px; height: 28px;
+        background: none;
+      }
+      .avatar.stack span {
+        position: absolute; top: 0; width: 28px; height: 28px; border-radius: 50%;
+        display: inline-flex; align-items: center; justify-content: center;
+        font-size: 12px; font-weight: 600; color: var(--crust);
+        border: 2px solid var(--mantle);
+      }
+      .avatar.stack span:nth-child(1) { left: 0;  background: var(--mauve);  }
+      .avatar.stack span:nth-child(2) { left: 14px; background: var(--peach); }
+      .avatar.stack span:nth-child(3) { left: 28px; background: var(--green); color: var(--crust); }
+      .row .title { color: var(--text); font-size: 14px; }
+      .row .meta  { color: var(--subtext0); font-size: 12px; margin-top: 2px; }
+      .row .badge {
+        font-size: 11px; padding: 2px 8px; border-radius: 999px;
+        background: var(--surface0); color: var(--subtext1);
+      }
+      .row .badge.bundle { background: var(--blue); color: var(--crust); }
+      .row.unread { background: rgba(137, 180, 250, 0.04); }
+
+      /* Features */
+      section.features { padding: 80px 0; }
+      section.features h2 {
+        font-size: 28px; margin: 0 0 40px; letter-spacing: -0.01em;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 20px;
+      }
+      @media (max-width: 720px) {
+        .grid { grid-template-columns: 1fr; }
+        header.nav { padding: 18px 0; }
+        .hero { padding: 48px 0; }
+      }
+      .card {
+        background: var(--mantle);
+        border: 1px solid var(--surface0);
+        border-radius: var(--radius);
+        padding: 22px;
+      }
+      .card h3 {
+        margin: 0 0 8px;
+        font-size: 17px;
+        color: var(--text);
+      }
+      .card p {
+        margin: 0;
+        color: var(--subtext0);
+        font-size: 14px;
+      }
+      .card .ico {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 6px;
+        background: var(--surface0);
+        color: var(--yellow);
+        font-size: 12px;
+        margin-bottom: 14px;
+      }
+
+      /* Providers strip */
+      .providers {
+        padding: 40px 0 80px;
+        text-align: center;
+      }
+      .providers .label {
+        color: var(--overlay0);
+        font-size: 12px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        margin-bottom: 16px;
+      }
+      .provider-pills {
+        display: inline-flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .pill {
+        background: var(--mantle);
+        border: 1px solid var(--surface0);
+        padding: 8px 14px;
+        border-radius: 999px;
+        font-size: 13px;
+        color: var(--subtext1);
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+      .pill .on  { color: var(--green); }
+      .pill .exp { color: var(--peach); }
+
+      /* FAQ */
+      section.faq { padding: 0 0 80px; }
+      section.faq h2 { font-size: 24px; margin: 0 0 24px; }
+      .faq-item {
+        border-top: 1px solid var(--surface0);
+        padding: 18px 0;
+      }
+      .faq-item:last-child { border-bottom: 1px solid var(--surface0); }
+      .faq-item summary {
+        cursor: pointer;
+        font-weight: 500;
+        color: var(--text);
+        list-style: none;
+      }
+      .faq-item summary::-webkit-details-marker { display: none; }
+      .faq-item summary::after {
+        content: "+";
+        float: right;
+        color: var(--subtext0);
+        font-family: ui-monospace, monospace;
+      }
+      .faq-item[open] summary::after { content: "–"; }
+      .faq-item p {
+        margin: 10px 0 0;
+        color: var(--subtext1);
+        font-size: 14px;
+      }
+
+      footer {
+        border-top: 1px solid var(--surface0);
+        padding: 28px 0 48px;
+        color: var(--overlay0);
+        font-size: 13px;
+      }
+      footer .row-f {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      footer a { color: var(--subtext0); }
+      footer a:hover { color: var(--text); }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <header class="nav">
+        <a class="brand" href="/">
+          <span class="dot" aria-hidden="true"></span>
+          <span>noti-peek</span>
+        </a>
+        <nav class="links" aria-label="Top nav">
+          <a href="#features">Features</a>
+          <a href="#faq">FAQ</a>
+          <a href="https://github.com/Rohithgilla12/noti-peek" rel="noopener">GitHub</a>
+          <a href="/privacy.html">Privacy</a>
+        </nav>
+      </header>
+
+      <section class="hero">
+        <h1>
+          One menubar.<br />
+          <span class="accent">Every dev notification.</span>
+        </h1>
+        <p class="lede">
+          noti-peek is a fast macOS menubar app that unifies your GitHub, Linear,
+          Jira and Bitbucket notifications — then intelligently bundles the noise
+          so you only see what actually changed.
+        </p>
+
+        <div class="cta-row">
+          <a class="btn btn-primary" href="https://github.com/Rohithgilla12/noti-peek/releases/latest" rel="noopener">
+            Download for macOS
+          </a>
+          <a class="btn btn-ghost" href="https://github.com/Rohithgilla12/noti-peek" rel="noopener">
+            View on GitHub
+            <span class="kbd">★</span>
+          </a>
+        </div>
+        <p class="sub-note">
+          macOS 10.15+ · Apple-signed &amp; notarized · Apple Silicon and Intel
+          · Auto-updates.
+        </p>
+
+        <!-- Mock panel -->
+        <div class="mock" aria-hidden="true">
+          <div class="titlebar">
+            <span class="stoplight r"></span>
+            <span class="stoplight y"></span>
+            <span class="stoplight g"></span>
+            <span class="title">noti-peek — 7 unread</span>
+          </div>
+
+          <div class="row unread">
+            <div class="avatar stack">
+              <span>RG</span><span>JP</span><span>MK</span>
+            </div>
+            <div>
+              <div class="title">rohithgilla/noti-peek#42 — Smart bundling PR</div>
+              <div class="meta">3 reviews, 2 comments · bundle of 5 · 12m ago</div>
+            </div>
+            <span class="badge bundle">bundle</span>
+          </div>
+
+          <div class="row unread">
+            <div class="avatar">DS</div>
+            <div>
+              <div class="title">ENG-214 — Release blocker: D1 write contention</div>
+              <div class="meta">Linear · assigned to you · 41m ago</div>
+            </div>
+            <span class="badge">linear</span>
+          </div>
+
+          <div class="row">
+            <div class="avatar">CH</div>
+            <div>
+              <div class="title">PROJ-1033 — Postmortem review ready</div>
+              <div class="meta">Jira · 2h ago</div>
+            </div>
+            <span class="badge">jira</span>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <section class="features" id="features">
+      <div class="container">
+        <h2>Built to disappear into your workflow.</h2>
+        <div class="grid">
+          <div class="card">
+            <span class="ico">bundle</span>
+            <h3>Smart bundling</h3>
+            <p>
+              Multiple comments on the same PR or issue collapse into a single row
+              with actor stack, type summary and unread count. Configurable, and
+              always a toggle away from the raw feed.
+            </p>
+          </div>
+          <div class="card">
+            <span class="ico">hub</span>
+            <h3>Every provider, one feed</h3>
+            <p>
+              GitHub and Linear on day one, with Jira and Bitbucket behind an
+              experimental flag. Consistent UI, consistent keyboard shortcuts,
+              consistent mark-as-read semantics.
+            </p>
+          </div>
+          <div class="card">
+            <span class="ico">local</span>
+            <h3>Runs on your laptop</h3>
+            <p>
+              Tauri native app (~15&nbsp;MB). Your tokens are stored encrypted
+              locally; notification bodies never leave your machine. See the
+              <a href="/privacy.html">privacy statement</a>.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="container">
+      <section class="providers">
+        <div class="label">Supported providers</div>
+        <div class="provider-pills">
+          <span class="pill">GitHub <span class="on">●</span> stable</span>
+          <span class="pill">Linear <span class="on">●</span> stable</span>
+          <span class="pill">Jira <span class="exp">●</span> experimental</span>
+          <span class="pill">Bitbucket <span class="exp">●</span> experimental</span>
+        </div>
+      </section>
+
+      <section class="faq" id="faq">
+        <h2>Questions</h2>
+
+        <details class="faq-item">
+          <summary>Is this free?</summary>
+          <p>
+            The current builds are free while noti-peek is in beta. Paid tiers may
+            appear later for heavier providers or team features — existing users
+            will get clear notice, nothing swapped under you.
+          </p>
+        </details>
+
+        <details class="faq-item">
+          <summary>Where are my OAuth tokens stored?</summary>
+          <p>
+            In D1 (Cloudflare's SQLite), encrypted at rest, on a per-device token.
+            Your device only ever sees its own connection. No third-party analytics,
+            no token sharing, no token export. Details live in the
+            <a href="/privacy.html">privacy statement</a>.
+          </p>
+        </details>
+
+        <details class="faq-item">
+          <summary>Can I run it without the hosted backend?</summary>
+          <p>
+            Yes — the backend is a single Cloudflare Worker and two D1 migrations;
+            self-hosting takes about 10 minutes if you're comfortable with
+            <code>wrangler deploy</code>. The frontend points to any API URL you
+            configure.
+          </p>
+        </details>
+
+        <details class="faq-item">
+          <summary>What happens when I disconnect a provider?</summary>
+          <p>
+            The app revokes the token with the provider (where their API supports
+            it) and deletes the connection row from D1. Nothing is kept server-side
+            after disconnect.
+          </p>
+        </details>
+
+        <details class="faq-item">
+          <summary>Windows or Linux?</summary>
+          <p>
+            Not yet. Tauri makes it possible, but the current focus is a polished
+            macOS menubar experience. Watch the repo if you want cross-platform —
+            that's when it'll show up.
+          </p>
+        </details>
+      </section>
+    </div>
+
+    <footer>
+      <div class="container row-f">
+        <span>© noti-peek · built as an indie side project.</span>
+        <span>
+          <a href="/privacy.html">Privacy</a>
+          &nbsp;·&nbsp;
+          <a href="https://github.com/Rohithgilla12/noti-peek" rel="noopener">Source</a>
+          &nbsp;·&nbsp;
+          <a href="https://github.com/Rohithgilla12/noti-peek/issues" rel="noopener">Feedback</a>
+        </span>
+      </div>
+    </footer>
+  </body>
+</html>
