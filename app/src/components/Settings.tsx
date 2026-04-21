@@ -3,7 +3,6 @@ import { openUrl } from '@tauri-apps/plugin-opener';
 import { load } from '@tauri-apps/plugin-store';
 import { useAppStore } from '../store';
 import { api } from '../lib/api';
-import { ThemeSwitcher } from './ThemeSwitcher';
 
 interface SettingsProps {
   onClose: () => void;
@@ -189,13 +188,6 @@ export function Settings({ onClose }: SettingsProps) {
         </div>
 
         <div className="p-4 space-y-6">
-          <section>
-            <h3 className="text-[length:var(--text-sm)] font-medium text-[var(--text-primary)] mb-3">
-              Theme
-            </h3>
-            <ThemeSwitcher />
-          </section>
-
           <section>
             <h3 className="text-[length:var(--text-sm)] font-medium text-[var(--text-primary)] mb-3">
               Connected Accounts

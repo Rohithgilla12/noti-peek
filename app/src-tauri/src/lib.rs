@@ -1,32 +1,11 @@
 use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent, TrayIcon},
-    Manager, WindowEvent, State,
+    Manager, State,
 };
-use tauri_plugin_positioner::{Position, WindowExt};
 use tauri_plugin_sql::{Migration, MigrationKind};
 use std::sync::Mutex;
 
-#[cfg(target_os = "macos")]
-use objc2_app_kit::{NSWindow, NSWindowCollectionBehavior};
-
 struct TrayState(Mutex<Option<TrayIcon>>);
-
-#[cfg(target_os = "macos")]
-fn configure_macos_panel(window: &tauri::WebviewWindow) {
-    const NS_FLOATING_WINDOW_LEVEL: isize = 3;
-
-    let ns_window = window.ns_window().unwrap() as *mut objc2::runtime::AnyObject;
-    let ns_window: &NSWindow = unsafe { &*(ns_window as *const NSWindow) };
-
-    ns_window.setLevel(NS_FLOATING_WINDOW_LEVEL);
-
-    let mut behavior = ns_window.collectionBehavior();
-    behavior.insert(NSWindowCollectionBehavior::FullScreenAuxiliary);
-    behavior.insert(NSWindowCollectionBehavior::Transient);
-    ns_window.setCollectionBehavior(behavior);
-
-    ns_window.setHidesOnDeactivate(false);
-}
 
 fn get_migrations() -> Vec<Migration> {
     vec![
@@ -106,7 +85,6 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_store::Builder::new().build())
-        .plugin(tauri_plugin_positioner::init())
         .plugin(
             tauri_plugin_sql::Builder::default()
                 .add_migrations("sqlite:noti-peek.db", get_migrations())
@@ -116,12 +94,13 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .manage(TrayState(Mutex::new(None)))
         .setup(|app| {
+            // Tray icon stays — it toggles the main window's visibility and
+            // surfaces the unread badge. No longer drives position (the main
+            // window is a regular app window now, not a menubar popover).
             let tray = TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
                 .icon_as_template(true)
                 .on_tray_icon_event(|tray, event| {
-                    tauri_plugin_positioner::on_tray_event(tray.app_handle(), &event);
-
                     if let TrayIconEvent::Click {
                         button: MouseButton::Left,
                         button_state: MouseButtonState::Up,
@@ -130,11 +109,13 @@ pub fn run() {
                     {
                         let app = tray.app_handle();
                         if let Some(window) = app.get_webview_window("main") {
-                            if window.is_visible().unwrap_or(false) {
+                            if window.is_visible().unwrap_or(false)
+                                && window.is_focused().unwrap_or(false)
+                            {
                                 let _ = window.hide();
                             } else {
-                                let _ = window.move_window(Position::TrayBottomCenter);
                                 let _ = window.show();
+                                let _ = window.unminimize();
                                 let _ = window.set_focus();
                             }
                         }
@@ -144,20 +125,6 @@ pub fn run() {
 
             let tray_state: State<TrayState> = app.state();
             *tray_state.0.lock().unwrap() = Some(tray);
-
-            if let Some(window) = app.get_webview_window("main") {
-                #[cfg(target_os = "macos")]
-                configure_macos_panel(&window);
-
-                let _ = window.hide();
-
-                let window_clone = window.clone();
-                window.on_window_event(move |event| {
-                    if let WindowEvent::Focused(false) = event {
-                        let _ = window_clone.hide();
-                    }
-                });
-            }
 
             Ok(())
         })
