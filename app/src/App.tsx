@@ -29,6 +29,7 @@ function App() {
   const setSelectedId = useAppStore((s) => s.setSelectedNotification);
   const notifications = useAppStore((s) => s.notifications);
   const markAsRead = useAppStore((s) => s.markAsRead);
+  const activeTab = useAppStore((s) => s.activeTab);
 
   const selected = notifications.find((n) => n.id === selectedId) ?? null;
 
@@ -45,6 +46,11 @@ function App() {
       await initializeFromCache();
 
       const store = await load('config.json');
+
+      const savedTab = await store.get<'inbox' | 'pulse'>('activeTab');
+      if (savedTab === 'inbox' || savedTab === 'pulse') {
+        useAppStore.getState().setActiveTab(savedTab);
+      }
 
       api.setOnUnauthorized(async () => {
         try {
@@ -90,6 +96,12 @@ function App() {
   useEffect(() => {
     initialize();
   }, [initialize]);
+
+  useEffect(() => {
+    void load('config.json').then((s) => {
+      void s.set('activeTab', activeTab).then(() => s.save());
+    });
+  }, [activeTab]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
