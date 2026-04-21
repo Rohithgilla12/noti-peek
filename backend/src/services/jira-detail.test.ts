@@ -5,7 +5,7 @@ import { InsufficientScopeError } from '../types';
 const mockFetch = vi.fn();
 globalThis.fetch = mockFetch;
 
-import { parseJiraIssueUrl, fetchJiraIssueDetails } from './jira-detail';
+import { parseJiraIssueUrl, fetchJiraIssueDetails, postJiraComment, transitionJiraIssue, assignJiraSelf } from './jira-detail';
 
 const connection: Connection = {
   id: 'c1', user_id: 'u1', provider: 'jira',
@@ -115,5 +115,48 @@ describe('fetchJiraIssueDetails', () => {
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => [{ id: 'c', url: 'https://acme.atlassian.net', name: 'a' }] });
     mockFetch.mockResolvedValueOnce({ ok: false, status: 403, json: async () => ({}) });
     await expect(fetchJiraIssueDetails(connection, env, db, 'TEST-1')).rejects.toBeInstanceOf(InsufficientScopeError);
+  });
+});
+
+describe('Jira actions', () => {
+  beforeEach(() => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => [{ id: 'cloud-1', url: 'https://acme.atlassian.net', name: 'acme' }] });
+  });
+
+  it('postJiraComment POSTs ADF body', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 201, json: async () => ({ id: '1' }) });
+    await postJiraComment(connection, env, db, 'TEST-1', 'hello there');
+    const [url, init] = mockFetch.mock.calls[1];
+    expect(url).toBe('https://api.atlassian.com/ex/jira/cloud-1/rest/api/3/issue/TEST-1/comment');
+    expect(init.method).toBe('POST');
+    const body = JSON.parse(init.body);
+    expect(body.body.type).toBe('doc');
+    expect(body.body.content[0].content[0].text).toBe('hello there');
+  });
+
+  it('transitionJiraIssue POSTs transition id', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 204, json: async () => ({}) });
+    await transitionJiraIssue(connection, env, db, 'TEST-1', '31');
+    const [url, init] = mockFetch.mock.calls[1];
+    expect(url).toBe('https://api.atlassian.com/ex/jira/cloud-1/rest/api/3/issue/TEST-1/transitions');
+    expect(JSON.parse(init.body)).toEqual({ transition: { id: '31' } });
+  });
+
+  it('assignJiraSelf fetches myself then PUTs assignee', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ accountId: 'me-1', displayName: 'Me' }),
+    });
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 204, json: async () => ({}) });
+    await assignJiraSelf(connection, env, db, 'TEST-1');
+    const [url, init] = mockFetch.mock.calls[2];
+    expect(url).toBe('https://api.atlassian.com/ex/jira/cloud-1/rest/api/3/issue/TEST-1/assignee');
+    expect(init.method).toBe('PUT');
+    expect(JSON.parse(init.body)).toEqual({ accountId: 'me-1' });
+  });
+
+  it('throws InsufficientScopeError on 403', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 403, json: async () => ({}) });
+    await expect(postJiraComment(connection, env, db, 'TEST-1', 'x')).rejects.toBeInstanceOf(InsufficientScopeError);
   });
 });

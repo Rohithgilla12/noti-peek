@@ -160,3 +160,70 @@ export async function fetchJiraIssueDetails(
     },
   };
 }
+
+function adfParagraph(text: string): unknown {
+  return {
+    type: 'doc',
+    version: 1,
+    content: [{ type: 'paragraph', content: [{ type: 'text', text }] }],
+  };
+}
+
+async function jiraWrite(
+  token: string,
+  url: string,
+  method: 'POST' | 'PUT',
+  body: unknown,
+): Promise<void> {
+  const res = await fetch(url, {
+    method,
+    headers: jiraHeaders(token),
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throwForStatus(res.status, url);
+}
+
+export async function postJiraComment(
+  connection: Connection,
+  env: Env,
+  db: D1Database,
+  issueKey: string,
+  body: string,
+): Promise<void> {
+  const token = await getAccessToken(connection, env, db);
+  const { cloudId } = await getCloudId(token);
+  const url = `https://api.atlassian.com/ex/jira/${cloudId}/rest/api/3/issue/${encodeURIComponent(issueKey)}/comment`;
+  await jiraWrite(token, url, 'POST', { body: adfParagraph(body) });
+}
+
+export async function transitionJiraIssue(
+  connection: Connection,
+  env: Env,
+  db: D1Database,
+  issueKey: string,
+  transitionId: string,
+): Promise<void> {
+  const token = await getAccessToken(connection, env, db);
+  const { cloudId } = await getCloudId(token);
+  const url = `https://api.atlassian.com/ex/jira/${cloudId}/rest/api/3/issue/${encodeURIComponent(issueKey)}/transitions`;
+  await jiraWrite(token, url, 'POST', { transition: { id: transitionId } });
+}
+
+export async function assignJiraSelf(
+  connection: Connection,
+  env: Env,
+  db: D1Database,
+  issueKey: string,
+): Promise<void> {
+  const token = await getAccessToken(connection, env, db);
+  const { cloudId } = await getCloudId(token);
+
+  const myselfRes = await fetch(`https://api.atlassian.com/ex/jira/${cloudId}/rest/api/3/myself`, {
+    headers: jiraHeaders(token),
+  });
+  if (!myselfRes.ok) throwForStatus(myselfRes.status, 'myself');
+  const myself = (await myselfRes.json()) as { accountId: string };
+
+  const url = `https://api.atlassian.com/ex/jira/${cloudId}/rest/api/3/issue/${encodeURIComponent(issueKey)}/assignee`;
+  await jiraWrite(token, url, 'PUT', { accountId: myself.accountId });
+}
