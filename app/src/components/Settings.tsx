@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { openUrl } from '@tauri-apps/plugin-opener';
+import { load } from '@tauri-apps/plugin-store';
 import { useAppStore } from '../store';
 import { api } from '../lib/api';
 import { ThemeSwitcher } from './ThemeSwitcher';
@@ -7,6 +8,9 @@ import { ThemeSwitcher } from './ThemeSwitcher';
 interface SettingsProps {
   onClose: () => void;
 }
+
+const AUTH_STORE_FILE = 'config.json';
+const AUTH_STORE_KEY = 'auth';
 
 function GitHubIcon() {
   return (
@@ -46,11 +50,16 @@ export function Settings({ onClose }: SettingsProps) {
   const fetchConnections = useAppStore((state) => state.fetchConnections);
   const refreshInterval = useAppStore((state) => state.refreshInterval);
   const setRefreshInterval = useAppStore((state) => state.setRefreshInterval);
+  const clearCache = useAppStore((state) => state.clearCache);
+  const setAuth = useAppStore((state) => state.setAuth);
+  const clearAuth = useAppStore((state) => state.clearAuth);
 
   const [showGitHubToken, setShowGitHubToken] = useState(false);
   const [githubToken, setGithubToken] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const isGitHubConnected = connections.some((c) => c.provider === 'github');
   const isLinearConnected = connections.some((c) => c.provider === 'linear');
@@ -119,6 +128,34 @@ export function Settings({ onClose }: SettingsProps) {
   const handleDisconnectBitbucket = async () => {
     await api.disconnectBitbucket();
     await fetchConnections();
+  };
+
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    setError(null);
+
+    try {
+      await api.deleteAccount();
+
+      await clearCache();
+      clearAuth();
+
+      const store = await load(AUTH_STORE_FILE);
+      await store.delete(AUTH_STORE_KEY);
+
+      const { id, deviceToken } = await api.register();
+      api.setDeviceToken(deviceToken);
+      setAuth(deviceToken, id);
+      await store.set(AUTH_STORE_KEY, { deviceToken, userId: id });
+      await store.save();
+
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete account');
+      setConfirmingDelete(false);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const intervals = [
@@ -356,6 +393,47 @@ export function Settings({ onClose }: SettingsProps) {
                 </option>
               ))}
             </select>
+          </section>
+
+          <section>
+            <h3 className="text-[length:var(--text-sm)] font-medium text-[var(--error)] mb-3">
+              Danger Zone
+            </h3>
+            <div className="p-3 bg-[var(--bg-surface)] rounded-[var(--radius-md)] border border-[var(--error)]/30 space-y-3">
+              <div>
+                <p className="text-[length:var(--text-sm)] font-medium text-[var(--text-primary)]">
+                  Delete account
+                </p>
+                <p className="text-[length:var(--text-xs)] text-[var(--text-secondary)] mt-1">
+                  Permanently removes your account, connected providers, and all cached notifications from our servers. This cannot be undone.
+                </p>
+              </div>
+              {confirmingDelete ? (
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleDeleteAccount}
+                    disabled={isDeleting}
+                    className="flex-1 px-3 py-2 text-[length:var(--text-xs)] font-medium bg-[var(--error)] text-white rounded-[var(--radius-sm)] hover:opacity-90 disabled:opacity-50 transition-opacity duration-150"
+                  >
+                    {isDeleting ? 'Deleting…' : 'Yes, delete my account'}
+                  </button>
+                  <button
+                    onClick={() => setConfirmingDelete(false)}
+                    disabled={isDeleting}
+                    className="px-3 py-2 text-[length:var(--text-xs)] bg-[var(--bg-overlay)] text-[var(--text-secondary)] rounded-[var(--radius-sm)] hover:bg-[var(--bg-highlight)] disabled:opacity-50 transition-colors duration-150"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmingDelete(true)}
+                  className="w-full px-3 py-2 text-[length:var(--text-xs)] font-medium text-[var(--error)] border border-[var(--error)]/40 rounded-[var(--radius-sm)] hover:bg-[var(--error)]/10 transition-colors duration-150"
+                >
+                  Delete account
+                </button>
+              )}
+            </div>
           </section>
 
           <section className="pt-4 border-t border-[var(--border-muted)]">

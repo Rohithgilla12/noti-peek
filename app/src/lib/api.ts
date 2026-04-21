@@ -121,6 +121,10 @@ class ApiClient {
       body: source ? JSON.stringify({ source }) : undefined,
     });
   }
+
+  async deleteAccount(): Promise<void> {
+    await this.request('/users/me', { method: 'DELETE' });
+  }
 }
 
 export const api = new ApiClient();

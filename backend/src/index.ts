@@ -5,6 +5,7 @@ import type { Env, Variables } from './types';
 import auth from './routes/auth';
 import connections from './routes/connections';
 import notifications from './routes/notifications';
+import users from './routes/users';
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -30,6 +31,7 @@ app.get('/health', (c) => {
 app.route('/auth', auth);
 app.route('/connections', connections);
 app.route('/notifications', notifications);
+app.route('/users', users);
 
 app.notFound((c) => {
   return c.json({ error: 'Not found' }, 404);
