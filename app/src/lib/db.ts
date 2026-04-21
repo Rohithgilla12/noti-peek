@@ -88,13 +88,19 @@ export async function cacheNotifications(notifications: Notification[]): Promise
   const database = await getDatabase();
   const now = new Date().toISOString();
 
-  await database.execute('DELETE FROM notifications');
-
   for (const n of notifications) {
     await database.execute(
-      `INSERT OR REPLACE INTO notifications
-       (id, source, type, title, body, url, repo, project, author_name, author_avatar, unread, created_at, updated_at, cached_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+      `INSERT INTO notifications
+         (id, source, type, title, body, url, repo, project,
+          author_name, author_avatar, unread,
+          created_at, updated_at, cached_at, first_seen_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+       ON CONFLICT(id) DO UPDATE SET
+         unread     = excluded.unread,
+         updated_at = excluded.updated_at,
+         cached_at  = excluded.cached_at,
+         title      = excluded.title,
+         body       = excluded.body`,
       [
         n.id,
         n.source,
@@ -110,7 +116,8 @@ export async function cacheNotifications(notifications: Notification[]): Promise
         n.createdAt,
         n.updatedAt,
         now,
-      ]
+        now,
+      ],
     );
   }
 
@@ -197,4 +204,82 @@ export async function clearAllCache(): Promise<void> {
   await database.execute('DELETE FROM notifications');
   await database.execute('DELETE FROM connections');
   await database.execute('DELETE FROM sync_metadata');
+}
+
+export interface ArchiveQuery {
+  since?: string;
+  source?: Provider;
+  actor?: string;
+  repo?: string;
+  hour?: number;
+  limit?: number;
+  offset?: number;
+}
+
+export async function fetchArchiveWindow(q: ArchiveQuery): Promise<Notification[]> {
+  const database = await getDatabase();
+  const wheres: string[] = [];
+  const params: unknown[] = [];
+  if (q.since) {
+    wheres.push(`first_seen_at >= $${params.length + 1}`);
+    params.push(q.since);
+  }
+  if (q.source) {
+    wheres.push(`source = $${params.length + 1}`);
+    params.push(q.source);
+  }
+  if (q.actor) {
+    wheres.push(`LOWER(author_name) = LOWER($${params.length + 1})`);
+    params.push(q.actor);
+  }
+  if (q.repo) {
+    wheres.push(`LOWER(COALESCE(repo, project, '')) = LOWER($${params.length + 1})`);
+    params.push(q.repo);
+  }
+  if (typeof q.hour === 'number') {
+    wheres.push(`strftime('%H', first_seen_at, 'localtime') = $${params.length + 1}`);
+    params.push(q.hour.toString().padStart(2, '0'));
+  }
+  const where = wheres.length ? `WHERE ${wheres.join(' AND ')}` : '';
+  const limit = q.limit ?? 200;
+  const offset = q.offset ?? 0;
+  const rows = await database.select<NotificationRow[]>(
+    `SELECT * FROM notifications ${where}
+     ORDER BY first_seen_at DESC
+     LIMIT ${limit} OFFSET ${offset}`,
+    params,
+  );
+  return rows.map(rowToNotification);
+}
+
+export async function countArchive(q: ArchiveQuery): Promise<number> {
+  const database = await getDatabase();
+  const wheres: string[] = [];
+  const params: unknown[] = [];
+  if (q.since) {
+    wheres.push(`first_seen_at >= $${params.length + 1}`);
+    params.push(q.since);
+  }
+  if (q.source) {
+    wheres.push(`source = $${params.length + 1}`);
+    params.push(q.source);
+  }
+  if (q.actor) {
+    wheres.push(`LOWER(author_name) = LOWER($${params.length + 1})`);
+    params.push(q.actor);
+  }
+  if (q.repo) {
+    wheres.push(`LOWER(COALESCE(repo, project, '')) = LOWER($${params.length + 1})`);
+    params.push(q.repo);
+  }
+  if (typeof q.hour === 'number') {
+    wheres.push(`strftime('%H', first_seen_at, 'localtime') = $${params.length + 1}`);
+    params.push(q.hour.toString().padStart(2, '0'));
+  }
+  const where = wheres.length ? `WHERE ${wheres.join(' AND ')}` : '';
+  const rows = await database.select<Array<{ n: number }>>(
+    `SELECT COUNT(*) AS n FROM notifications ${where}`,
+    params,
+  );
+  return rows[0]?.n ?? 0;
 }
