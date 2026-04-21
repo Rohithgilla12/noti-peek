@@ -18,6 +18,7 @@ export interface Notification {
   unread: boolean;
   createdAt: string;
   updatedAt: string;
+  firstSeenAt?: string;
 }
 
 export interface Connection {

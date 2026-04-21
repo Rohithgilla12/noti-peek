@@ -65,6 +65,17 @@ fn get_migrations() -> Vec<Migration> {
             "#,
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 4,
+            description: "add_first_seen_at_to_notifications",
+            sql: r#"
+                ALTER TABLE notifications ADD COLUMN first_seen_at TEXT;
+                UPDATE notifications SET first_seen_at = cached_at WHERE first_seen_at IS NULL;
+                CREATE INDEX IF NOT EXISTS idx_notifications_first_seen_source
+                  ON notifications(first_seen_at DESC, source);
+            "#,
+            kind: MigrationKind::Up,
+        },
     ]
 }
 

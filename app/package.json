@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@fontsource-variable/martian-mono": "^5.2.7",
@@ -27,11 +29,16 @@
     "zustand": "^5.0.10"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.10.1",
+    "@testing-library/jest-dom": "^6",
+    "@testing-library/react": "^16",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",
+    "@vitest/ui": "^2",
+    "jsdom": "^24",
     "typescript": "~5.8.3",
     "vite": "^7.0.4",
-    "@tauri-apps/cli": "^2.10.1"
+    "vitest": "^2"
   }
 }

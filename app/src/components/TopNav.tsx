@@ -4,34 +4,44 @@ interface Props {
   onOpenSettings: () => void;
 }
 
-/**
- * macOS-style toolbar: inset traffic lights live in the left gutter,
- * the bar is drag-region everywhere except the action buttons. Brand
- * anchors the centre-left; refresh + settings sit on the right.
- */
 export function TopNav({ onOpenSettings }: Props) {
   const fetchNotifications = useAppStore((s) => s.fetchNotifications);
   const isSyncing = useAppStore((s) => s.isLoading || s.isSyncing);
   const unread = useUnreadCount();
+  const activeTab = useAppStore((s) => s.activeTab);
+  const setActiveTab = useAppStore((s) => s.setActiveTab);
 
   return (
     <header className="topnav" data-tauri-drag-region>
-      <div className="topnav-gutter" aria-hidden="true" />
-      <div className="topnav-brand">
-        <span className="topnav-wordmark">
-          noti&#8209;peek<em>.</em>
-        </span>
-        {unread > 0 && (
-          <span className="topnav-unread" aria-label={`${unread} unread`}>
-            {String(unread).padStart(2, '0')}
-          </span>
-        )}
-      </div>
+      <div className="topnav-gutter" aria-hidden="true" data-tauri-drag-region />
+      <nav className="topnav-tabs" role="tablist">
+        <button
+          aria-current={activeTab === 'inbox'}
+          role="tab"
+          type="button"
+          onClick={() => setActiveTab('inbox')}
+          title="Inbox (1)"
+        >
+          inbox
+          {unread > 0 && (
+            <span className="topnav-tab-badge">{String(unread).padStart(2, '0')}</span>
+          )}
+        </button>
+        <button
+          aria-current={activeTab === 'pulse'}
+          role="tab"
+          type="button"
+          onClick={() => setActiveTab('pulse')}
+          title="Pulse (2)"
+        >
+          pulse
+        </button>
+      </nav>
       <div className="topnav-actions">
         <button
           onClick={() => fetchNotifications()}
           disabled={isSyncing}
-          title="Refresh (⌘R)"
+          title="Refresh (R)"
           aria-label="Refresh"
           type="button"
         >

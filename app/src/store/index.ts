@@ -36,6 +36,9 @@ interface AppState {
 
   refreshInterval: number;
 
+  activeTab: 'inbox' | 'pulse';
+  setActiveTab: (tab: 'inbox' | 'pulse') => void;
+
   setAuth: (deviceToken: string, userId: string) => void;
   clearAuth: () => void;
 
@@ -79,6 +82,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   selectedNotificationId: null,
 
   refreshInterval: 5 * 60 * 1000,
+
+  activeTab: 'inbox',
+  setActiveTab: (activeTab) => set({ activeTab }),
 
   setAuth: (deviceToken, userId) => {
     api.setDeviceToken(deviceToken);

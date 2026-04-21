@@ -2,6 +2,8 @@ import { useMemo, useEffect } from 'react';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { useAppStore, useFilteredNotifications, useUnreadCount } from '../store';
 import type { Notification, Provider } from '../lib/types';
+import { startOfDay, dayLabel } from '../lib/days';
+import { NotificationRow } from './shared/NotificationRow';
 
 type FilterSource = Provider | 'all';
 
@@ -15,37 +17,6 @@ const SOURCES: Array<{ value: FilterSource; label: string; experimental?: boolea
 
 const enableExperimentalProviders =
   import.meta.env.VITE_ENABLE_EXPERIMENTAL_PROVIDERS === 'true';
-
-function startOfDay(iso: string): number {
-  const d = new Date(iso);
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-}
-
-function dayLabel(ts: number): { label: string; sub: string } {
-  const today = new Date();
-  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
-  const diffDays = Math.round((todayStart - ts) / 86_400_000);
-  const d = new Date(ts);
-  const weekday = d.toLocaleDateString(undefined, { weekday: 'long' });
-  const date = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }).toLowerCase();
-
-  if (diffDays === 0) return { label: 'Today', sub: `${weekday} · ${date}` };
-  if (diffDays === 1) return { label: 'Yesterday', sub: `${weekday} · ${date}` };
-  if (diffDays < 7) return { label: weekday, sub: date };
-  return { label: d.toLocaleDateString(undefined, { month: 'long', day: 'numeric' }), sub: date };
-}
-
-function timeLabel(iso: string): string {
-  const d = new Date(iso);
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  if (d.getTime() >= todayStart.getTime()) {
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-  }
-  const y = todayStart.getTime() - 86_400_000;
-  if (d.getTime() >= y) return 'yd';
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }).toLowerCase();
-}
 
 export function DayStream() {
   const filter = useAppStore((s) => s.filter);
@@ -163,7 +134,7 @@ export function DayStream() {
                 </span>
               </h5>
               {items.map((n) => (
-                <Row
+                <NotificationRow
                   key={n.id}
                   n={n}
                   selected={n.id === selectedId}
@@ -182,35 +153,3 @@ export function DayStream() {
   );
 }
 
-function Row({
-  n,
-  selected,
-  onSelect,
-  onOpen,
-}: {
-  n: Notification;
-  selected: boolean;
-  onSelect: () => void;
-  onOpen: () => void;
-}) {
-  const ref = n.repo ?? n.project ?? '';
-  return (
-    <button
-      className={`day-row ${n.unread ? 'unread' : 'read'}`}
-      data-source={n.source}
-      aria-current={selected}
-      onClick={onSelect}
-      onDoubleClick={onOpen}
-      type="button"
-    >
-      <span className="marker" aria-hidden="true"></span>
-      <span className="src">{n.source}</span>
-      <span className="title">
-        {ref && <span className="ref">{ref}</span>}
-        <span>{n.title}</span>
-        {n.author?.name && <span className="note">· {n.author.name}</span>}
-      </span>
-      <span className="time">{timeLabel(n.updatedAt)}</span>
-    </button>
-  );
-}
