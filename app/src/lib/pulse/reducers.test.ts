@@ -62,7 +62,7 @@ describe('hourBuckets', () => {
   it('accumulates counts per local hour-of-day', () => {
     const rows = [
       n({ id: '1', firstSeenAt: '2026-04-21T03:00:00Z' }),
-      n({ id: '2', firstSeenAt: '2026-04-21T03:30:00Z' }),
+      n({ id: '2', firstSeenAt: '2026-04-21T03:15:00Z' }),
       n({ id: '3', firstSeenAt: '2026-04-21T14:00:00Z' }),
     ];
     const b = hourBuckets(rows);
