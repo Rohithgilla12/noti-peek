@@ -10,10 +10,18 @@ export function Header() {
   const unreadCount = useUnreadCount();
   const notificationTypes = useNotificationTypes();
 
+  const enableExperimentalProviders = import.meta.env.VITE_ENABLE_EXPERIMENTAL_PROVIDERS === 'true';
+
   const sources: Array<{ value: Provider | 'all'; label: string }> = [
     { value: 'all', label: 'All' },
     { value: 'github', label: 'GitHub' },
     { value: 'linear', label: 'Linear' },
+    ...(enableExperimentalProviders
+      ? ([
+          { value: 'jira', label: 'Jira' },
+          { value: 'bitbucket', label: 'Bitbucket' },
+        ] as const)
+      : []),
   ];
 
   return (

@@ -32,6 +32,24 @@ function App() {
       await initializeFromCache();
 
       const store = await load('config.json');
+
+      // Install the auto-reauth handler before any request fires, so a stale
+      // deviceToken (backend DB reset, account deleted) self-heals on the
+      // first 401 instead of leaving the user stuck on "Failed to fetch".
+      api.setOnUnauthorized(async () => {
+        try {
+          const { id, deviceToken } = await api.register();
+          api.setDeviceToken(deviceToken);
+          setAuth(deviceToken, id);
+          await store.set(STORE_KEY, { deviceToken, userId: id });
+          await store.save();
+          return deviceToken;
+        } catch (err) {
+          console.error('Auto re-register failed:', err);
+          return null;
+        }
+      });
+
       const authData = await store.get<{ deviceToken: string; userId: string }>(STORE_KEY);
 
       if (authData?.deviceToken) {

@@ -42,15 +42,14 @@ export function NotificationList() {
     return <LoadingSkeleton />;
   }
 
-  if (error) {
-    return (
-      <div className="p-4 text-center fade-in">
-        <p className="text-[var(--error)] text-[length:var(--text-sm)]">{error}</p>
-      </div>
-    );
-  }
-
   if (notifications.length === 0) {
+    if (error) {
+      return (
+        <div className="p-4 text-center fade-in">
+          <p className="text-[var(--error)] text-[length:var(--text-sm)]">{error}</p>
+        </div>
+      );
+    }
     return (
       <div className="flex flex-col items-center justify-center h-64 text-[var(--text-secondary)] fade-in">
         <span className="text-4xl mb-4 scale-in">🎉</span>
@@ -62,6 +61,18 @@ export function NotificationList() {
 
   return (
     <div className="flex-1 overflow-y-auto">
+      {error && (
+        <div className="px-3 py-2 bg-[var(--error)]/10 border-b border-[var(--error)]/20 text-[var(--error)] text-[length:var(--text-xs)] flex items-start gap-2 fade-in">
+          <svg className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path
+              fillRule="evenodd"
+              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+              clipRule="evenodd"
+            />
+          </svg>
+          <span className="break-words">{error}</span>
+        </div>
+      )}
       {notifications.map((notification, index) => (
         <NotificationItem
           key={notification.id}

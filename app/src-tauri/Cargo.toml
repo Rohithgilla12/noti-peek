@@ -1,6 +1,6 @@
 [package]
 name = "noti-peek"
-version = "0.1.0"
+version = "0.1.0-beta.3"
 description = "A unified notification hub for developers"
 authors = ["Rohith Gilla"]
 edition = "2021"

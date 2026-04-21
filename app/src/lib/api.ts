@@ -3,14 +3,44 @@ import type { Notification, Connection } from './types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787';
 
+export class UnauthorizedError extends Error {
+  constructor(message = 'Unauthorized') {
+    super(message);
+    this.name = 'UnauthorizedError';
+  }
+}
+
+type ReauthHandler = () => Promise<string | null>;
+
+// Paths that must never trigger the re-auth callback — they're part of the
+// auth flow itself, so retrying would either loop or hide a real failure.
+const REAUTH_SKIP_PATHS = new Set(['/auth/register', '/auth/verify']);
+
 class ApiClient {
   private deviceToken: string | null = null;
+  private onUnauthorized: ReauthHandler | null = null;
+  private reauthInFlight: Promise<string | null> | null = null;
 
   setDeviceToken(token: string | null) {
     this.deviceToken = token;
   }
 
-  private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  setOnUnauthorized(handler: ReauthHandler | null) {
+    this.onUnauthorized = handler;
+  }
+
+  private async runReauth(): Promise<string | null> {
+    if (!this.onUnauthorized) return null;
+    if (!this.reauthInFlight) {
+      const handler = this.onUnauthorized;
+      this.reauthInFlight = handler().finally(() => {
+        this.reauthInFlight = null;
+      });
+    }
+    return this.reauthInFlight;
+  }
+
+  private async request<T>(path: string, options: RequestInit = {}, retried = false): Promise<T> {
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
       ...options.headers,
@@ -25,9 +55,21 @@ class ApiClient {
       headers,
     });
 
+    if (response.status === 401 && !retried && !REAUTH_SKIP_PATHS.has(path)) {
+      const newToken = await this.runReauth();
+      if (newToken) {
+        return this.request<T>(path, options, true);
+      }
+      throw new UnauthorizedError();
+    }
+
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Request failed' }));
-      throw new Error((error as { error?: string }).error || 'Request failed');
+      const message = (error as { error?: string }).error || 'Request failed';
+      if (response.status === 401) {
+        throw new UnauthorizedError(message);
+      }
+      throw new Error(message);
     }
 
     return response.json() as Promise<T>;
