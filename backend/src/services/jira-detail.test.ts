@@ -2,6 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Connection, Env } from '../types';
 import { InsufficientScopeError } from '../types';
 
+const { refreshJiraTokenMock } = vi.hoisted(() => ({
+  refreshJiraTokenMock: vi.fn(),
+}));
+
+vi.mock('./jira', () => ({
+  refreshJiraToken: refreshJiraTokenMock,
+}));
+
 const mockFetch = vi.fn();
 globalThis.fetch = mockFetch;
 
@@ -158,5 +166,75 @@ describe('Jira actions', () => {
   it('throws InsufficientScopeError on 403', async () => {
     mockFetch.mockResolvedValueOnce({ ok: false, status: 403, json: async () => ({}) });
     await expect(postJiraComment(connection, env, db, 'TEST-1', 'x')).rejects.toBeInstanceOf(InsufficientScopeError);
+  });
+});
+
+describe('Jira token refresh', () => {
+  const expiredConnection: Connection = {
+    ...connection,
+    // Expired 60s ago — within the 5-minute buffer, so isTokenExpired() returns true.
+    token_expires_at: new Date(Date.now() - 60_000).toISOString(),
+    access_token: 'stale-token',
+  };
+
+  it('fetchJiraIssueDetails refreshes expired token and uses the fresh bearer for subsequent requests', async () => {
+    refreshJiraTokenMock.mockResolvedValueOnce('refreshed-token');
+
+    // accessible-resources
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => [{ id: 'cloud-1', url: 'https://acme.atlassian.net', name: 'acme' }] });
+    // myself
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ accountId: 'me-1', displayName: 'Me', avatarUrls: { '48x48': 'https://example.com/me.png' } }),
+    });
+    // issue
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        key: 'TEST-42',
+        fields: {
+          summary: 'Fix it',
+          status: { name: 'Open', statusCategory: { key: 'new' } },
+          priority: null,
+          assignee: null,
+          reporter: null,
+          comment: { total: 0 },
+        },
+        renderedFields: {},
+      }),
+    });
+    // transitions
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ transitions: [] }) });
+    // comments
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ comments: [], total: 0 }) });
+
+    await fetchJiraIssueDetails(expiredConnection, env, db, 'TEST-42');
+
+    expect(refreshJiraTokenMock).toHaveBeenCalledTimes(1);
+    expect(refreshJiraTokenMock).toHaveBeenCalledWith(expiredConnection, env, db);
+
+    // Every outgoing request should carry the refreshed token, never the stale one.
+    for (const call of mockFetch.mock.calls) {
+      const init = call[1] as RequestInit | undefined;
+      const headers = (init?.headers ?? {}) as Record<string, string>;
+      expect(headers.Authorization).toBe('Bearer refreshed-token');
+    }
+  });
+
+  it('postJiraComment refreshes expired token before writing', async () => {
+    refreshJiraTokenMock.mockResolvedValueOnce('refreshed-token');
+
+    // accessible-resources, then the POST.
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => [{ id: 'cloud-1', url: 'https://acme.atlassian.net', name: 'acme' }] });
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 201, json: async () => ({ id: '1' }) });
+
+    await postJiraComment(expiredConnection, env, db, 'TEST-1', 'hello');
+
+    expect(refreshJiraTokenMock).toHaveBeenCalledTimes(1);
+    expect(refreshJiraTokenMock).toHaveBeenCalledWith(expiredConnection, env, db);
+
+    const [, postInit] = mockFetch.mock.calls[1];
+    expect(postInit.method).toBe('POST');
+    expect((postInit.headers as Record<string, string>).Authorization).toBe('Bearer refreshed-token');
   });
 });
