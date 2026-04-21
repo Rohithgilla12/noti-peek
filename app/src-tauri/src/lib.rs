@@ -220,8 +220,14 @@ pub fn run() {
                 .items(&[&show_item, &prefs_item, &separator, &quit_item])
                 .build()?;
 
+            // Menubar glyph is a single-color template image (ring + offset
+            // dot). macOS inverts it for dark/light menubars automatically.
+            let tray_icon = tauri::image::Image::from_bytes(include_bytes!(
+                "../icons/tray-template@2x.png"
+            ))
+            .expect("tray-template@2x.png must be a valid PNG");
             let tray = TrayIconBuilder::new()
-                .icon(app.default_window_icon().unwrap().clone())
+                .icon(tray_icon)
                 .icon_as_template(true)
                 .menu(&tray_menu)
                 .show_menu_on_left_click(false)
