@@ -237,3 +237,93 @@ export async function fetchPRDetails(
     },
   };
 }
+
+async function githubWrite(
+  connection: Connection,
+  url: string,
+  init: RequestInit,
+): Promise<unknown> {
+  const res = await fetch(url, {
+    ...init,
+    headers: {
+      ...jsonHeaders(connection.access_token),
+      ...(init.headers || {}),
+    },
+  });
+  if (!res.ok) {
+    if (res.status === 403) throw new InsufficientScopeError(`GitHub forbade ${url}`, 'github');
+    if (res.status === 401) throw new Error('GitHub token expired or revoked');
+    if (res.status === 405) {
+      const body = await res.json().catch(() => ({})) as { message?: string };
+      throw new Error(`Not mergeable: ${body.message ?? 'GitHub rejected merge'}`);
+    }
+    const body = await res.json().catch(() => ({})) as { message?: string };
+    throw new Error(`GitHub API error ${res.status}: ${body.message ?? url}`);
+  }
+  return res.json().catch(() => ({}));
+}
+
+export async function postIssueComment(
+  connection: Connection,
+  owner: string,
+  repo: string,
+  number: number,
+  body: string,
+): Promise<void> {
+  await githubWrite(
+    connection,
+    `${GH_API}/repos/${owner}/${repo}/issues/${number}/comments`,
+    { method: 'POST', body: JSON.stringify({ body }) },
+  );
+}
+
+export async function setIssueState(
+  connection: Connection,
+  owner: string,
+  repo: string,
+  number: number,
+  state: 'open' | 'closed',
+  stateReason?: 'completed' | 'not_planned',
+): Promise<void> {
+  const payload: Record<string, unknown> = { state };
+  if (stateReason) payload.state_reason = stateReason;
+  await githubWrite(
+    connection,
+    `${GH_API}/repos/${owner}/${repo}/issues/${number}`,
+    { method: 'PATCH', body: JSON.stringify(payload) },
+  );
+}
+
+export async function submitPRReview(
+  connection: Connection,
+  owner: string,
+  repo: string,
+  number: number,
+  event: 'APPROVE' | 'REQUEST_CHANGES' | 'COMMENT',
+  body?: string,
+): Promise<void> {
+  if (event === 'REQUEST_CHANGES' && (!body || body.trim() === '')) {
+    throw new Error('body is required for REQUEST_CHANGES');
+  }
+  const payload: Record<string, unknown> = { event };
+  if (body) payload.body = body;
+  await githubWrite(
+    connection,
+    `${GH_API}/repos/${owner}/${repo}/pulls/${number}/reviews`,
+    { method: 'POST', body: JSON.stringify(payload) },
+  );
+}
+
+export async function mergePR(
+  connection: Connection,
+  owner: string,
+  repo: string,
+  number: number,
+  method: 'merge' | 'squash' | 'rebase',
+): Promise<void> {
+  await githubWrite(
+    connection,
+    `${GH_API}/repos/${owner}/${repo}/pulls/${number}/merge`,
+    { method: 'PUT', body: JSON.stringify({ merge_method: method }) },
+  );
+}

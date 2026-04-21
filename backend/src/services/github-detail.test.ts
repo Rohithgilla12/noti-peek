@@ -191,3 +191,60 @@ describe('fetchPRDetails', () => {
     expect(result.permissions.canMerge).toBe(false);
   });
 });
+
+import {
+  postIssueComment,
+  setIssueState,
+  submitPRReview,
+  mergePR,
+} from './github-detail';
+
+describe('GitHub actions', () => {
+  it('postIssueComment POSTs the body', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 201, json: async () => ({ id: 1 }) });
+    await postIssueComment(connection, 'acme', 'widgets', 7, 'hello');
+    const [url, init] = mockFetch.mock.calls[0];
+    expect(url).toBe('https://api.github.com/repos/acme/widgets/issues/7/comments');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body)).toEqual({ body: 'hello' });
+  });
+
+  it('setIssueState PATCHes state and state_reason', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({}) });
+    await setIssueState(connection, 'acme', 'widgets', 7, 'closed', 'completed');
+    const [, init] = mockFetch.mock.calls[0];
+    expect(init.method).toBe('PATCH');
+    expect(JSON.parse(init.body)).toEqual({ state: 'closed', state_reason: 'completed' });
+  });
+
+  it('submitPRReview POSTs event and body', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({}) });
+    await submitPRReview(connection, 'acme', 'widgets', 42, 'APPROVE', 'lgtm');
+    const [url, init] = mockFetch.mock.calls[0];
+    expect(url).toBe('https://api.github.com/repos/acme/widgets/pulls/42/reviews');
+    expect(JSON.parse(init.body)).toEqual({ event: 'APPROVE', body: 'lgtm' });
+  });
+
+  it('submitPRReview requires body for REQUEST_CHANGES', async () => {
+    await expect(submitPRReview(connection, 'acme', 'widgets', 42, 'REQUEST_CHANGES', '')).rejects.toThrow(/body is required/i);
+  });
+
+  it('mergePR PUTs the merge method', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({}) });
+    await mergePR(connection, 'acme', 'widgets', 42, 'squash');
+    const [url, init] = mockFetch.mock.calls[0];
+    expect(url).toBe('https://api.github.com/repos/acme/widgets/pulls/42/merge');
+    expect(init.method).toBe('PUT');
+    expect(JSON.parse(init.body)).toEqual({ merge_method: 'squash' });
+  });
+
+  it('mergePR maps 405 to a helpful error', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 405, json: async () => ({ message: 'Not mergeable' }) });
+    await expect(mergePR(connection, 'acme', 'widgets', 42, 'squash')).rejects.toThrow(/not mergeable/i);
+  });
+
+  it('action throws InsufficientScopeError on 403', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 403, json: async () => ({}) });
+    await expect(postIssueComment(connection, 'acme', 'widgets', 7, 'x')).rejects.toBeInstanceOf(InsufficientScopeError);
+  });
+});
