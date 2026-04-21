@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { useAppStore } from '../store';
 import { sanitizeHtml } from '../lib/sanitize';
+import { api, InsufficientScopeError } from '../lib/api';
 import type { Notification, DetailResponse } from '../lib/types';
 import { StatusStrip } from './DetailPane/StatusStrip';
 import { CommentsSection } from './DetailPane/CommentsSection';
@@ -38,23 +39,47 @@ async function openExternalUrl(url: string) {
   try { await openUrl(url); } catch (err) { console.error('Failed to open URL:', err); }
 }
 
+async function reconnect(source: 'github' | 'jira' | string) {
+  try {
+    const url = source === 'jira' ? await api.getJiraAuthUrl() : await api.getGitHubAuthUrl();
+    await openUrl(url);
+  } catch (err) {
+    console.error('Failed to start reconnect:', err);
+  }
+}
+
 export function DetailPane({ notification }: Props) {
   const markAsRead = useAppStore((s) => s.markAsRead);
   const fetchDetails = useAppStore((s) => s.fetchDetails);
   const [detail, setDetail] = useState<DetailResponse | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
+  const [scopeReconnectUrl, setScopeReconnectUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!notification) { setDetail(null); setDetailError(null); return; }
+    if (!notification) {
+      setDetail(null);
+      setDetailError(null);
+      setScopeReconnectUrl(null);
+      return;
+    }
 
     let cancelled = false;
     setLoading(true);
     setDetailError(null);
+    setScopeReconnectUrl(null);
 
     fetchDetails(notification)
       .then((d) => { if (!cancelled) setDetail(d); })
-      .catch((err) => { if (!cancelled) setDetailError(err instanceof Error ? err.message : 'failed to load details'); })
+      .catch((err) => {
+        if (cancelled) return;
+        if (err instanceof InsufficientScopeError) {
+          setScopeReconnectUrl(err.reconnectUrl);
+          setDetailError(null);
+        } else {
+          setDetailError(err instanceof Error ? err.message : 'failed to load details');
+        }
+      })
       .finally(() => { if (!cancelled) setLoading(false); });
 
     return () => { cancelled = true; };
@@ -81,8 +106,6 @@ export function DetailPane({ notification }: Props) {
   const bodyHtml = details
     ? (details.kind === 'jira_issue' ? details.descriptionHtml : details.bodyHtml)
     : '';
-  const scopeError = detailError?.toLowerCase().includes('insufficient_scope');
-
   return (
     <div className="detail" data-source={n.source}>
       <div className="meta">
@@ -97,23 +120,24 @@ export function DetailPane({ notification }: Props) {
 
       {loading && <div className="detail-loading">loading…</div>}
 
-      {scopeError && (
+      {scopeReconnectUrl && (
         <div className="detail-banner">
           <span>reconnect {n.source} to load full details and enable actions</span>
+          <button type="button" onClick={() => void reconnect(n.source)}>reconnect</button>
         </div>
       )}
 
-      {detailError && !scopeError && (
+      {detailError && !scopeReconnectUrl && (
         <div className="detail-hint">couldn't load full details — showing basics</div>
       )}
 
-      {bodyHtml && !scopeError && (
+      {bodyHtml && !scopeReconnectUrl && (
         <div className="body html-body" dangerouslySetInnerHTML={{ __html: sanitizeHtml(bodyHtml) }} />
       )}
 
       {!bodyHtml && n.body && <div className="body">{n.body}</div>}
 
-      {details && !scopeError && (
+      {details && !scopeReconnectUrl && (
         <CommentsSection
           comments={details.comments}
           totalCount={details.commentCount}
@@ -121,7 +145,7 @@ export function DetailPane({ notification }: Props) {
         />
       )}
 
-      {details && !scopeError && <ActionsBar notification={n} details={details} />}
+      {details && !scopeReconnectUrl && <ActionsBar notification={n} details={details} />}
 
       <div className="actions">
         <button className="primary" onClick={() => void handleOpen()} type="button">open</button>

@@ -2,7 +2,6 @@ import type { NotificationDetails } from '../../lib/types';
 
 interface Props {
   details: NotificationDetails;
-  currentUserIsAssignee?: boolean;
 }
 
 function Badge({ tone, children }: { tone: 'open' | 'closed' | 'merged' | 'neutral' | 'good' | 'bad' | 'warn'; children: React.ReactNode }) {

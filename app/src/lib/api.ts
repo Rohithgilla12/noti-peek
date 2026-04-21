@@ -10,6 +10,16 @@ export class UnauthorizedError extends Error {
   }
 }
 
+export class InsufficientScopeError extends Error {
+  constructor(
+    public readonly reconnectUrl: string,
+    public readonly provider: 'github' | 'jira',
+  ) {
+    super('insufficient_scope');
+    this.name = 'InsufficientScopeError';
+  }
+}
+
 type ReauthHandler = () => Promise<string | null>;
 
 // Paths that must never trigger the re-auth callback — they're part of the
@@ -68,6 +78,17 @@ class ApiClient {
       const message = (error as { error?: string }).error || 'Request failed';
       if (response.status === 401) {
         throw new UnauthorizedError(message);
+      }
+      if (response.status === 403) {
+        const body = error as { error?: string; reconnectUrl?: string };
+        if (body.error === 'insufficient_scope' && body.reconnectUrl) {
+          const provider: 'github' | 'jira' = body.reconnectUrl.includes('/auth/jira')
+            ? 'jira'
+            : body.reconnectUrl.includes('/auth/github')
+              ? 'github'
+              : 'github';
+          throw new InsufficientScopeError(body.reconnectUrl, provider);
+        }
       }
       throw new Error(message);
     }

@@ -122,7 +122,3 @@ export interface DetailResponse {
   fetchedAt: string;
 }
 
-export interface InsufficientScopeError {
-  error: 'insufficient_scope';
-  reconnectUrl: string;
-}
