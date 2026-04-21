@@ -30,6 +30,7 @@ interface NotificationRow {
   unread: number;
   created_at: string;
   updated_at: string;
+  first_seen_at: string | null;
 }
 
 interface ConnectionRow {
@@ -63,6 +64,7 @@ function rowToNotification(row: NotificationRow): Notification {
     unread: row.unread === 1,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    firstSeenAt: row.first_seen_at ?? undefined,
   };
 }
 
