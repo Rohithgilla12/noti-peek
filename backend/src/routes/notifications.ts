@@ -9,8 +9,15 @@ import { fetchJiraNotifications, markJiraNotificationAsRead, markAllJiraNotifica
 import { fetchBitbucketNotifications, markBitbucketNotificationAsRead, markAllBitbucketNotificationsAsRead } from '../services/bitbucket';
 import { bundleNotifications, BUNDLING_VERSION } from '../services/bundling';
 import { parseGitHubIssueOrPRUrl } from '../services/github-urls';
-import { fetchIssueDetails, fetchPRDetails } from '../services/github-detail';
-import { parseJiraIssueUrl, fetchJiraIssueDetails } from '../services/jira-detail';
+import {
+  fetchIssueDetails, fetchPRDetails,
+  postIssueComment, setIssueState,
+  submitPRReview, mergePR,
+} from '../services/github-detail';
+import {
+  fetchJiraIssueDetails, parseJiraIssueUrl,
+  postJiraComment, transitionJiraIssue, assignJiraSelf,
+} from '../services/jira-detail';
 
 const notifications = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -241,6 +248,105 @@ notifications.get('/:id/details', async (c) => {
   } catch (err) {
     if (err instanceof InsufficientScopeError) {
       return c.json({
+        error: 'insufficient_scope',
+        reconnectUrl: `/auth/${err.reconnectProvider}/start`,
+      }, 403);
+    }
+    return c.json({ error: err instanceof Error ? err.message : 'unknown error' }, 500);
+  }
+});
+
+notifications.post('/:id/actions/:action', async (c) => {
+  const user = c.get('user');
+  const id = c.req.param('id');
+  const action = c.req.param('action');
+  const body = await c.req.json<{ url: string; body?: string; method?: 'merge' | 'squash' | 'rebase'; transitionId?: string; reason?: 'completed' | 'not_planned' }>()
+    .catch(() => null);
+  if (!body || typeof body.url !== 'string') return c.json({ error: 'url required in body' }, 400);
+
+  const [source] = id.split(':');
+
+  try {
+    if (source === 'github') {
+      const parsed = parseGitHubIssueOrPRUrl(body.url);
+      if (!parsed) return c.json({ error: 'not a GitHub issue or PR URL' }, 400);
+
+      const connection = await getConnection(c.env.DB, user.id, 'github');
+      if (!connection) return c.json({ error: 'GitHub not connected' }, 400);
+
+      switch (action) {
+        case 'comment':
+          if (!body.body) return c.json({ error: 'body required' }, 400);
+          await postIssueComment(connection, parsed.owner, parsed.repo, parsed.number, body.body);
+          break;
+        case 'close':
+          await setIssueState(connection, parsed.owner, parsed.repo, parsed.number, 'closed', body.reason ?? 'completed');
+          break;
+        case 'reopen':
+          await setIssueState(connection, parsed.owner, parsed.repo, parsed.number, 'open');
+          break;
+        case 'approve':
+          if (parsed.kind !== 'pr') return c.json({ error: 'approve only valid on PRs' }, 400);
+          await submitPRReview(connection, parsed.owner, parsed.repo, parsed.number, 'APPROVE', body.body);
+          break;
+        case 'request_changes':
+          if (parsed.kind !== 'pr') return c.json({ error: 'request_changes only valid on PRs' }, 400);
+          if (!body.body) return c.json({ error: 'body required for request_changes' }, 400);
+          await submitPRReview(connection, parsed.owner, parsed.repo, parsed.number, 'REQUEST_CHANGES', body.body);
+          break;
+        case 'merge':
+          if (parsed.kind !== 'pr') return c.json({ error: 'merge only valid on PRs' }, 400);
+          await mergePR(connection, parsed.owner, parsed.repo, parsed.number, body.method ?? 'squash');
+          break;
+        default:
+          return c.json({ error: `unknown github action: ${action}` }, 400);
+      }
+
+      const details = parsed.kind === 'pr'
+        ? await fetchPRDetails(connection, parsed.owner, parsed.repo, parsed.number)
+        : await fetchIssueDetails(connection, parsed.owner, parsed.repo, parsed.number);
+
+      return c.json({
+        success: true,
+        details: { id, source: 'github', details, fetchedAt: new Date().toISOString() },
+      });
+    }
+
+    if (source === 'jira') {
+      const parsed = parseJiraIssueUrl(body.url);
+      if (!parsed) return c.json({ error: 'not a Jira issue URL' }, 400);
+
+      const connection = await getConnection(c.env.DB, user.id, 'jira');
+      if (!connection) return c.json({ error: 'Jira not connected' }, 400);
+
+      switch (action) {
+        case 'comment':
+          if (!body.body) return c.json({ error: 'body required' }, 400);
+          await postJiraComment(connection, c.env, c.env.DB, parsed.key, body.body);
+          break;
+        case 'transition':
+          if (!body.transitionId) return c.json({ error: 'transitionId required' }, 400);
+          await transitionJiraIssue(connection, c.env, c.env.DB, parsed.key, body.transitionId);
+          break;
+        case 'assign_self':
+          await assignJiraSelf(connection, c.env, c.env.DB, parsed.key);
+          break;
+        default:
+          return c.json({ error: `unknown jira action: ${action}` }, 400);
+      }
+
+      const details = await fetchJiraIssueDetails(connection, c.env, c.env.DB, parsed.key);
+      return c.json({
+        success: true,
+        details: { id, source: 'jira', details, fetchedAt: new Date().toISOString() },
+      });
+    }
+
+    return c.json({ error: 'unknown notification source' }, 400);
+  } catch (err) {
+    if (err instanceof InsufficientScopeError) {
+      return c.json({
+        success: false,
         error: 'insufficient_scope',
         reconnectUrl: `/auth/${err.reconnectProvider}/start`,
       }, 403);
