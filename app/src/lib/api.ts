@@ -1,5 +1,5 @@
 import { fetch } from '@tauri-apps/plugin-http';
-import type { Notification, Connection } from './types';
+import type { Notification, Connection, DetailResponse } from './types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787';
 
@@ -162,6 +162,24 @@ class ApiClient {
       method: 'POST',
       body: source ? JSON.stringify({ source }) : undefined,
     });
+  }
+
+  async fetchDetails(notificationId: string, url: string): Promise<DetailResponse> {
+    const q = new URLSearchParams({ url });
+    return this.request<DetailResponse>(
+      `/notifications/${encodeURIComponent(notificationId)}/details?${q}`,
+    );
+  }
+
+  async performAction(
+    notificationId: string,
+    action: string,
+    payload: Record<string, unknown>,
+  ): Promise<{ success: true; details: DetailResponse }> {
+    return this.request(
+      `/notifications/${encodeURIComponent(notificationId)}/actions/${encodeURIComponent(action)}`,
+      { method: 'POST', body: JSON.stringify(payload) },
+    );
   }
 
   async deleteAccount(): Promise<void> {
