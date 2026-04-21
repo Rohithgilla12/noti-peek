@@ -156,3 +156,47 @@ describe('Notifications route provider gating', () => {
     expect(response.status).toBe(404);
   });
 });
+
+describe('Notifications detail route', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns 400 when url query param is missing', async () => {
+    const mockDb = createMockDb();
+    mockDb.usersByToken.set('device-token-1', { id: 'user-1', device_token: 'device-token-1' });
+    const env = createEnv(mockDb.db);
+
+    const response = await notifications.request(
+      '/github:123/details',
+      {
+        method: 'GET',
+        headers: { Authorization: 'Bearer device-token-1' },
+      },
+      env
+    );
+
+    expect(response.status).toBe(400);
+    const body = await response.json<{ error: string }>();
+    expect(body.error).toContain('url');
+  });
+
+  it('returns 400 when id prefix is unknown', async () => {
+    const mockDb = createMockDb();
+    mockDb.usersByToken.set('device-token-1', { id: 'user-1', device_token: 'device-token-1' });
+    const env = createEnv(mockDb.db);
+
+    const response = await notifications.request(
+      '/weird:123/details?url=https%3A%2F%2Fexample.com',
+      {
+        method: 'GET',
+        headers: { Authorization: 'Bearer device-token-1' },
+      },
+      env
+    );
+
+    expect(response.status).toBe(400);
+    const body = await response.json<{ error: string }>();
+    expect(body.error).toBe('unknown notification source');
+  });
+});

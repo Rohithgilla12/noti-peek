@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
-import type { Env, Variables, Connection, NotificationResponse, Provider, RateLimitInfo } from '../types';
-import { RateLimitError } from '../types';
+import type { Env, Variables, Connection, NotificationResponse, Provider, RateLimitInfo, DetailResponse } from '../types';
+import { RateLimitError, InsufficientScopeError } from '../types';
 import { authMiddleware } from '../middleware/auth';
 import { rateLimitMiddleware } from '../middleware/rateLimiter';
 import { fetchGitHubNotifications, markGitHubNotificationAsRead, markAllGitHubNotificationsAsRead } from '../services/github';
@@ -8,6 +8,9 @@ import { fetchLinearNotifications, markLinearNotificationAsRead, markAllLinearNo
 import { fetchJiraNotifications, markJiraNotificationAsRead, markAllJiraNotificationsAsRead } from '../services/jira';
 import { fetchBitbucketNotifications, markBitbucketNotificationAsRead, markAllBitbucketNotificationsAsRead } from '../services/bitbucket';
 import { bundleNotifications, BUNDLING_VERSION } from '../services/bundling';
+import { parseGitHubIssueOrPRUrl } from '../services/github-urls';
+import { fetchIssueDetails, fetchPRDetails } from '../services/github-detail';
+import { parseJiraIssueUrl, fetchJiraIssueDetails } from '../services/jira-detail';
 
 const notifications = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -189,6 +192,60 @@ notifications.get('/bitbucket', async (c) => {
     return c.json({ notifications: result.notifications });
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Unknown error' }, 500);
+  }
+});
+
+notifications.get('/:id/details', async (c) => {
+  const user = c.get('user');
+  const id = c.req.param('id');
+  const url = c.req.query('url');
+
+  if (!url) return c.json({ error: 'url query parameter required' }, 400);
+
+  const [source] = id.split(':');
+
+  try {
+    if (source === 'github') {
+      const parsed = parseGitHubIssueOrPRUrl(url);
+      if (!parsed) return c.json({ error: 'not a GitHub issue or PR URL' }, 400);
+
+      const connection = await getConnection(c.env.DB, user.id, 'github');
+      if (!connection) return c.json({ error: 'GitHub not connected' }, 400);
+
+      const details = parsed.kind === 'pr'
+        ? await fetchPRDetails(connection, parsed.owner, parsed.repo, parsed.number)
+        : await fetchIssueDetails(connection, parsed.owner, parsed.repo, parsed.number);
+
+      const response: DetailResponse = {
+        id, source: 'github', details, fetchedAt: new Date().toISOString(),
+      };
+      return c.json(response);
+    }
+
+    if (source === 'jira') {
+      const parsed = parseJiraIssueUrl(url);
+      if (!parsed) return c.json({ error: 'not a Jira issue URL' }, 400);
+
+      const connection = await getConnection(c.env.DB, user.id, 'jira');
+      if (!connection) return c.json({ error: 'Jira not connected' }, 400);
+
+      const details = await fetchJiraIssueDetails(connection, c.env, c.env.DB, parsed.key);
+
+      const response: DetailResponse = {
+        id, source: 'jira', details, fetchedAt: new Date().toISOString(),
+      };
+      return c.json(response);
+    }
+
+    return c.json({ error: 'unknown notification source' }, 400);
+  } catch (err) {
+    if (err instanceof InsufficientScopeError) {
+      return c.json({
+        error: 'insufficient_scope',
+        reconnectUrl: `/auth/${err.reconnectProvider}/start`,
+      }, 403);
+    }
+    return c.json({ error: err instanceof Error ? err.message : 'unknown error' }, 500);
   }
 });
 
