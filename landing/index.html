@@ -8,7 +8,7 @@
       name="description"
       content="A fast macOS menubar app that unifies GitHub, Linear, Jira and Bitbucket notifications, intelligently bundled so you don't drown."
     />
-    <meta name="color-scheme" content="dark light" />
+    <meta name="color-scheme" content="dark" />
     <meta property="og:title" content="noti-peek" />
     <meta
       property="og:description"
@@ -16,26 +16,53 @@
     />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://notipeek.dev" />
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231e1e2e'/%3E%3Ccircle cx='32' cy='32' r='14' fill='none' stroke='%2389b4fa' stroke-width='4'/%3E%3Ccircle cx='32' cy='32' r='5' fill='%23f9e2af'/%3E%3C/svg%3E" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231c1813'/%3E%3Ccircle cx='32' cy='32' r='18' fill='none' stroke='%23d8cfbf' stroke-width='3'/%3E%3Ccircle cx='42' cy='26' r='4.5' fill='%23e8a83e'/%3E%3C/svg%3E" />
+    <link rel="apple-touch-icon" href="/brand/icon-128.png" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@1,500&family=Hanken+Grotesk:wght@400;500;600&family=Martian+Mono:wght@400;500&display=swap"
+    />
+
     <style>
       :root {
-        /* Catppuccin Mocha — matches the app default theme. */
-        --base: #1e1e2e;
-        --mantle: #181825;
-        --crust: #11111b;
-        --surface0: #313244;
-        --surface1: #45475a;
-        --text: #cdd6f4;
-        --subtext1: #bac2de;
-        --subtext0: #a6adc8;
-        --overlay0: #6c7086;
-        --blue: #89b4fa;
-        --mauve: #cba6f7;
-        --green: #a6e3a1;
-        --peach: #fab387;
-        --yellow: #f9e2af;
-        --red: #f38ba8;
-        --radius: 12px;
+        --bg:          oklch(13% 0.006 80);
+        --bg-elev:     oklch(17% 0.008 80);
+        --bg-elev-2:   oklch(21% 0.010 80);
+
+        --line-soft:   oklch(23% 0.008 80);
+        --line:        oklch(29% 0.012 80);
+
+        --ink-1:       oklch(88% 0.010 80);
+        --ink-2:       oklch(68% 0.012 80);
+        --ink-3:       oklch(48% 0.010 78);
+        --ink-4:       oklch(34% 0.008 78);
+
+        --accent:      oklch(97% 0.012 82);
+        --accent-ink:  oklch(13% 0.006 82);
+
+        --github:      oklch(70% 0.015 280);
+        --linear:      oklch(70% 0.080 260);
+        --jira:        oklch(68% 0.095 250);
+        --bitbucket:   oklch(68% 0.110 245);
+
+        --font-display: "EB Garamond", "Iowan Old Style", Georgia, serif;
+        --font-body:    "Hanken Grotesk", ui-sans-serif, -apple-system, BlinkMacSystemFont, sans-serif;
+        --font-mono:    "Martian Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+        --space-1:  4px;
+        --space-2:  8px;
+        --space-3:  12px;
+        --space-4:  16px;
+        --space-6:  24px;
+        --space-8:  32px;
+        --space-12: 48px;
+        --space-16: 64px;
+        --space-24: 96px;
+
+        --measure:   62ch;
       }
 
       * { box-sizing: border-box; }
@@ -43,297 +70,455 @@
 
       body {
         margin: 0;
-        background: var(--base);
-        color: var(--text);
-        font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Inter",
-          "Segoe UI", Helvetica, Arial, sans-serif;
-        font-feature-settings: "ss01", "cv11";
+        background: var(--bg);
+        color: var(--ink-1);
+        font-family: var(--font-body);
+        font-size: 17px;
+        font-weight: 400;
         line-height: 1.55;
         -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
       }
 
-      a { color: var(--blue); text-decoration: none; }
-      a:hover { text-decoration: underline; text-underline-offset: 3px; }
+      ::selection { background: var(--accent); color: var(--accent-ink); }
+
+      a { color: var(--ink-1); text-decoration: none; }
+      a:hover { text-decoration: underline; text-underline-offset: 4px; text-decoration-color: var(--accent); text-decoration-thickness: 1px; }
 
       .container {
-        max-width: 960px;
+        max-width: 860px;
         margin: 0 auto;
         padding: 0 24px;
       }
 
+      /* ── Nav ─────────────────────────────────────────── */
       header.nav {
-        padding: 24px 0;
+        padding: 28px 0 18px;
         display: flex;
         align-items: center;
         justify-content: space-between;
+        gap: var(--space-6);
       }
-
       .brand {
         display: inline-flex;
         align-items: center;
         gap: 10px;
-        font-weight: 600;
-        color: var(--text);
-      }
-      .brand .dot {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background: var(--yellow);
-        box-shadow: 0 0 0 4px rgba(249, 226, 175, 0.15);
+        color: var(--ink-1);
+        font-weight: 500;
+        font-size: 17px;
       }
       .brand:hover { text-decoration: none; }
-
-      nav.links a {
-        color: var(--subtext0);
-        margin-left: 20px;
-        font-size: 14px;
+      .brand .mark {
+        width: 26px; height: 26px;
+        border-radius: 6px;
+        display: block;
       }
-      nav.links a:hover { color: var(--text); text-decoration: none; }
+      .brand .word .peek { font-family: var(--font-display); font-style: italic; font-weight: 500; letter-spacing: 0.005em; }
 
-      /* Hero */
-      .hero {
-        padding: 72px 0 64px;
-        text-align: left;
+      nav.links {
+        display: flex;
+        gap: var(--space-6);
+        align-items: center;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        font-weight: 400;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
       }
-      .hero h1 {
-        font-size: clamp(36px, 6vw, 60px);
+      nav.links a { color: var(--ink-3); }
+      nav.links a:hover { color: var(--ink-1); text-decoration: none; }
+
+      /* ── Hero ────────────────────────────────────────── */
+      section.hero { padding: 64px 0 24px; }
+      section.hero h1 {
+        font-family: var(--font-body);
+        font-weight: 500;
+        font-size: clamp(2rem, 4.2vw, 3.25rem);
         line-height: 1.05;
         letter-spacing: -0.02em;
-        margin: 0 0 20px;
+        margin: 0 0 22px;
+        color: var(--ink-1);
+        max-width: 20ch;
+        text-wrap: balance;
       }
-      .hero h1 .accent { color: var(--yellow); }
-      .hero p.lede {
-        font-size: 18px;
-        color: var(--subtext1);
-        max-width: 620px;
+      section.hero h1 em {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 500;
+        letter-spacing: -0.01em;
+        color: var(--accent);
+      }
+      section.hero .lede {
+        font-size: 1.0625rem;
+        line-height: 1.6;
+        color: var(--ink-2);
+        max-width: 54ch;
         margin: 0 0 32px;
       }
 
       .cta-row {
         display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
+        gap: var(--space-3);
         align-items: center;
+        flex-wrap: wrap;
       }
       .btn {
         display: inline-flex;
         align-items: center;
-        gap: 8px;
-        padding: 10px 18px;
-        border-radius: var(--radius);
+        gap: 10px;
+        padding: 11px 18px;
+        border-radius: 8px;
         border: 1px solid transparent;
+        font-family: var(--font-body);
+        font-size: 14px;
         font-weight: 500;
-        font-size: 15px;
-        transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+        letter-spacing: -0.005em;
+        transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
       }
-      .btn:hover { text-decoration: none; transform: translateY(-1px); }
       .btn-primary {
-        background: var(--blue);
-        color: var(--crust);
+        background: var(--accent);
+        color: var(--accent-ink);
       }
-      .btn-primary:hover { background: #a6c8ff; }
+      .btn-primary:hover { background: color-mix(in oklch, var(--accent) 88%, var(--ink-4)); text-decoration: none; }
       .btn-ghost {
         background: transparent;
-        color: var(--text);
-        border-color: var(--surface1);
+        color: var(--ink-1);
+        border-color: var(--line);
       }
-      .btn-ghost:hover { background: var(--surface0); border-color: var(--overlay0); }
-      .btn .kbd {
-        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      .btn-ghost:hover { border-color: var(--ink-3); text-decoration: none; }
+      .btn .glyph {
+        font-family: var(--font-mono);
         font-size: 12px;
-        padding: 2px 6px;
-        border-radius: 4px;
-        background: rgba(0,0,0,0.18);
+        color: var(--ink-3);
       }
+      .btn-ghost:hover .glyph { color: var(--ink-1); }
 
       .sub-note {
-        color: var(--overlay0);
-        font-size: 13px;
-        margin-top: 14px;
+        margin-top: 22px;
+        color: var(--ink-4);
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
       }
+      .sub-note .sep { margin: 0 10px; color: var(--line); }
 
-      /* Mock panel */
-      .mock {
-        margin: 16px 0 0;
-        background: var(--mantle);
-        border: 1px solid var(--surface0);
-        border-radius: 16px;
-        padding: 14px;
-        box-shadow:
-          0 0 0 1px rgba(0,0,0,0.2),
-          0 24px 60px -24px rgba(0,0,0,0.6);
+      /* ── Mock panel ──────────────────────────────────── */
+      .mock-wrap {
+        margin-top: var(--space-8);
+        display: flex;
+        justify-content: flex-start;
       }
-      .mock .titlebar {
+      .mock {
+        width: min(520px, 100%);
+        background: var(--bg-elev);
+        border: 1px solid var(--line-soft);
+        border-radius: 12px;
+        padding: 4px;
+        box-shadow:
+          0 1px 0 oklch(100% 0 0 / 0.04) inset,
+          0 24px 60px -28px oklch(0% 0 0 / 0.6);
+      }
+      .mock-head {
         display: flex;
         align-items: center;
-        gap: 6px;
-        padding: 4px 6px 12px;
-        border-bottom: 1px solid var(--surface0);
+        gap: 10px;
+        padding: 10px 14px 12px;
+        border-bottom: 1px solid var(--line-soft);
+        color: var(--ink-3);
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.04em;
       }
-      .mock .titlebar .stoplight {
-        width: 10px; height: 10px; border-radius: 50%;
+      .mock-head .tray {
+        width: 12px; height: 12px;
+        border: 1.25px solid var(--ink-2);
+        border-radius: 50%;
+        position: relative;
+        flex: 0 0 auto;
       }
-      .mock .titlebar .stoplight.r { background: var(--red); }
-      .mock .titlebar .stoplight.y { background: var(--yellow); }
-      .mock .titlebar .stoplight.g { background: var(--green); }
-      .mock .titlebar .title {
-        margin-left: 12px; color: var(--subtext0); font-size: 13px;
+      .mock-head .tray::after {
+        content: "";
+        position: absolute;
+        width: 3.5px; height: 3.5px; border-radius: 50%;
+        background: var(--ink-2);
+        top: 1px;
+        right: 0.5px;
       }
-
-      .row {
+      .mock-head .count {
+        margin-left: auto;
+        color: var(--ink-4);
+      }
+      .mock-row {
         display: grid;
         grid-template-columns: auto 1fr auto;
-        gap: 12px;
-        padding: 12px 10px;
-        border-bottom: 1px solid var(--surface0);
+        gap: 14px;
         align-items: center;
+        padding: 14px 14px;
+        border-bottom: 1px solid var(--line-soft);
       }
-      .row:last-child { border-bottom: none; }
+      .mock-row:last-child { border-bottom: none; }
       .avatar {
-        width: 28px; height: 28px; border-radius: 50%;
-        background: linear-gradient(135deg, var(--mauve), var(--blue));
-        color: var(--crust);
+        width: 28px; height: 28px;
+        border-radius: 50%;
+        background: var(--bg-elev-2);
+        border: 1px solid var(--line);
+        color: var(--ink-2);
         display: inline-flex; align-items: center; justify-content: center;
-        font-weight: 600; font-size: 12px;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.04em;
       }
-      .avatar.stack {
-        position: relative; width: 52px; height: 28px;
-        background: none;
-      }
+      .avatar.stack { position: relative; width: 56px; height: 28px; background: none; border: none; }
       .avatar.stack span {
         position: absolute; top: 0; width: 28px; height: 28px; border-radius: 50%;
+        background: var(--bg-elev-2); border: 1px solid var(--line);
         display: inline-flex; align-items: center; justify-content: center;
-        font-size: 12px; font-weight: 600; color: var(--crust);
-        border: 2px solid var(--mantle);
+        font-family: var(--font-mono); font-size: 10px; color: var(--ink-2);
+        box-shadow: 0 0 0 2px var(--bg-elev);
       }
-      .avatar.stack span:nth-child(1) { left: 0;  background: var(--mauve);  }
-      .avatar.stack span:nth-child(2) { left: 14px; background: var(--peach); }
-      .avatar.stack span:nth-child(3) { left: 28px; background: var(--green); color: var(--crust); }
-      .row .title { color: var(--text); font-size: 14px; }
-      .row .meta  { color: var(--subtext0); font-size: 12px; margin-top: 2px; }
-      .row .badge {
-        font-size: 11px; padding: 2px 8px; border-radius: 999px;
-        background: var(--surface0); color: var(--subtext1);
-      }
-      .row .badge.bundle { background: var(--blue); color: var(--crust); }
-      .row.unread { background: rgba(137, 180, 250, 0.04); }
-
-      /* Features */
-      section.features { padding: 80px 0; }
-      section.features h2 {
-        font-size: 28px; margin: 0 0 40px; letter-spacing: -0.01em;
-      }
-      .grid {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 20px;
-      }
-      @media (max-width: 720px) {
-        .grid { grid-template-columns: 1fr; }
-        header.nav { padding: 18px 0; }
-        .hero { padding: 48px 0; }
-      }
-      .card {
-        background: var(--mantle);
-        border: 1px solid var(--surface0);
-        border-radius: var(--radius);
-        padding: 22px;
-      }
-      .card h3 {
-        margin: 0 0 8px;
-        font-size: 17px;
-        color: var(--text);
-      }
-      .card p {
-        margin: 0;
-        color: var(--subtext0);
+      .avatar.stack span:nth-child(1) { left: 0; }
+      .avatar.stack span:nth-child(2) { left: 14px; }
+      .avatar.stack span:nth-child(3) { left: 28px; }
+      .mock-row .title {
+        display: flex; align-items: flex-start; gap: 8px;
+        color: var(--ink-1);
         font-size: 14px;
+        line-height: 1.35;
       }
-      .card .ico {
-        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-        display: inline-block;
-        padding: 4px 8px;
-        border-radius: 6px;
-        background: var(--surface0);
-        color: var(--yellow);
-        font-size: 12px;
-        margin-bottom: 14px;
+      .mock-row .title .dot {
+        width: 6px; height: 6px; border-radius: 50%;
+        background: var(--accent);
+        flex: 0 0 auto;
+        margin-top: 7px;
       }
+      .mock-row .title.no-dot { padding-left: 14px; }
+      .mock-row .meta {
+        margin-top: 4px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--ink-3);
+        letter-spacing: 0.01em;
+      }
+      .tag {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--ink-3);
+        padding: 3px 8px;
+        border-radius: 4px;
+        border: 1px solid var(--line);
+        background: transparent;
+      }
+      .tag.bundle { color: var(--ink-1); border-color: var(--ink-3); }
 
-      /* Providers strip */
-      .providers {
-        padding: 40px 0 80px;
-        text-align: center;
-      }
-      .providers .label {
-        color: var(--overlay0);
-        font-size: 12px;
+      /* ── Section kickers ─────────────────────────────── */
+      .kicker {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--ink-4);
         letter-spacing: 0.12em;
         text-transform: uppercase;
-        margin-bottom: 16px;
+        margin: 0 0 var(--space-3);
       }
-      .provider-pills {
-        display: inline-flex;
-        gap: 10px;
-        flex-wrap: wrap;
-        justify-content: center;
-      }
-      .pill {
-        background: var(--mantle);
-        border: 1px solid var(--surface0);
-        padding: 8px 14px;
-        border-radius: 999px;
-        font-size: 13px;
-        color: var(--subtext1);
-        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      }
-      .pill .on  { color: var(--green); }
-      .pill .exp { color: var(--peach); }
 
-      /* FAQ */
-      section.faq { padding: 0 0 80px; }
-      section.faq h2 { font-size: 24px; margin: 0 0 24px; }
-      .faq-item {
-        border-top: 1px solid var(--surface0);
-        padding: 18px 0;
+      /* ── Features ────────────────────────────────────── */
+      section.features {
+        padding: var(--space-16) 0 var(--space-12);
       }
-      .faq-item:last-child { border-bottom: 1px solid var(--surface0); }
+      section.features h2 {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 500;
+        font-size: clamp(1.75rem, 3.2vw, 2.5rem);
+        line-height: 1.15;
+        letter-spacing: -0.005em;
+        color: var(--ink-1);
+        margin: 0 0 var(--space-12);
+        max-width: 22ch;
+      }
+      .features-list {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-12);
+      }
+      .feature {
+        display: grid;
+        grid-template-columns: 140px 1fr;
+        gap: var(--space-6);
+        align-items: baseline;
+      }
+      .feature .f-label {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--ink-4);
+        padding-top: 4px;
+      }
+      .feature .f-body h3 {
+        font-family: var(--font-body);
+        font-weight: 500;
+        font-size: 1.25rem;
+        letter-spacing: -0.012em;
+        color: var(--ink-1);
+        margin: 0 0 var(--space-2);
+      }
+      .feature .f-body p {
+        margin: 0;
+        color: var(--ink-2);
+        font-size: 1rem;
+        line-height: 1.6;
+        max-width: var(--measure);
+      }
+      .feature .f-body p a { color: var(--ink-1); border-bottom: 1px solid var(--line); }
+      .feature .f-body p a:hover { border-color: var(--accent); text-decoration: none; }
+
+      /* ── Providers ───────────────────────────────────── */
+      section.providers {
+        padding: var(--space-12) 0;
+        border-top: 1px solid var(--line-soft);
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .provider-rows {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        column-gap: var(--space-8);
+      }
+      .provider {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        padding: 10px 0;
+        font-family: var(--font-mono);
+        font-size: 12px;
+      }
+      .provider .state {
+        width: 7px; height: 7px; border-radius: 50%;
+        background: var(--provider, var(--ink-3));
+        flex: 0 0 auto;
+        transform: translateY(-1px);
+      }
+      .provider.experimental .state {
+        background: transparent;
+        border: 1px solid var(--ink-4);
+      }
+      .provider .name { color: var(--ink-1); letter-spacing: 0.01em; }
+      .provider .sep { color: var(--line); }
+      .provider .status {
+        color: var(--ink-3);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        font-size: 10px;
+      }
+      .provider.experimental .status { color: var(--ink-4); }
+      .provider[data-provider="github"]    { --provider: var(--github); }
+      .provider[data-provider="linear"]    { --provider: var(--linear); }
+      .provider[data-provider="jira"]      { --provider: var(--jira); }
+      .provider[data-provider="bitbucket"] { --provider: var(--bitbucket); }
+
+      /* ── FAQ ─────────────────────────────────────────── */
+      section.faq { padding: var(--space-16) 0 var(--space-12); }
+      section.faq h2 {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 500;
+        font-size: 2rem;
+        letter-spacing: -0.005em;
+        margin: 0 0 var(--space-8);
+        color: var(--ink-1);
+      }
+      .faq-item {
+        border-top: 1px solid var(--line-soft);
+        padding: var(--space-4) 0;
+      }
+      .faq-item:last-child { border-bottom: 1px solid var(--line-soft); }
       .faq-item summary {
         cursor: pointer;
         font-weight: 500;
-        color: var(--text);
+        color: var(--ink-1);
         list-style: none;
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: var(--space-4);
       }
       .faq-item summary::-webkit-details-marker { display: none; }
-      .faq-item summary::after {
-        content: "+";
-        float: right;
-        color: var(--subtext0);
-        font-family: ui-monospace, monospace;
+      .faq-item summary .chev {
+        font-family: var(--font-mono);
+        color: var(--ink-3);
+        font-size: 16px;
+        line-height: 1;
+        transition: transform 180ms ease, color 180ms ease;
+        transform-origin: center;
+        display: inline-block;
       }
-      .faq-item[open] summary::after { content: "–"; }
+      .faq-item summary:hover .chev { color: var(--ink-1); }
+      .faq-item[open] summary .chev { transform: rotate(90deg); color: var(--accent); }
       .faq-item p {
-        margin: 10px 0 0;
-        color: var(--subtext1);
-        font-size: 14px;
+        margin: var(--space-3) 0 0;
+        color: var(--ink-2);
+        font-size: 0.9375rem;
+        line-height: 1.6;
+        max-width: var(--measure);
+      }
+      .faq-item p a { color: var(--ink-1); border-bottom: 1px solid var(--line); }
+      .faq-item p a:hover { border-color: var(--accent); text-decoration: none; }
+      .faq-item p code {
+        font-family: var(--font-mono);
+        font-size: 0.8125rem;
+        padding: 1px 5px;
+        border-radius: 3px;
+        background: var(--bg-elev);
+        border: 1px solid var(--line-soft);
+        color: var(--ink-1);
       }
 
+      /* ── Footer ──────────────────────────────────────── */
       footer {
-        border-top: 1px solid var(--surface0);
-        padding: 28px 0 48px;
-        color: var(--overlay0);
-        font-size: 13px;
+        border-top: 1px solid var(--line-soft);
+        padding: var(--space-8) 0 var(--space-16);
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        color: var(--ink-4);
       }
       footer .row-f {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        gap: 12px;
+        gap: var(--space-4);
         flex-wrap: wrap;
       }
-      footer a { color: var(--subtext0); }
-      footer a:hover { color: var(--text); }
+      footer a { color: var(--ink-3); }
+      footer a:hover { color: var(--ink-1); text-decoration: none; }
+      footer .sep { margin: 0 8px; color: var(--line); }
+
+      /* ── Responsive ──────────────────────────────────── */
+      @media (max-width: 680px) {
+        .container { padding: 0 20px; }
+        header.nav { padding: 20px 0 12px; }
+        nav.links { gap: var(--space-4); }
+        nav.links a[data-hide-sm] { display: none; }
+        section.hero { padding: 40px 0 28px; }
+        .mock { width: 100%; }
+        .mock-row { grid-template-columns: 28px 1fr; padding: 12px; gap: 10px; }
+        .mock-row .tag { grid-column: 2; justify-self: start; margin-top: 6px; font-size: 9px; padding: 2px 6px; }
+        .mock-row .title { font-size: 13px; }
+        .mock-row .meta { font-size: 10px; }
+        .avatar.stack { width: 56px; height: 28px; }
+        section.features { padding: var(--space-16) 0 var(--space-8); }
+        .features-list { gap: var(--space-8); }
+        .feature { grid-template-columns: 1fr; gap: var(--space-2); }
+        .feature .f-label { padding-top: 0; }
+        .provider-rows { grid-template-columns: 1fr; }
+        section.faq h2 { font-size: 1.625rem; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .faq-item summary .chev { transition: none; }
+      }
     </style>
   </head>
 
@@ -341,12 +526,12 @@
     <div class="container">
       <header class="nav">
         <a class="brand" href="/">
-          <span class="dot" aria-hidden="true"></span>
-          <span>noti-peek</span>
+          <img class="mark" src="/brand/icon-128.png" alt="" width="26" height="26" />
+          <span class="word">noti-<span class="peek">peek</span></span>
         </a>
         <nav class="links" aria-label="Top nav">
-          <a href="#features">Features</a>
-          <a href="#faq">FAQ</a>
+          <a href="#features" data-hide-sm>Features</a>
+          <a href="#faq" data-hide-sm>FAQ</a>
           <a href="https://github.com/Rohithgilla12/noti-peek" rel="noopener">GitHub</a>
           <a href="/privacy.html">Privacy</a>
         </nav>
@@ -354,13 +539,12 @@
 
       <section class="hero">
         <h1>
-          One menubar.<br />
-          <span class="accent">Every dev notification.</span>
+          One menubar. Every dev <em>notification.</em>
         </h1>
         <p class="lede">
-          noti-peek is a fast macOS menubar app that unifies your GitHub, Linear,
-          Jira and Bitbucket notifications — then intelligently bundles the noise
-          so you only see what actually changed.
+          A fast macOS menubar app that unifies GitHub, Linear, Jira and
+          Bitbucket notifications — then bundles the noise so you only see
+          what actually changed.
         </p>
 
         <div class="cta-row">
@@ -368,51 +552,50 @@
             Download for macOS
           </a>
           <a class="btn btn-ghost" href="https://github.com/Rohithgilla12/noti-peek" rel="noopener">
-            View on GitHub
-            <span class="kbd">★</span>
+            View on GitHub <span class="glyph" aria-hidden="true">↗</span>
           </a>
         </div>
+
         <p class="sub-note">
-          macOS 10.15+ · Apple-signed &amp; notarized · Apple Silicon and Intel
-          · Auto-updates.
+          macOS 10.15+<span class="sep">·</span>Apple-signed<span class="sep">·</span>Apple Silicon &amp; Intel<span class="sep">·</span>Auto-updates
         </p>
 
-        <!-- Mock panel -->
-        <div class="mock" aria-hidden="true">
-          <div class="titlebar">
-            <span class="stoplight r"></span>
-            <span class="stoplight y"></span>
-            <span class="stoplight g"></span>
-            <span class="title">noti-peek — 7 unread</span>
-          </div>
+        <div class="mock-wrap" aria-hidden="true">
+          <div class="mock">
+            <div class="mock-head">
+              <span class="tray" aria-hidden="true"></span>
+              <span>noti-peek</span>
+              <span class="count">7 unread</span>
+            </div>
 
-          <div class="row unread">
-            <div class="avatar stack">
-              <span>RG</span><span>JP</span><span>MK</span>
+            <div class="mock-row">
+              <div class="avatar stack">
+                <span>RG</span><span>JP</span><span>MK</span>
+              </div>
+              <div>
+                <div class="title"><span class="dot"></span>rohithgilla/noti-peek#42 — smart bundling PR</div>
+                <div class="meta">3 reviews · 2 comments · bundle of 5 · 12m</div>
+              </div>
+              <span class="tag bundle">bundle</span>
             </div>
-            <div>
-              <div class="title">rohithgilla/noti-peek#42 — Smart bundling PR</div>
-              <div class="meta">3 reviews, 2 comments · bundle of 5 · 12m ago</div>
-            </div>
-            <span class="badge bundle">bundle</span>
-          </div>
 
-          <div class="row unread">
-            <div class="avatar">DS</div>
-            <div>
-              <div class="title">ENG-214 — Release blocker: D1 write contention</div>
-              <div class="meta">Linear · assigned to you · 41m ago</div>
+            <div class="mock-row">
+              <div class="avatar">DS</div>
+              <div>
+                <div class="title"><span class="dot"></span>ENG-214 — release blocker: D1 write contention</div>
+                <div class="meta">linear · assigned to you · 41m</div>
+              </div>
+              <span class="tag">linear</span>
             </div>
-            <span class="badge">linear</span>
-          </div>
 
-          <div class="row">
-            <div class="avatar">CH</div>
-            <div>
-              <div class="title">PROJ-1033 — Postmortem review ready</div>
-              <div class="meta">Jira · 2h ago</div>
+            <div class="mock-row">
+              <div class="avatar">CH</div>
+              <div>
+                <div class="title no-dot">PROJ-1033 — postmortem review ready</div>
+                <div class="meta">jira · 2h</div>
+              </div>
+              <span class="tag">jira</span>
             </div>
-            <span class="badge">jira</span>
           </div>
         </div>
       </section>
@@ -420,34 +603,44 @@
 
     <section class="features" id="features">
       <div class="container">
+        <p class="kicker">What it does</p>
         <h2>Built to disappear into your workflow.</h2>
-        <div class="grid">
-          <div class="card">
-            <span class="ico">bundle</span>
-            <h3>Smart bundling</h3>
-            <p>
-              Multiple comments on the same PR or issue collapse into a single row
-              with actor stack, type summary and unread count. Configurable, and
-              always a toggle away from the raw feed.
-            </p>
+
+        <div class="features-list">
+          <div class="feature">
+            <span class="f-label">01 · Bundling</span>
+            <div class="f-body">
+              <h3>Noise collapses into one row.</h3>
+              <p>
+                Multiple comments on the same PR or issue fold into a single
+                entry with an actor stack, event-type summary and unread count.
+                Always a keystroke away from the raw feed, never your default.
+              </p>
+            </div>
           </div>
-          <div class="card">
-            <span class="ico">hub</span>
-            <h3>Every provider, one feed</h3>
-            <p>
-              GitHub and Linear on day one, with Jira and Bitbucket behind an
-              experimental flag. Consistent UI, consistent keyboard shortcuts,
-              consistent mark-as-read semantics.
-            </p>
+
+          <div class="feature">
+            <span class="f-label">02 · Coverage</span>
+            <div class="f-body">
+              <h3>Four tools, one inbox.</h3>
+              <p>
+                GitHub and Linear on day one. Jira and Bitbucket behind an
+                experimental flag. Consistent UI, consistent shortcuts,
+                consistent mark-as-read semantics across all of them.
+              </p>
+            </div>
           </div>
-          <div class="card">
-            <span class="ico">local</span>
-            <h3>Runs on your laptop</h3>
-            <p>
-              Tauri native app (~15&nbsp;MB). Your tokens are stored encrypted
-              locally; notification bodies never leave your machine. See the
-              <a href="/privacy.html">privacy statement</a>.
-            </p>
+
+          <div class="feature">
+            <span class="f-label">03 · Local</span>
+            <div class="f-body">
+              <h3>Runs on your laptop.</h3>
+              <p>
+                Native Tauri binary, roughly 15&nbsp;MB. Tokens are stored
+                encrypted on-device; notification bodies never leave your
+                machine. See the <a href="/privacy.html">privacy statement</a>.
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -455,62 +648,83 @@
 
     <div class="container">
       <section class="providers">
-        <div class="label">Supported providers</div>
-        <div class="provider-pills">
-          <span class="pill">GitHub <span class="on">●</span> stable</span>
-          <span class="pill">Linear <span class="on">●</span> stable</span>
-          <span class="pill">Jira <span class="exp">●</span> experimental</span>
-          <span class="pill">Bitbucket <span class="exp">●</span> experimental</span>
+        <p class="kicker">Providers</p>
+        <div class="provider-rows">
+          <div class="provider" data-provider="github">
+            <span class="state" aria-hidden="true"></span>
+            <span class="name">GitHub</span>
+            <span class="sep">·</span>
+            <span class="status">stable</span>
+          </div>
+          <div class="provider" data-provider="linear">
+            <span class="state" aria-hidden="true"></span>
+            <span class="name">Linear</span>
+            <span class="sep">·</span>
+            <span class="status">stable</span>
+          </div>
+          <div class="provider experimental" data-provider="jira">
+            <span class="state" aria-hidden="true"></span>
+            <span class="name">Jira</span>
+            <span class="sep">·</span>
+            <span class="status">experimental</span>
+          </div>
+          <div class="provider experimental" data-provider="bitbucket">
+            <span class="state" aria-hidden="true"></span>
+            <span class="name">Bitbucket</span>
+            <span class="sep">·</span>
+            <span class="status">experimental</span>
+          </div>
         </div>
       </section>
 
       <section class="faq" id="faq">
-        <h2>Questions</h2>
+        <p class="kicker">Questions</p>
+        <h2>Fair to ask.</h2>
 
         <details class="faq-item">
-          <summary>Is this free?</summary>
+          <summary>Is this free? <span class="chev" aria-hidden="true">›</span></summary>
           <p>
-            The current builds are free while noti-peek is in beta. Paid tiers may
-            appear later for heavier providers or team features — existing users
-            will get clear notice, nothing swapped under you.
+            Builds are free during beta. Paid tiers may appear later for
+            heavier providers or team features — existing users get clear
+            notice, nothing swapped under you.
           </p>
         </details>
 
         <details class="faq-item">
-          <summary>Where are my OAuth tokens stored?</summary>
+          <summary>Where are my OAuth tokens stored? <span class="chev" aria-hidden="true">›</span></summary>
           <p>
-            In D1 (Cloudflare's SQLite), encrypted at rest, on a per-device token.
-            Your device only ever sees its own connection. No third-party analytics,
+            In D1 (Cloudflare's SQLite), encrypted at rest, per-device. Your
+            device only ever sees its own connection. No third-party analytics,
             no token sharing, no token export. Details live in the
             <a href="/privacy.html">privacy statement</a>.
           </p>
         </details>
 
         <details class="faq-item">
-          <summary>Can I run it without the hosted backend?</summary>
+          <summary>Can I run it without the hosted backend? <span class="chev" aria-hidden="true">›</span></summary>
           <p>
-            Yes — the backend is a single Cloudflare Worker and two D1 migrations;
-            self-hosting takes about 10 minutes if you're comfortable with
-            <code>wrangler deploy</code>. The frontend points to any API URL you
-            configure.
+            Yes. The backend is one Cloudflare Worker and two D1 migrations;
+            self-hosting takes about ten minutes if you're comfortable with
+            <code>wrangler deploy</code>. The frontend points to any API URL
+            you configure.
           </p>
         </details>
 
         <details class="faq-item">
-          <summary>What happens when I disconnect a provider?</summary>
+          <summary>What happens when I disconnect a provider? <span class="chev" aria-hidden="true">›</span></summary>
           <p>
-            The app revokes the token with the provider (where their API supports
-            it) and deletes the connection row from D1. Nothing is kept server-side
-            after disconnect.
+            The app revokes the token with the provider (where their API
+            supports it) and deletes the connection row from D1. Nothing
+            kept server-side after disconnect.
           </p>
         </details>
 
         <details class="faq-item">
-          <summary>Windows or Linux?</summary>
+          <summary>Windows or Linux? <span class="chev" aria-hidden="true">›</span></summary>
           <p>
-            Not yet. Tauri makes it possible, but the current focus is a polished
-            macOS menubar experience. Watch the repo if you want cross-platform —
-            that's when it'll show up.
+            Not yet. Tauri makes it possible, but the current focus is a
+            polished macOS menubar experience. Watch the repo — that's where
+            it'll show up when it does.
           </p>
         </details>
       </section>
@@ -518,12 +732,12 @@
 
     <footer>
       <div class="container row-f">
-        <span>© noti-peek · built as an indie side project.</span>
+        <span>© noti-peek<span class="sep">·</span>an indie side project</span>
         <span>
           <a href="/privacy.html">Privacy</a>
-          &nbsp;·&nbsp;
+          <span class="sep">·</span>
           <a href="https://github.com/Rohithgilla12/noti-peek" rel="noopener">Source</a>
-          &nbsp;·&nbsp;
+          <span class="sep">·</span>
           <a href="https://github.com/Rohithgilla12/noti-peek/issues" rel="noopener">Feedback</a>
         </span>
       </div>
