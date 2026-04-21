@@ -23,7 +23,7 @@ ENVIRONMENT = "production"
 # api.notipeek.dev domain goes live, switch APP_URL here AND update every
 # provider's OAuth callback URL to match (see docs/deploy-e2e.md §1.4b).
 APP_URL = "https://noti-peek-api-production.rohithgilla.workers.dev"
-ENABLE_EXPERIMENTAL_PROVIDERS = "false"
+ENABLE_EXPERIMENTAL_PROVIDERS = "true"
 
 [[env.production.d1_databases]]
 binding = "DB"
