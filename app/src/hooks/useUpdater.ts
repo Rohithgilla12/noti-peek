@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-// @ts-expect-error — install via: bun add @tauri-apps/plugin-updater
 import { check, type Update } from '@tauri-apps/plugin-updater';
-// @ts-expect-error — install via: bun add @tauri-apps/plugin-process
 import { relaunch } from '@tauri-apps/plugin-process';
 
 /** Subset of the updater progress event shape — narrow to what we consume. */

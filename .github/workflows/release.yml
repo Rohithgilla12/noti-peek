@@ -128,8 +128,13 @@ jobs:
 
           URL="https://github.com/${RELEASES_REPO}/releases/download/${TAG}/$(basename "$APP_TARBALL")"
 
+          # Tauri's updater parses `version` with strict semver — strip the leading
+          # `v` from the git tag so "v0.1.1" becomes "0.1.1", otherwise the client
+          # silently rejects the manifest.
+          SEMVER="${TAG#v}"
+
           jq -n \
-            --arg version   "$TAG" \
+            --arg version   "$SEMVER" \
             --arg notes     "noti-peek $TAG" \
             --arg pub_date  "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             --rawfile sig   "$SIG_FILE" \

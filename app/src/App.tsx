@@ -8,6 +8,7 @@ import { NotificationList } from './components/NotificationList';
 import { Settings } from './components/Settings';
 import { StatusBar } from './components/StatusBar';
 import { NotificationDetail } from './components/NotificationDetail';
+import { useUpdater } from './hooks/useUpdater';
 
 const STORE_KEY = 'auth';
 
@@ -26,6 +27,16 @@ function App() {
   const notifications = useAppStore((state) => state.notifications);
 
   const selectedNotification = notifications.find((n) => n.id === selectedNotificationId);
+
+  const { status: updaterStatus, installNow, checkNow: checkForUpdatesNow } = useUpdater({ checkOnMount: true });
+
+  useEffect(() => {
+    // Re-check periodically so long-running instances pick up releases without a relaunch.
+    const id = setInterval(() => {
+      void checkForUpdatesNow();
+    }, 30 * 60 * 1000);
+    return () => clearInterval(id);
+  }, [checkForUpdatesNow]);
 
   const initialize = useCallback(async () => {
     try {
@@ -132,11 +143,46 @@ function App() {
     );
   }
 
+  const renderUpdateBanner = () => {
+    if (updaterStatus.kind === 'available') {
+      const version = updaterStatus.update.version;
+      return (
+        <div className="px-3 py-2 bg-[var(--accent-muted)] border-b border-[var(--accent)]/20 text-[length:var(--text-xs)] flex items-center justify-between gap-2 fade-in">
+          <span className="text-[var(--accent)]">
+            Update available: <strong>{version}</strong>
+          </span>
+          <button
+            onClick={() => void installNow()}
+            className="px-2 py-1 rounded-[var(--radius-sm)] bg-[var(--accent)] text-[var(--bg-base)] font-medium hover:opacity-90 active:scale-95 transition"
+          >
+            Install & restart
+          </button>
+        </div>
+      );
+    }
+    if (updaterStatus.kind === 'downloading') {
+      return (
+        <div className="px-3 py-2 bg-[var(--accent-muted)] border-b border-[var(--accent)]/20 text-[length:var(--text-xs)] text-[var(--accent)] fade-in">
+          Downloading update{updaterStatus.percent !== null ? `… ${updaterStatus.percent}%` : '…'}
+        </div>
+      );
+    }
+    if (updaterStatus.kind === 'ready') {
+      return (
+        <div className="px-3 py-2 bg-[var(--accent-muted)] border-b border-[var(--accent)]/20 text-[length:var(--text-xs)] text-[var(--accent)] fade-in">
+          Update installed — relaunching…
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="menubar-container">
       <div className="flex flex-1 overflow-hidden">
         <div className={`flex flex-col flex-1 ${selectedNotification ? 'w-1/2' : 'w-full'} transition-all duration-300`}>
           <Header />
+          {renderUpdateBanner()}
           <NotificationList />
           <StatusBar onOpenSettings={() => setShowSettings(true)} />
         </div>
