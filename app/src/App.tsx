@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { load } from '@tauri-apps/plugin-store';
+import { openUrl } from '@tauri-apps/plugin-opener';
 import './App.css';
 import { useAppStore } from './store';
 import { api } from './lib/api';
@@ -113,7 +114,7 @@ function App() {
         else if (selectedId) setSelectedId(null);
       }
       if (e.key === 'Enter' && selected) {
-        window.open(selected.url, '_blank');
+        void openUrl(selected.url).catch((err) => console.error('open url failed:', err));
         if (selected.unread) markAsRead(selected.id);
       }
     };

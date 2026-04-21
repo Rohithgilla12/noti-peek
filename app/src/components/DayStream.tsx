@@ -1,4 +1,5 @@
 import { useMemo, useEffect } from 'react';
+import { openUrl } from '@tauri-apps/plugin-opener';
 import { useAppStore, useFilteredNotifications, useUnreadCount } from '../store';
 import type { Notification, Provider } from '../lib/types';
 
@@ -168,7 +169,7 @@ export function DayStream() {
                   selected={n.id === selectedId}
                   onSelect={() => setSelectedId(n.id)}
                   onOpen={() => {
-                    window.open(n.url, '_blank');
+                    void openUrl(n.url).catch((err) => console.error('open url failed:', err));
                     if (n.unread) markAsRead(n.id);
                   }}
                 />
