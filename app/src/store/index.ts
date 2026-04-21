@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import type { Notification, Connection, Provider } from '../lib/types';
 import { api } from '../lib/api';
 import * as db from '../lib/db';
+import { notifyNew } from '../lib/notify';
 
 const updateBadgeCount = async (count: number) => {
   try {
@@ -130,7 +131,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   fetchNotifications: async () => {
-    const { notifications: existingNotifications } = get();
+    const { notifications: existingNotifications, lastSyncTime } = get();
     const hasCache = existingNotifications.length > 0;
 
     set({
@@ -142,15 +143,31 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     try {
       const { notifications, errors } = await api.getNotifications();
+
+      // Diff against the previous fetch to find notifications we haven't
+      // told the OS about yet. Only fire system notifications once we
+      // have a prior sync on record — otherwise first launch after a
+      // long weekend would spam a wall of banners.
+      const previousIds = new Set(existingNotifications.map((n) => n.id));
+      const newlyArrived = lastSyncTime
+        ? notifications.filter((n) => n.unread && !previousIds.has(n.id))
+        : [];
+
       set({ notifications, lastSyncTime: new Date() });
 
-      const unreadCount = notifications.filter(n => n.unread).length;
+      const unreadCount = notifications.filter((n) => n.unread).length;
       await updateBadgeCount(unreadCount);
 
       await db.cacheNotifications(notifications);
 
+      // Cap banners at 3 per sync so a burst (e.g. a PR with 10 review
+      // comments) becomes one or two notifications, not a storm.
+      for (const n of newlyArrived.slice(0, 3)) {
+        void notifyNew(n);
+      }
+
       if (errors && errors.length > 0) {
-        set({ error: errors.map(e => `${e.provider}: ${e.error}`).join(', ') });
+        set({ error: errors.map((e) => `${e.provider}: ${e.error}`).join(', ') });
       }
     } catch (err) {
       const isNetworkError = err instanceof Error &&

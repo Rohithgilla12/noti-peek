@@ -132,13 +132,23 @@ function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, [fetchNotifications, showSettings, selectedId, selected, setSelectedId, markAsRead]);
 
-  // Tray menu → "Preferences…" fires this event from the Rust side.
+  const setFilter = useAppStore((s) => s.setFilter);
+  const filter = useAppStore((s) => s.filter);
+
+  // Native app menu + tray right-click menu both dispatch these events
+  // from Rust so the frontend doesn't have to know where they came from.
   useEffect(() => {
-    const unlisten = listen('open-preferences', () => setShowSettings(true));
+    const unlisteners = [
+      listen('open-preferences', () => setShowSettings(true)),
+      listen('menu-refresh', () => fetchNotifications()),
+      listen('menu-toggle-unread', () =>
+        setFilter({ unreadOnly: !filter.unreadOnly }),
+      ),
+    ];
     return () => {
-      void unlisten.then((fn) => fn());
+      for (const p of unlisteners) void p.then((fn) => fn());
     };
-  }, []);
+  }, [fetchNotifications, setFilter, filter.unreadOnly]);
 
   if (isInitializing) {
     return (

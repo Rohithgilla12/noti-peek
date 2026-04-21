@@ -1,7 +1,9 @@
 use tauri::{
-    menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem},
+    menu::{
+        AboutMetadataBuilder, MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder,
+    },
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent, TrayIcon},
-    Manager, State, WindowEvent,
+    Emitter, Manager, State, WindowEvent,
 };
 use tauri_plugin_sql::{Migration, MigrationKind};
 use std::sync::Mutex;
@@ -67,29 +69,12 @@ fn get_migrations() -> Vec<Migration> {
 }
 
 #[tauri::command]
-fn set_badge_count(
-    count: u32,
-    state: State<TrayState>,
-    app: tauri::AppHandle,
-) -> Result<(), String> {
+fn set_badge_count(count: u32, state: State<TrayState>) -> Result<(), String> {
     let label = if count > 0 { Some(count.to_string()) } else { None };
-
-    // Menubar tray shows the unread count next to the icon.
     let tray_guard = state.0.lock().map_err(|e| e.to_string())?;
     if let Some(tray) = tray_guard.as_ref() {
-        tray.set_title(label.clone()).map_err(|e| e.to_string())?;
+        tray.set_title(label).map_err(|e| e.to_string())?;
     }
-
-    // macOS Dock badge — matches Mail.app behaviour.
-    #[cfg(target_os = "macos")]
-    {
-        let _ = app.set_badge_label(label);
-    }
-    #[cfg(not(target_os = "macos"))]
-    {
-        let _ = &app;
-    }
-
     Ok(())
 }
 
@@ -106,8 +91,103 @@ pub fn run() {
         )
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_notification::init())
         .manage(TrayState(Mutex::new(None)))
         .setup(|app| {
+            // ----------------------------------------------------------
+            // Native macOS menu bar.
+            // ----------------------------------------------------------
+            let about_metadata = AboutMetadataBuilder::new()
+                .name(Some("noti-peek"))
+                .version(Some(env!("CARGO_PKG_VERSION")))
+                .copyright(Some("© Rohith Gilla"))
+                .website(Some("https://github.com/Rohithgilla12/noti-peek"))
+                .website_label(Some("github.com/Rohithgilla12/noti-peek"))
+                .build();
+
+            let prefs = MenuItemBuilder::new("Preferences…")
+                .id("app:preferences")
+                .accelerator("CmdOrCtrl+,")
+                .build(app)?;
+            let refresh = MenuItemBuilder::new("Refresh")
+                .id("view:refresh")
+                .accelerator("CmdOrCtrl+R")
+                .build(app)?;
+            let toggle_unread = MenuItemBuilder::new("Toggle Unread Only")
+                .id("view:toggle-unread")
+                .accelerator("CmdOrCtrl+U")
+                .build(app)?;
+
+            let app_submenu = SubmenuBuilder::new(app, "noti-peek")
+                .item(&PredefinedMenuItem::about(
+                    app,
+                    Some("About noti-peek"),
+                    Some(about_metadata),
+                )?)
+                .separator()
+                .item(&prefs)
+                .separator()
+                .item(&PredefinedMenuItem::services(app, None)?)
+                .separator()
+                .item(&PredefinedMenuItem::hide(app, None)?)
+                .item(&PredefinedMenuItem::hide_others(app, None)?)
+                .item(&PredefinedMenuItem::show_all(app, None)?)
+                .separator()
+                .item(&PredefinedMenuItem::quit(app, None)?)
+                .build()?;
+
+            let edit_submenu = SubmenuBuilder::new(app, "Edit")
+                .item(&PredefinedMenuItem::undo(app, None)?)
+                .item(&PredefinedMenuItem::redo(app, None)?)
+                .separator()
+                .item(&PredefinedMenuItem::cut(app, None)?)
+                .item(&PredefinedMenuItem::copy(app, None)?)
+                .item(&PredefinedMenuItem::paste(app, None)?)
+                .item(&PredefinedMenuItem::select_all(app, None)?)
+                .build()?;
+
+            let view_submenu = SubmenuBuilder::new(app, "View")
+                .item(&refresh)
+                .item(&toggle_unread)
+                .separator()
+                .item(&PredefinedMenuItem::fullscreen(app, None)?)
+                .build()?;
+
+            let window_submenu = SubmenuBuilder::new(app, "Window")
+                .item(&PredefinedMenuItem::minimize(app, None)?)
+                .item(&PredefinedMenuItem::maximize(app, None)?)
+                .separator()
+                .item(&PredefinedMenuItem::close_window(app, None)?)
+                .build()?;
+
+            let menu = MenuBuilder::new(app)
+                .items(&[&app_submenu, &edit_submenu, &view_submenu, &window_submenu])
+                .build()?;
+
+            app.set_menu(menu)?;
+
+            app.on_menu_event(|app, event| match event.id().as_ref() {
+                "app:preferences" => {
+                    if let Some(window) = app.get_webview_window("main") {
+                        let _ = window.show();
+                        let _ = window.set_focus();
+                        let _ = window.emit("open-preferences", ());
+                    }
+                }
+                "view:refresh" => {
+                    if let Some(window) = app.get_webview_window("main") {
+                        let _ = window.emit("menu-refresh", ());
+                    }
+                }
+                "view:toggle-unread" => {
+                    if let Some(window) = app.get_webview_window("main") {
+                        let _ = window.emit("menu-toggle-unread", ());
+                    }
+                }
+                _ => {}
+            });
+
+            // ----------------------------------------------------------
             // Tray right-click menu — native macOS context menu with
             // Show · Preferences · Quit. Matches every menubar helper
             // the target user already has in their bar.

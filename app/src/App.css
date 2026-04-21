@@ -108,7 +108,11 @@ html, body, #root {
 }
 
 body {
-  background-color: var(--bg);
+  /* Transparent so the macOS NSVisualEffectView behind the window
+     shows through. Individual surfaces (stream, detail, footer)
+     keep their solid palette — only the toolbar lets vibrancy
+     bleed through. */
+  background: transparent;
   color: var(--ink-2);
   font-family: var(--font-mono);
   font-size: var(--text-base);
@@ -120,8 +124,14 @@ body {
   height: 100%;
   display: grid;
   grid-template-rows: auto 1fr auto;
-  background: var(--bg);
+  background: transparent;
   color: var(--ink-2);
+}
+.app-main {
+  background: var(--bg);
+}
+.footer {
+  background-color: var(--bg-1);
 }
 
 /* Legacy menubar container — preserved for Settings overlay + any
@@ -265,8 +275,10 @@ kbd {
   align-items: center;
   height: 44px;
   padding: 0 14px 0 0;
+  /* Transparent so the window's HeaderView vibrancy shows through.
+     Hair-line bottom keeps it visually distinct from the content. */
+  background: transparent;
   border-bottom: 1px solid var(--line-soft);
-  background: var(--bg);
   -webkit-user-select: none;
   user-select: none;
 }
