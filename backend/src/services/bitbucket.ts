@@ -161,82 +161,74 @@ export async function fetchBitbucketNotifications(
     accessToken = await refreshBitbucketToken(connection, env, db);
   }
 
+  const authHeaders = {
+    'Authorization': `Bearer ${accessToken}`,
+    'Accept': 'application/json',
+  };
+
   const currentUser = await getCurrentUser(accessToken);
   const allPullRequests: BitbucketPullRequest[] = [];
-  let pagesFetched = 0;
 
-  // Fetch PRs where user is a reviewer
-  let nextUrl: string | undefined = `https://api.bitbucket.org/2.0/pullrequests/${currentUser.uuid}?pagelen=${perPage}`;
+  // Bitbucket's cross-workspace endpoints were sunset on 2026-04-14 (CHANGE-2770):
+  //   - GET /2.0/pullrequests/{selected_user}  -> 404 (removed outright)
+  //   - GET /2.0/repositories?role=...         -> 410 Gone
+  //   - GET /2.0/user/permissions/{workspaces,repositories} -> 410 Gone
+  // We now walk: user -> workspaces -> repos -> pullrequests per repo.
 
-  while (nextUrl && pagesFetched < maxPages) {
-    const response = await fetch(nextUrl, {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Accept': 'application/json',
-      },
-    });
-
+  // Step 1: enumerate workspaces the user belongs to.
+  const workspaceSlugs: string[] = [];
+  let workspaceUrl: string | undefined = `https://api.bitbucket.org/2.0/user/workspaces?pagelen=${perPage}`;
+  let workspacePages = 0;
+  while (workspaceUrl && workspacePages < maxPages) {
+    const response = await fetch(workspaceUrl, { headers: authHeaders });
     if (!response.ok) {
       if (response.status === 401) {
         throw new TokenExpiredError('Bitbucket token expired or revoked');
       }
       throw new Error(`Bitbucket API error: ${response.status}`);
     }
-
-    const data = await response.json() as BitbucketPaginatedResponse<BitbucketPullRequest>;
-    allPullRequests.push(...data.values);
-
-    if (!data.next || data.values.length < perPage) {
-      break;
+    const data = await response.json() as BitbucketPaginatedResponse<{ workspace: { slug: string } }>;
+    for (const entry of data.values) {
+      if (entry.workspace?.slug) {
+        workspaceSlugs.push(entry.workspace.slug);
+      }
     }
-
-    nextUrl = data.next;
-    pagesFetched++;
+    workspaceUrl = data.next;
+    workspacePages++;
   }
 
-  // Also fetch PRs authored by the user
-  pagesFetched = 0;
-  nextUrl = `https://api.bitbucket.org/2.0/repositories?role=member&pagelen=${perPage}`;
-
-  const repoUrls: string[] = [];
-  while (nextUrl && pagesFetched < 2) {
-    const response = await fetch(nextUrl, {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Accept': 'application/json',
-      },
-    });
-
-    if (response.ok) {
+  // Step 2: for each workspace, list repos the user has access to.
+  const repoPRUrls: string[] = [];
+  for (const slug of workspaceSlugs) {
+    let repoUrl: string | undefined = `https://api.bitbucket.org/2.0/repositories/${encodeURIComponent(slug)}?role=member&pagelen=${perPage}`;
+    let repoPages = 0;
+    while (repoUrl && repoPages < 2) {
+      const response = await fetch(repoUrl, { headers: authHeaders });
+      if (!response.ok) {
+        break;
+      }
       const data = await response.json() as BitbucketPaginatedResponse<{ full_name: string; links: { pullrequests: { href: string } } }>;
       for (const repo of data.values) {
-        repoUrls.push(repo.links.pullrequests.href);
+        if (repo.links?.pullrequests?.href) {
+          repoPRUrls.push(repo.links.pullrequests.href);
+        }
       }
-      nextUrl = data.next;
-    } else {
-      break;
+      repoUrl = data.next;
+      repoPages++;
     }
-    pagesFetched++;
   }
 
-  // Fetch recent PRs from each repo
-  for (const prUrl of repoUrls.slice(0, 10)) {
+  // Step 3: fetch recent open PRs per repo and keep the ones the user is involved in.
+  for (const prUrl of repoPRUrls.slice(0, 20)) {
     try {
-      const response = await fetch(`${prUrl}?state=OPEN&pagelen=10`, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Accept': 'application/json',
-        },
-      });
+      const response = await fetch(`${prUrl}?state=OPEN&pagelen=10`, { headers: authHeaders });
 
       if (response.ok) {
         const data = await response.json() as BitbucketPaginatedResponse<BitbucketPullRequest>;
         for (const pr of data.values) {
-          // Only include if user is involved
           const isAuthor = pr.author.uuid === currentUser.uuid;
-          const isReviewer = pr.participants.some(p => p.user.uuid === currentUser.uuid);
+          const isReviewer = pr.participants?.some(p => p.user.uuid === currentUser.uuid) ?? false;
           if (isAuthor || isReviewer) {
-            // Avoid duplicates
             if (!allPullRequests.some(existing => existing.id === pr.id)) {
               allPullRequests.push(pr);
             }

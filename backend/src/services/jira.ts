@@ -142,18 +142,36 @@ export async function fetchJiraNotifications(
   const jiraBaseUrl = resources[0].url; // e.g., https://mycompany.atlassian.net
 
   const allNotifications: JiraNotification[] = [];
+  // The old GET /rest/api/3/search endpoint was removed (410 Gone). We now use
+  // POST /rest/api/3/search/jql, which is token-paginated via nextPageToken.
+  // Must specify `fields` explicitly (new endpoint returns minimal set otherwise).
+  // `description` is intentionally omitted: it's now returned as ADF JSON rather
+  // than plain text, and we only use it for a short body preview.
+  const searchUrl = `https://api.atlassian.com/ex/jira/${cloudId}/rest/api/3/search/jql`;
+  const jql = 'assignee = currentUser() OR watcher = currentUser() ORDER BY updated DESC';
+  const fields = ['summary', 'updated', 'created', 'status', 'project', 'assignee', 'reporter'];
+
+  let nextPageToken: string | undefined;
   let pagesFetched = 0;
 
   while (pagesFetched < maxPages) {
-    // Fetch issues assigned to the user or issues they're watching
-    const issuesUrl = `https://api.atlassian.com/ex/jira/${cloudId}/rest/api/3/search`;
-    const jql = 'assignee = currentUser() OR watcher = currentUser() ORDER BY updated DESC';
+    const body: { jql: string; maxResults: number; fields: string[]; nextPageToken?: string } = {
+      jql,
+      maxResults: perPage,
+      fields,
+    };
+    if (nextPageToken) {
+      body.nextPageToken = nextPageToken;
+    }
 
-    const issuesResponse = await fetch(`${issuesUrl}?jql=${encodeURIComponent(jql)}&maxResults=${perPage}&startAt=${pagesFetched * perPage}`, {
+    const issuesResponse = await fetch(searchUrl, {
+      method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Accept': 'application/json',
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify(body),
     });
 
     if (!issuesResponse.ok) {
@@ -169,7 +187,6 @@ export async function fetchJiraNotifications(
         key: string;
         fields: {
           summary: string;
-          description?: string;
           updated: string;
           created: string;
           status: { name: string };
@@ -179,16 +196,15 @@ export async function fetchJiraNotifications(
         };
         self: string;
       }>;
-      total: number;
-      startAt: number;
-      maxResults: number;
+      nextPageToken?: string;
+      isLast?: boolean;
     };
 
     for (const issue of issuesData.issues) {
       allNotifications.push({
         id: issue.id,
         title: `${issue.key}: ${issue.fields.summary}`,
-        content: issue.fields.description || '',
+        content: '',
         created: issue.fields.created,
         updated: issue.fields.updated,
         readState: 'unread', // Jira doesn't track read state the same way
@@ -208,10 +224,11 @@ export async function fetchJiraNotifications(
       });
     }
 
-    if (issuesData.issues.length < perPage || (issuesData.startAt + issuesData.maxResults) >= issuesData.total) {
+    if (issuesData.isLast || !issuesData.nextPageToken) {
       break;
     }
 
+    nextPageToken = issuesData.nextPageToken;
     pagesFetched++;
   }
 

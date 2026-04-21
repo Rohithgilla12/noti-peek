@@ -61,7 +61,7 @@ describe('Jira Service', () => {
         json: async () => [{ id: 'cloud-123', url: 'https://test.atlassian.net', name: 'Test Site' }],
       });
 
-      // Mock issues search response
+      // Mock issues search response (POST /rest/api/3/search/jql)
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
@@ -71,7 +71,6 @@ describe('Jira Service', () => {
               key: 'TEST-123',
               fields: {
                 summary: 'Fix login bug',
-                description: 'Users cannot login with SSO',
                 updated: '2024-01-15T10:30:00Z',
                 created: '2024-01-14T09:00:00Z',
                 status: { name: 'In Progress' },
@@ -86,7 +85,6 @@ describe('Jira Service', () => {
               key: 'TEST-124',
               fields: {
                 summary: 'Add dark mode',
-                description: null,
                 updated: '2024-01-15T11:00:00Z',
                 created: '2024-01-15T08:00:00Z',
                 status: { name: 'To Do' },
@@ -97,9 +95,7 @@ describe('Jira Service', () => {
               self: 'https://api.atlassian.com/ex/jira/cloud-123/rest/api/3/issue/10002',
             },
           ],
-          total: 2,
-          startAt: 0,
-          maxResults: 50,
+          isLast: true,
         }),
       });
 
@@ -134,9 +130,7 @@ describe('Jira Service', () => {
         ok: true,
         json: async () => ({
           issues: [],
-          total: 0,
-          startAt: 0,
-          maxResults: 50,
+          isLast: true,
         }),
       });
 
@@ -262,7 +256,7 @@ describe('Jira Service', () => {
       // Mock issues
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ issues: [], total: 0, startAt: 0, maxResults: 50 }),
+        json: async () => ({ issues: [], isLast: true }),
       });
 
       await fetchJiraNotifications(expiredConnection, mockEnv, mockDb);
