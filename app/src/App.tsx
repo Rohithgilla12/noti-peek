@@ -11,6 +11,7 @@ import { DayStream } from './components/DayStream';
 import { DetailPane } from './components/DetailPane';
 import { Footer } from './components/Footer';
 import { Settings } from './components/Settings';
+import { Pulse } from './components/Pulse/Pulse';
 import { useUpdater } from './hooks/useUpdater';
 
 const STORE_KEY = 'auth';
@@ -30,6 +31,7 @@ function App() {
   const notifications = useAppStore((s) => s.notifications);
   const markAsRead = useAppStore((s) => s.markAsRead);
   const activeTab = useAppStore((s) => s.activeTab);
+  const setActiveTab = useAppStore((s) => s.setActiveTab);
 
   const selected = notifications.find((n) => n.id === selectedId) ?? null;
 
@@ -135,6 +137,12 @@ function App() {
         if (showSettings) setShowSettings(false);
         else if (selectedId) setSelectedId(null);
       }
+      if (e.key === '1' && !e.metaKey && !e.ctrlKey) {
+        setActiveTab('inbox');
+      }
+      if (e.key === '2' && !e.metaKey && !e.ctrlKey) {
+        setActiveTab('pulse');
+      }
       if (e.key === 'Enter' && selected) {
         void openUrl(selected.url).catch((err) => console.error('open url failed:', err));
         if (selected.unread) markAsRead(selected.id);
@@ -142,7 +150,7 @@ function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [fetchNotifications, showSettings, selectedId, selected, setSelectedId, markAsRead]);
+  }, [fetchNotifications, showSettings, selectedId, selected, setSelectedId, markAsRead, setActiveTab]);
 
   const setFilter = useAppStore((s) => s.setFilter);
   const filter = useAppStore((s) => s.filter);
@@ -184,12 +192,20 @@ function App() {
       <TopNav onOpenSettings={() => setShowSettings(true)} />
       <UpdateBanner status={updaterStatus} onInstall={() => void installNow()} />
       <main className="app-main">
-        <section className="stream-col">
-          <DayStream />
-        </section>
-        <section className="detail-col">
-          <DetailPane notification={selected} />
-        </section>
+        {activeTab === 'inbox' ? (
+          <>
+            <section className="stream-col">
+              <DayStream />
+            </section>
+            <section className="detail-col">
+              <DetailPane notification={selected} />
+            </section>
+          </>
+        ) : (
+          <section className="pulse-col">
+            <Pulse />
+          </section>
+        )}
       </main>
       <Footer />
       {showSettings && <Settings onClose={() => setShowSettings(false)} />}
