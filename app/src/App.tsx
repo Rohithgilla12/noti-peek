@@ -147,6 +147,14 @@ function App() {
         void openUrl(selected.url).catch((err) => console.error('open url failed:', err));
         if (selected.unread) markAsRead(selected.id);
       }
+      if (e.key === 'c' && !e.metaKey && !e.ctrlKey && !e.shiftKey) {
+        e.preventDefault();
+        document.getElementById('comment-textarea')?.focus();
+      }
+      if (e.key === 'm' && !e.metaKey && !e.ctrlKey && !e.shiftKey) {
+        e.preventDefault();
+        (document.querySelector('button[data-action="merge"]') as HTMLButtonElement)?.click();
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
