@@ -60,9 +60,9 @@ interface AppState {
   clearCache: () => Promise<void>;
 
   detailsCache: Record<string, { response: DetailResponse; cachedAt: number }>;
-  inFlightDetails: Set<string>;
+  inFlightDetails: Map<string, Promise<DetailResponse>>;
 
-  fetchDetails: (notification: Notification) => Promise<DetailResponse | null>;
+  fetchDetails: (notification: Notification) => Promise<DetailResponse>;
   performAction: (
     notification: Notification,
     action: string,
@@ -94,7 +94,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   refreshInterval: 5 * 60 * 1000,
 
   detailsCache: {},
-  inFlightDetails: new Set<string>(),
+  inFlightDetails: new Map<string, Promise<DetailResponse>>(),
 
   activeTab: 'inbox',
   setActiveTab: (activeTab) => set({ activeTab }),
@@ -265,55 +265,51 @@ export const useAppStore = create<AppState>((set, get) => ({
     const cached = get().detailsCache[key];
     if (cached) return cached.response;
 
-    if (get().inFlightDetails.has(key)) {
-      return new Promise((resolve) => {
-        const interval = setInterval(() => {
-          const hit = get().detailsCache[key];
-          if (hit) {
-            clearInterval(interval);
-            resolve(hit.response);
-          } else if (!get().inFlightDetails.has(key)) {
-            clearInterval(interval);
-            resolve(null);
-          }
-        }, 50);
-      });
-    }
+    const existing = get().inFlightDetails.get(key);
+    if (existing) return existing;
+
+    const promise = (async () => {
+      try {
+        const response = await api.fetchDetails(notification.id, notification.url);
+        set((state) => {
+          const entries = Object.entries(state.detailsCache);
+          entries.push([key, { response, cachedAt: Date.now() }]);
+          const kept = entries
+            .sort(([, a], [, b]) => b.cachedAt - a.cachedAt)
+            .slice(0, 50);
+          const nextCache: Record<string, { response: DetailResponse; cachedAt: number }> = {};
+          for (const [k, v] of kept) nextCache[k] = v;
+          const nextInFlight = new Map(state.inFlightDetails);
+          nextInFlight.delete(key);
+          return { detailsCache: nextCache, inFlightDetails: nextInFlight };
+        });
+        return response;
+      } catch (err) {
+        set((state) => {
+          const nextInFlight = new Map(state.inFlightDetails);
+          nextInFlight.delete(key);
+          return { inFlightDetails: nextInFlight };
+        });
+        throw err;
+      }
+    })();
 
     set((state) => {
-      const next = new Set(state.inFlightDetails);
-      next.add(key);
-      return { inFlightDetails: next };
+      const nextInFlight = new Map(state.inFlightDetails);
+      nextInFlight.set(key, promise);
+      return { inFlightDetails: nextInFlight };
     });
 
-    try {
-      const response = await api.fetchDetails(notification.id, notification.url);
-      set((state) => {
-        const entries = Object.entries(state.detailsCache);
-        entries.push([key, { response, cachedAt: Date.now() }]);
-        const kept = entries
-          .sort(([, a], [, b]) => b.cachedAt - a.cachedAt)
-          .slice(0, 50);
-        const nextCache: Record<string, { response: DetailResponse; cachedAt: number }> = {};
-        for (const [k, v] of kept) nextCache[k] = v;
-        const nextInFlight = new Set(state.inFlightDetails);
-        nextInFlight.delete(key);
-        return { detailsCache: nextCache, inFlightDetails: nextInFlight };
-      });
-      return response;
-    } catch (err) {
-      set((state) => {
-        const next = new Set(state.inFlightDetails);
-        next.delete(key);
-        return { inFlightDetails: next };
-      });
-      throw err;
-    }
+    return promise;
   },
 
   performAction: async (notification, action, payload) => {
     const fullPayload = { url: notification.url, ...payload };
-    const { details: response } = await api.performAction(notification.id, action, fullPayload);
+    const result = await api.performAction(notification.id, action, fullPayload);
+    if (!result?.details) {
+      throw new Error('action response missing details');
+    }
+    const response = result.details;
     const key = `${notification.id}@${notification.updatedAt}`;
     set((state) => ({
       detailsCache: {

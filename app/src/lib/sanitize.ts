@@ -13,12 +13,19 @@ const ALLOWED_TAGS = [
 
 const ALLOWED_ATTR = ['href', 'src', 'alt', 'title', 'class', 'align'];
 
-export function sanitizeHtml(html: string): string {
-  return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS,
-    ALLOWED_ATTR,
-    ALLOW_DATA_ATTR: false,
-    FORBID_TAGS: ['script', 'iframe', 'form', 'object', 'embed', 'style'],
-    FORBID_ATTR: ['onerror', 'onload', 'onclick'],
-  });
+export function sanitizeHtml(html: string | null | undefined): string {
+  if (typeof html !== 'string' || html.length === 0) return '';
+  try {
+    return DOMPurify.sanitize(html, {
+      ALLOWED_TAGS,
+      ALLOWED_ATTR,
+      ALLOW_DATA_ATTR: false,
+      FORBID_TAGS: ['script', 'iframe', 'form', 'object', 'embed', 'style'],
+      FORBID_ATTR: ['onerror', 'onload', 'onclick'],
+    });
+  } catch (err) {
+    console.error('DOMPurify sanitize failed:', err);
+    // Fallback: strip tags via a naive regex so user at least sees text.
+    return html.replace(/<[^>]*>/g, '');
+  }
 }

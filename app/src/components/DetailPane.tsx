@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { useAppStore } from '../store';
 import { sanitizeHtml } from '../lib/sanitize';
-import { api, InsufficientScopeError } from '../lib/api';
+import { api, ReconnectRequiredError } from '../lib/api';
 import type { Notification, DetailResponse } from '../lib/types';
 import { StatusStrip } from './DetailPane/StatusStrip';
 import { CommentsSection } from './DetailPane/CommentsSection';
@@ -54,6 +54,7 @@ export function DetailPane({ notification }: Props) {
   const [detail, setDetail] = useState<DetailResponse | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [scopeReconnectUrl, setScopeReconnectUrl] = useState<string | null>(null);
+  const [reconnectReason, setReconnectReason] = useState<'insufficient_scope' | 'token_expired' | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -61,6 +62,7 @@ export function DetailPane({ notification }: Props) {
       setDetail(null);
       setDetailError(null);
       setScopeReconnectUrl(null);
+      setReconnectReason(null);
       return;
     }
 
@@ -68,13 +70,15 @@ export function DetailPane({ notification }: Props) {
     setLoading(true);
     setDetailError(null);
     setScopeReconnectUrl(null);
+    setReconnectReason(null);
 
     fetchDetails(notification)
       .then((d) => { if (!cancelled) setDetail(d); })
       .catch((err) => {
         if (cancelled) return;
-        if (err instanceof InsufficientScopeError) {
+        if (err instanceof ReconnectRequiredError) {
           setScopeReconnectUrl(err.reconnectUrl);
+          setReconnectReason(err.reason);
           setDetailError(null);
         } else {
           setDetailError(err instanceof Error ? err.message : 'failed to load details');
@@ -122,7 +126,11 @@ export function DetailPane({ notification }: Props) {
 
       {scopeReconnectUrl && (
         <div className="detail-banner">
-          <span>reconnect {n.source} to load full details and enable actions</span>
+          <span>
+            {reconnectReason === 'token_expired'
+              ? `your ${n.source} session expired — reconnect to load full details`
+              : `reconnect ${n.source} to load full details and enable actions`}
+          </span>
           <button type="button" onClick={() => void reconnect(n.source)}>reconnect</button>
         </div>
       )}

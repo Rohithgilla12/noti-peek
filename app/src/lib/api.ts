@@ -10,13 +10,14 @@ export class UnauthorizedError extends Error {
   }
 }
 
-export class InsufficientScopeError extends Error {
+export class ReconnectRequiredError extends Error {
   constructor(
     public readonly reconnectUrl: string,
     public readonly provider: 'github' | 'jira',
+    public readonly reason: 'insufficient_scope' | 'token_expired',
   ) {
-    super('insufficient_scope');
-    this.name = 'InsufficientScopeError';
+    super(reason);
+    this.name = 'ReconnectRequiredError';
   }
 }
 
@@ -65,30 +66,34 @@ class ApiClient {
       headers,
     });
 
-    if (response.status === 401 && !retried && !REAUTH_SKIP_PATHS.has(path)) {
-      const newToken = await this.runReauth();
-      if (newToken) {
-        return this.request<T>(path, options, true);
-      }
-      throw new UnauthorizedError();
-    }
-
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Request failed' }));
       const message = (error as { error?: string }).error || 'Request failed';
+
+      if (response.status === 403 && (error as { error?: string }).error === 'insufficient_scope') {
+        const body = error as { reconnectUrl?: string; reconnectProvider?: 'github' | 'jira' };
+        if (body.reconnectUrl && body.reconnectProvider) {
+          throw new ReconnectRequiredError(body.reconnectUrl, body.reconnectProvider, 'insufficient_scope');
+        }
+      }
+      if (response.status === 401 && (error as { error?: string }).error === 'token_expired') {
+        const body = error as { reconnectUrl?: string; reconnectProvider?: 'github' | 'jira' };
+        if (body.reconnectUrl && body.reconnectProvider) {
+          throw new ReconnectRequiredError(body.reconnectUrl, body.reconnectProvider, 'token_expired');
+        }
+      }
+
+      // Device-token expiry — unknown 401s trigger the re-auth handler once.
+      if (response.status === 401 && !retried && !REAUTH_SKIP_PATHS.has(path)) {
+        const newToken = await this.runReauth();
+        if (newToken) {
+          return this.request<T>(path, options, true);
+        }
+        throw new UnauthorizedError();
+      }
+
       if (response.status === 401) {
         throw new UnauthorizedError(message);
-      }
-      if (response.status === 403) {
-        const body = error as { error?: string; reconnectUrl?: string };
-        if (body.error === 'insufficient_scope' && body.reconnectUrl) {
-          const provider: 'github' | 'jira' = body.reconnectUrl.includes('/auth/jira')
-            ? 'jira'
-            : body.reconnectUrl.includes('/auth/github')
-              ? 'github'
-              : 'github';
-          throw new InsufficientScopeError(body.reconnectUrl, provider);
-        }
       }
       throw new Error(message);
     }

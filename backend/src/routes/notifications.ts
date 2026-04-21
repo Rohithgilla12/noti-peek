@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import type { Env, Variables, Connection, NotificationResponse, Provider, RateLimitInfo, DetailResponse } from '../types';
-import { RateLimitError, InsufficientScopeError } from '../types';
+import { RateLimitError, InsufficientScopeError, TokenExpiredError } from '../types';
 import { authMiddleware } from '../middleware/auth';
 import { rateLimitMiddleware } from '../middleware/rateLimiter';
 import { fetchGitHubNotifications, markGitHubNotificationAsRead, markAllGitHubNotificationsAsRead } from '../services/github';
@@ -246,10 +246,22 @@ notifications.get('/:id/details', async (c) => {
 
     return c.json({ error: 'unknown notification source' }, 400);
   } catch (err) {
+    if (err instanceof TokenExpiredError) {
+      // Surface as a reconnect-required error so the frontend drops into the
+      // same reconnect CTA flow as insufficient_scope. The remediation is
+      // identical: user reconnects the provider.
+      const provider = source === 'jira' ? 'jira' : 'github';
+      return c.json({
+        error: 'token_expired',
+        reconnectUrl: `/auth/${provider}/start`,
+        reconnectProvider: provider,
+      }, 401);
+    }
     if (err instanceof InsufficientScopeError) {
       return c.json({
         error: 'insufficient_scope',
         reconnectUrl: `/auth/${err.reconnectProvider}/start`,
+        reconnectProvider: err.reconnectProvider,
       }, 403);
     }
     return c.json({ error: err instanceof Error ? err.message : 'unknown error' }, 500);
@@ -344,11 +356,23 @@ notifications.post('/:id/actions/:action', async (c) => {
 
     return c.json({ error: 'unknown notification source' }, 400);
   } catch (err) {
+    if (err instanceof TokenExpiredError) {
+      // Surface as a reconnect-required error so the frontend drops into the
+      // same reconnect CTA flow as insufficient_scope. The remediation is
+      // identical: user reconnects the provider.
+      const provider = source === 'jira' ? 'jira' : 'github';
+      return c.json({
+        error: 'token_expired',
+        reconnectUrl: `/auth/${provider}/start`,
+        reconnectProvider: provider,
+      }, 401);
+    }
     if (err instanceof InsufficientScopeError) {
       return c.json({
         success: false,
         error: 'insufficient_scope',
         reconnectUrl: `/auth/${err.reconnectProvider}/start`,
+        reconnectProvider: err.reconnectProvider,
       }, 403);
     }
     return c.json({ error: err instanceof Error ? err.message : 'unknown error' }, 500);

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAppStore } from '../../store';
-import { InsufficientScopeError } from '../../lib/api';
+import { ReconnectRequiredError } from '../../lib/api';
 import type { Notification, NotificationDetails } from '../../lib/types';
 
 interface Props {
@@ -29,8 +29,8 @@ export function ActionsBar({ notification, details }: Props) {
       setComment('');
       setConfirm(null);
     } catch (err) {
-      if (err instanceof InsufficientScopeError) {
-        setError(`reconnect ${err.provider} to enable actions`);
+      if (err instanceof ReconnectRequiredError) {
+        setError(`reconnect ${err.provider} to continue`);
       } else {
         setError(err instanceof Error ? err.message : 'action failed');
       }
