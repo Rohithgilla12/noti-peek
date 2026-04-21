@@ -11,27 +11,20 @@ on:
         required: true
         type: string
 
+# Source stays private in this repo; the signed DMG + updater JSON ship from
+# Rohithgilla12/noti-peek-releases (public) so browsers and the Tauri updater
+# can fetch without auth. Cross-repo uploads use RELEASES_REPO_TOKEN (a fine-
+# grained PAT scoped to contents:write on the releases repo only).
+env:
+  RELEASES_REPO: Rohithgilla12/noti-peek-releases
+
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   release:
-    name: Build + sign + notarize (macOS ${{ matrix.arch }})
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: aarch64
-            runner: macos-14 # Apple Silicon
-            rust_target: aarch64-apple-darwin
-          # Intel build disabled for Phase 0 — Apple stopped shipping Intel
-          # Macs in 2022 and the beta audience is Apple-Silicon-heavy. Uncomment
-          # to re-enable. `macos-13` was retired 2025-12-04 → use `macos-15-intel`.
-          # - arch: x86_64
-          #   runner: macos-15-intel
-          #   rust_target: x86_64-apple-darwin
-
-    runs-on: ${{ matrix.runner }}
+    name: Build + sign + notarize (macOS aarch64)
+    runs-on: macos-14
     timeout-minutes: 45
 
     steps:
@@ -43,31 +36,40 @@ jobs:
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.rust_target }}
+          targets: aarch64-apple-darwin
 
       - name: Cache Cargo registry + target
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: app/src-tauri -> target
 
+      - name: Resolve tag
+        id: resolve_tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.tag }}"
+          else
+            TAG="${{ github.ref_name }}"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Release tag: $TAG"
+
       - name: Install frontend dependencies
         working-directory: app
         run: bun install --frozen-lockfile
 
-      - name: Build + sign + notarize + upload
+      - name: Build + sign + notarize
+        id: tauri_build
         uses: tauri-apps/tauri-action@v0
         env:
-          # GitHub release upload
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
           # Tauri updater signing (generated via `bun x @tauri-apps/cli signer generate`)
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
           # macOS code signing (Developer ID Application cert)
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }} # base64-encoded .p12
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }} # e.g. "Developer ID Application: Rohith Gilla (TEAMID)"
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
 
           # Apple notarization (app-specific password flow)
           APPLE_ID: ${{ secrets.APPLE_ID }}
@@ -75,30 +77,99 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           projectPath: app
-          tagName: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
-          releaseName: "noti-peek ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}"
-          releaseBody: |
-            See the changelog for what's new.
+          args: --target aarch64-apple-darwin
+          # No tagName → tauri-action builds but does NOT create a release in
+          # the current (private) repo. We publish to the public releases repo
+          # in the next step. `artifactPaths` is still populated as an output.
 
-            The auto-updater will pull this release on existing installs.
-            First-time install: download the `.dmg` for your architecture below.
-          releaseDraft: true
-          prerelease: false
-          args: --target ${{ matrix.rust_target }}
-          includeUpdaterJson: true
-
-  # Single finalize job that flips the draft release to published.
-  # Runs only after both arch builds succeed, so we never ship half a release.
-  publish:
-    name: Publish release
-    needs: release
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Flip draft release to published
+      - name: Create or reuse draft release on public repo
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          GH_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN }}
+          TAG: ${{ steps.resolve_tag.outputs.tag }}
         run: |
-          gh release edit "$TAG" --draft=false
+          if gh release view "$TAG" --repo "$RELEASES_REPO" >/dev/null 2>&1; then
+            echo "Release $TAG already exists on $RELEASES_REPO — reusing."
+          else
+            gh release create "$TAG" --repo "$RELEASES_REPO" --draft \
+              --title "noti-peek $TAG" \
+              --notes "See https://github.com/Rohithgilla12/noti-peek for the changelog. The auto-updater will pull this release on existing installs."
+          fi
+
+      - name: Upload build artifacts to public release
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN }}
+          TAG: ${{ steps.resolve_tag.outputs.tag }}
+          ARTIFACTS_JSON: ${{ steps.tauri_build.outputs.artifactPaths }}
+        run: |
+          echo "Artifacts produced by tauri-action:"
+          echo "$ARTIFACTS_JSON" | jq -r '.[]'
+
+          echo "$ARTIFACTS_JSON" | jq -r '.[]' | while read -r file; do
+            [ -f "$file" ] || { echo "  skipping (missing): $file"; continue; }
+            echo "  uploading: $(basename "$file")"
+            gh release upload "$TAG" "$file" --repo "$RELEASES_REPO" --clobber
+          done
+
+      - name: Generate & upload latest.json (updater manifest)
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN }}
+          TAG: ${{ steps.resolve_tag.outputs.tag }}
+          ARTIFACTS_JSON: ${{ steps.tauri_build.outputs.artifactPaths }}
+        run: |
+          APP_TARBALL=$(echo "$ARTIFACTS_JSON" | jq -r '.[] | select(endswith(".app.tar.gz"))' | head -1)
+          SIG_FILE="${APP_TARBALL}.sig"
+
+          if [ ! -f "$APP_TARBALL" ] || [ ! -f "$SIG_FILE" ]; then
+            echo "Error: expected .app.tar.gz + .sig"
+            echo "  APP_TARBALL=$APP_TARBALL (exists=$([ -f "$APP_TARBALL" ] && echo y || echo n))"
+            echo "  SIG_FILE=$SIG_FILE (exists=$([ -f "$SIG_FILE" ] && echo y || echo n))"
+            exit 1
+          fi
+
+          URL="https://github.com/${RELEASES_REPO}/releases/download/${TAG}/$(basename "$APP_TARBALL")"
+
+          jq -n \
+            --arg version   "$TAG" \
+            --arg notes     "noti-peek $TAG" \
+            --arg pub_date  "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --rawfile sig   "$SIG_FILE" \
+            --arg url       "$URL" \
+            '{
+              version: $version,
+              notes: $notes,
+              pub_date: $pub_date,
+              platforms: {
+                "darwin-aarch64": {
+                  signature: $sig,
+                  url: $url
+                }
+              }
+            }' > latest.json
+
+          cat latest.json | jq .  # echo for debugging
+
+          gh release upload "$TAG" latest.json --repo "$RELEASES_REPO" --clobber
+
+      - name: Publish the release (draft → public)
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN }}
+          TAG: ${{ steps.resolve_tag.outputs.tag }}
+        run: |
+          gh release edit "$TAG" --repo "$RELEASES_REPO" --draft=false
+          echo "Published: https://github.com/$RELEASES_REPO/releases/tag/$TAG"
+
+# When you re-enable Intel (macos-15-intel), convert `release` back to a matrix
+# job and add a merge step that combines per-arch latest-<arch>.json files into
+# a single latest.json with both platforms in the platforms map. See commented
+# matrix entry below for the starting point.
+#
+#     strategy:
+#       fail-fast: false
+#       matrix:
+#         include:
+#           - arch: aarch64
+#             runner: macos-14
+#             rust_target: aarch64-apple-darwin
+#           - arch: x86_64
+#             runner: macos-15-intel
+#             rust_target: x86_64-apple-darwin
