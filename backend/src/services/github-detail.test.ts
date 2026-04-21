@@ -106,3 +106,88 @@ describe('fetchIssueDetails', () => {
     await expect(fetchIssueDetails(connection, 'acme', 'widgets', 7)).rejects.toBeInstanceOf(InsufficientScopeError);
   });
 });
+
+import { fetchPRDetails } from './github-detail';
+
+describe('fetchPRDetails', () => {
+  it('fetches PR, reviews, and checks and maps to GitHubPRDetails', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ permissions: { push: true } }),
+    });
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        number: 42,
+        state: 'open',
+        state_reason: null,
+        title: 'Add feature',
+        body_html: '<p>PR body</p>',
+        user: { login: 'alice', avatar_url: 'https://example.com/a.png' },
+        labels: [],
+        assignees: [],
+        comments: 3,
+        draft: false,
+        merged: false,
+        mergeable: true,
+        mergeable_state: 'clean',
+        head: { sha: 'abc123' },
+      }),
+    });
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => [] });
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => [
+        { state: 'APPROVED', submitted_at: '2026-04-20T10:00:00Z' },
+        { state: 'APPROVED', submitted_at: '2026-04-20T11:00:00Z' },
+      ],
+    });
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        check_runs: [
+          { status: 'completed', conclusion: 'success' },
+          { status: 'completed', conclusion: 'failure' },
+          { status: 'in_progress', conclusion: null },
+        ],
+      }),
+    });
+
+    const result = await fetchPRDetails(connection, 'acme', 'widgets', 42);
+    expect(result.kind).toBe('github_pr');
+    expect(result.draft).toBe(false);
+    expect(result.merged).toBe(false);
+    expect(result.mergeable).toBe(true);
+    expect(result.mergeableState).toBe('clean');
+    expect(result.reviewDecision).toBe('APPROVED');
+    expect(result.checks).toEqual({ passed: 1, failed: 1, pending: 1 });
+    expect(result.permissions).toEqual({ canComment: true, canReview: true, canMerge: true, canClose: true });
+  });
+
+  it('reviewDecision is CHANGES_REQUESTED when latest review per user requests changes', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ permissions: { push: false } }) });
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        number: 1, state: 'open', state_reason: null, title: 't',
+        body_html: '', user: { login: 'a', avatar_url: '' },
+        labels: [], assignees: [], comments: 0,
+        draft: false, merged: false, mergeable: null, mergeable_state: 'unknown',
+        head: { sha: 's' },
+      }),
+    });
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => [] });
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => [
+        { user: { login: 'x' }, state: 'APPROVED', submitted_at: '2026-04-20T10:00:00Z' },
+        { user: { login: 'x' }, state: 'CHANGES_REQUESTED', submitted_at: '2026-04-20T11:00:00Z' },
+      ],
+    });
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ check_runs: [] }) });
+
+    const result = await fetchPRDetails(connection, 'acme', 'widgets', 1);
+    expect(result.reviewDecision).toBe('CHANGES_REQUESTED');
+    expect(result.permissions.canMerge).toBe(false);
+  });
+});
