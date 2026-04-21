@@ -549,6 +549,7 @@ auth.get('/bitbucket/callback', async (c) => {
   }
 
   const credentials = btoa(`${c.env.BITBUCKET_CLIENT_ID}:${c.env.BITBUCKET_CLIENT_SECRET}`);
+  const redirectUri = `${c.env.APP_URL}/auth/bitbucket/callback`;
 
   const tokenResponse = await fetch('https://bitbucket.org/site/oauth2/access_token', {
     method: 'POST',
@@ -559,6 +560,7 @@ auth.get('/bitbucket/callback', async (c) => {
     body: new URLSearchParams({
       grant_type: 'authorization_code',
       code,
+      redirect_uri: redirectUri,
     }),
   });
 
