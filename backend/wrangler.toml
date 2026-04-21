@@ -12,6 +12,11 @@ binding = "DB"
 database_name = "noti-peek-db"
 database_id = "placeholder-will-be-replaced-after-d1-create"
 
+[observability]
+[observability.logs]
+enabled = true
+invocation_logs = true
+
 [env.production.vars]
 ENVIRONMENT = "production"
 # Shipping on the default workers.dev subdomain for beta. When the custom
