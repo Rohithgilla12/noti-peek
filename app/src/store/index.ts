@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { invoke } from '@tauri-apps/api/core';
-import type { Notification, Connection, Provider } from '../lib/types';
+import type { Notification, Connection, Provider, DetailResponse } from '../lib/types';
 import { api } from '../lib/api';
 import * as db from '../lib/db';
 import { notifyNew } from '../lib/notify';
@@ -58,6 +58,16 @@ interface AppState {
   markAsRead: (id: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
   clearCache: () => Promise<void>;
+
+  detailsCache: Record<string, { response: DetailResponse; cachedAt: number }>;
+  inFlightDetails: Set<string>;
+
+  fetchDetails: (notification: Notification) => Promise<DetailResponse | null>;
+  performAction: (
+    notification: Notification,
+    action: string,
+    payload: Record<string, unknown>,
+  ) => Promise<void>;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -82,6 +92,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   selectedNotificationId: null,
 
   refreshInterval: 5 * 60 * 1000,
+
+  detailsCache: {},
+  inFlightDetails: new Set<string>(),
 
   activeTab: 'inbox',
   setActiveTab: (activeTab) => set({ activeTab }),
@@ -245,6 +258,69 @@ export const useAppStore = create<AppState>((set, get) => ({
   clearCache: async () => {
     await db.clearAllCache();
     set({ notifications: [], connections: [], lastSyncTime: null });
+  },
+
+  fetchDetails: async (notification) => {
+    const key = `${notification.id}@${notification.updatedAt}`;
+    const cached = get().detailsCache[key];
+    if (cached) return cached.response;
+
+    if (get().inFlightDetails.has(key)) {
+      return new Promise((resolve) => {
+        const interval = setInterval(() => {
+          const hit = get().detailsCache[key];
+          if (hit) {
+            clearInterval(interval);
+            resolve(hit.response);
+          } else if (!get().inFlightDetails.has(key)) {
+            clearInterval(interval);
+            resolve(null);
+          }
+        }, 50);
+      });
+    }
+
+    set((state) => {
+      const next = new Set(state.inFlightDetails);
+      next.add(key);
+      return { inFlightDetails: next };
+    });
+
+    try {
+      const response = await api.fetchDetails(notification.id, notification.url);
+      set((state) => {
+        const entries = Object.entries(state.detailsCache);
+        entries.push([key, { response, cachedAt: Date.now() }]);
+        const kept = entries
+          .sort(([, a], [, b]) => b.cachedAt - a.cachedAt)
+          .slice(0, 50);
+        const nextCache: Record<string, { response: DetailResponse; cachedAt: number }> = {};
+        for (const [k, v] of kept) nextCache[k] = v;
+        const nextInFlight = new Set(state.inFlightDetails);
+        nextInFlight.delete(key);
+        return { detailsCache: nextCache, inFlightDetails: nextInFlight };
+      });
+      return response;
+    } catch (err) {
+      set((state) => {
+        const next = new Set(state.inFlightDetails);
+        next.delete(key);
+        return { inFlightDetails: next };
+      });
+      throw err;
+    }
+  },
+
+  performAction: async (notification, action, payload) => {
+    const fullPayload = { url: notification.url, ...payload };
+    const { details: response } = await api.performAction(notification.id, action, fullPayload);
+    const key = `${notification.id}@${notification.updatedAt}`;
+    set((state) => ({
+      detailsCache: {
+        ...state.detailsCache,
+        [key]: { response, cachedAt: Date.now() },
+      },
+    }));
   },
 }));
 
