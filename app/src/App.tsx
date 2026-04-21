@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { load } from '@tauri-apps/plugin-store';
 import { openUrl } from '@tauri-apps/plugin-opener';
+import { getCurrentWindow } from '@tauri-apps/api/window';
+import { listen } from '@tauri-apps/api/event';
 import './App.css';
 import { useAppStore } from './store';
 import { api } from './lib/api';
@@ -102,12 +104,20 @@ function App() {
       const typing = (e.target as HTMLElement)?.closest('input, textarea, [contenteditable]');
       if (typing) return;
 
-      if (e.key === 'r' && !e.metaKey && !e.ctrlKey) {
+      // ⌘R → refresh. Plain `r` also works when not typing.
+      if (e.key === 'r' && !e.altKey && !e.shiftKey) {
+        e.preventDefault();
         fetchNotifications();
       }
+      // ⌘, → preferences
       if (e.key === ',' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         setShowSettings(true);
+      }
+      // ⌘W → hide window (stay running in tray)
+      if (e.key === 'w' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        void getCurrentWindow().hide();
       }
       if (e.key === 'Escape') {
         if (showSettings) setShowSettings(false);
@@ -121,6 +131,14 @@ function App() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [fetchNotifications, showSettings, selectedId, selected, setSelectedId, markAsRead]);
+
+  // Tray menu → "Preferences…" fires this event from the Rust side.
+  useEffect(() => {
+    const unlisten = listen('open-preferences', () => setShowSettings(true));
+    return () => {
+      void unlisten.then((fn) => fn());
+    };
+  }, []);
 
   if (isInitializing) {
     return (

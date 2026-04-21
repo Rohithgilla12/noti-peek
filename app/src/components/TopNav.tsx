@@ -1,59 +1,44 @@
 import { useAppStore, useUnreadCount } from '../store';
 
-type Tab = 'inbox' | 'pulse';
-
 interface Props {
   onOpenSettings: () => void;
 }
 
 /**
- * Thin top-nav — brand + tabs + settings. Pulse is scaffolded but not
- * routed yet; clicking it keeps you on Inbox for now (placeholder for
- * the analytics surface this shell grows into).
+ * macOS-style toolbar: inset traffic lights live in the left gutter,
+ * the bar is drag-region everywhere except the action buttons. Brand
+ * anchors the centre-left; refresh + settings sit on the right.
  */
 export function TopNav({ onOpenSettings }: Props) {
   const fetchNotifications = useAppStore((s) => s.fetchNotifications);
   const isSyncing = useAppStore((s) => s.isLoading || s.isSyncing);
   const unread = useUnreadCount();
-  const tab: Tab = 'inbox';
 
   return (
-    <header className="topnav">
-      <div className="brand">
-        noti&#8209;peek<em>.</em>
+    <header className="topnav" data-tauri-drag-region>
+      <div className="topnav-gutter" aria-hidden="true" />
+      <div className="topnav-brand">
+        <span className="topnav-wordmark">
+          noti&#8209;peek<em>.</em>
+        </span>
+        {unread > 0 && (
+          <span className="topnav-unread" aria-label={`${unread} unread`}>
+            {String(unread).padStart(2, '0')}
+          </span>
+        )}
       </div>
-      <nav className="tabs" role="tablist">
-        <button aria-current={tab === 'inbox'} role="tab" type="button">
-          inbox
-          {unread > 0 && (
-            <span style={{ marginLeft: 6, color: 'var(--accent)' }}>
-              {String(unread).padStart(2, '0')}
-            </span>
-          )}
-        </button>
-        <button
-          role="tab"
-          type="button"
-          aria-current={false}
-          disabled
-          title="Coming soon"
-          style={{ cursor: 'not-allowed', opacity: 0.5 }}
-        >
-          pulse
-        </button>
-      </nav>
-      <div className="actions">
+      <div className="topnav-actions">
         <button
           onClick={() => fetchNotifications()}
           disabled={isSyncing}
-          title="Refresh (R)"
+          title="Refresh (⌘R)"
           aria-label="Refresh"
           type="button"
         >
           <svg
             className={isSyncing ? 'spinner' : undefined}
-            width="12"
-            height="12"
+            width="13"
+            height="13"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -66,8 +51,8 @@ export function TopNav({ onOpenSettings }: Props) {
         </button>
         <button onClick={onOpenSettings} title="Settings (⌘,)" aria-label="Settings" type="button">
           <svg
-            width="12"
-            height="12"
+            width="13"
+            height="13"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"

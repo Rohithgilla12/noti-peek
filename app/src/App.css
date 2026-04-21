@@ -253,68 +253,85 @@ kbd {
 }
 
 /* -------------------------------------------------------- */
-/*  Top nav                                                 */
+/*  Top toolbar                                             */
+/*                                                          */
+/*  macOS-style: hidden title bar with traffic lights       */
+/*  inset at {x: 18, y: 18}. The bar is 44px tall to give   */
+/*  them room. Whole bar is a drag region; buttons opt out. */
 /* -------------------------------------------------------- */
 .topnav {
   display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 18px;
+  grid-template-columns: 82px 1fr auto;
   align-items: center;
-  padding: 12px 18px;
+  height: 44px;
+  padding: 0 14px 0 0;
   border-bottom: 1px solid var(--line-soft);
   background: var(--bg);
+  -webkit-user-select: none;
+  user-select: none;
 }
-.topnav .brand {
+.topnav-gutter {
+  /* Reserves space for the macOS traffic lights. The drag region
+     extends underneath them so dragging from that corner still works. */
+  height: 100%;
+}
+.topnav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  line-height: 1;
+}
+.topnav-wordmark {
   font-family: var(--font-serif);
-  font-size: 19px;
+  font-size: 18px;
   color: var(--ink-1);
   letter-spacing: -0.01em;
   font-weight: 500;
 }
-.topnav .brand em {
+.topnav-wordmark em {
   color: var(--accent);
   font-style: italic;
   font-weight: 500;
 }
-.topnav .tabs {
-  display: flex;
-  gap: 20px;
-  justify-self: start;
-  padding-left: 8px;
-}
-.topnav .tabs button {
-  font: inherit;
-  font-size: 11px;
-  color: var(--ink-3);
-  background: transparent;
-  border: 0;
-  padding: 4px 0;
-  cursor: pointer;
+.topnav-unread {
+  font-family: var(--font-mono);
+  font-style: normal;
+  font-size: 10.5px;
+  color: var(--accent-ink);
+  background: var(--accent);
+  padding: 1px 5px;
+  border-radius: 2px;
+  font-variation-settings: 'wght' 520;
   letter-spacing: 0.02em;
 }
-.topnav .tabs button[aria-current="true"] { color: var(--ink-1); }
-.topnav .tabs button[aria-current="true"]::before { content: '▸ '; color: var(--accent); }
-.topnav .actions {
+.topnav-actions {
   display: flex;
-  gap: 10px;
+  gap: 4px;
   align-items: center;
-  color: var(--ink-3);
-  font-size: 11px;
 }
-.topnav .actions button {
+.topnav-actions button {
+  -webkit-app-region: no-drag;
   font: inherit;
-  font-size: 11px;
   color: var(--ink-2);
   background: transparent;
   border: 1px solid transparent;
-  padding: 5px 8px;
-  border-radius: 3px;
+  padding: 5px 7px;
+  border-radius: 4px;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
-.topnav .actions button:hover {
+.topnav-actions button:hover {
   background: var(--bg-1);
-  border-color: var(--line-soft);
   color: var(--ink-1);
+}
+.topnav-actions button:active {
+  background: var(--bg-2);
+}
+.topnav-actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 /* -------------------------------------------------------- */

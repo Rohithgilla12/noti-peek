@@ -1,6 +1,7 @@
 use tauri::{
+    menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent, TrayIcon},
-    Manager, State,
+    Manager, State, WindowEvent,
 };
 use tauri_plugin_sql::{Migration, MigrationKind};
 use std::sync::Mutex;
@@ -66,16 +67,29 @@ fn get_migrations() -> Vec<Migration> {
 }
 
 #[tauri::command]
-fn set_badge_count(count: u32, state: State<TrayState>) -> Result<(), String> {
+fn set_badge_count(
+    count: u32,
+    state: State<TrayState>,
+    app: tauri::AppHandle,
+) -> Result<(), String> {
+    let label = if count > 0 { Some(count.to_string()) } else { None };
+
+    // Menubar tray shows the unread count next to the icon.
     let tray_guard = state.0.lock().map_err(|e| e.to_string())?;
     if let Some(tray) = tray_guard.as_ref() {
-        let title = if count > 0 {
-            Some(count.to_string())
-        } else {
-            None
-        };
-        tray.set_title(title).map_err(|e| e.to_string())?;
+        tray.set_title(label.clone()).map_err(|e| e.to_string())?;
     }
+
+    // macOS Dock badge — matches Mail.app behaviour.
+    #[cfg(target_os = "macos")]
+    {
+        let _ = app.set_badge_label(label);
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = &app;
+    }
+
     Ok(())
 }
 
@@ -94,12 +108,52 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .manage(TrayState(Mutex::new(None)))
         .setup(|app| {
-            // Tray icon stays — it toggles the main window's visibility and
-            // surfaces the unread badge. No longer drives position (the main
-            // window is a regular app window now, not a menubar popover).
+            // Tray right-click menu — native macOS context menu with
+            // Show · Preferences · Quit. Matches every menubar helper
+            // the target user already has in their bar.
+            let show_item = MenuItemBuilder::new("Show noti-peek")
+                .id("show")
+                .accelerator("CmdOrCtrl+Shift+N")
+                .build(app)?;
+            let prefs_item = MenuItemBuilder::new("Preferences…")
+                .id("preferences")
+                .accelerator("CmdOrCtrl+,")
+                .build(app)?;
+            let separator = PredefinedMenuItem::separator(app)?;
+            let quit_item = MenuItemBuilder::new("Quit noti-peek")
+                .id("quit")
+                .accelerator("CmdOrCtrl+Q")
+                .build(app)?;
+
+            let tray_menu = MenuBuilder::new(app)
+                .items(&[&show_item, &prefs_item, &separator, &quit_item])
+                .build()?;
+
             let tray = TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
                 .icon_as_template(true)
+                .menu(&tray_menu)
+                .show_menu_on_left_click(false)
+                .on_menu_event(|app, event| match event.id().as_ref() {
+                    "show" => {
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.unminimize();
+                            let _ = window.set_focus();
+                        }
+                    }
+                    "preferences" => {
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                            let _ = window.emit("open-preferences", ());
+                        }
+                    }
+                    "quit" => {
+                        app.exit(0);
+                    }
+                    _ => {}
+                })
                 .on_tray_icon_event(|tray, event| {
                     if let TrayIconEvent::Click {
                         button: MouseButton::Left,
@@ -125,6 +179,19 @@ pub fn run() {
 
             let tray_state: State<TrayState> = app.state();
             *tray_state.0.lock().unwrap() = Some(tray);
+
+            // Close-to-hide: red traffic-light button hides the window
+            // instead of quitting the process. ⌘Q still quits. This is
+            // the standard macOS app lifetime.
+            if let Some(window) = app.get_webview_window("main") {
+                let win = window.clone();
+                window.on_window_event(move |event| {
+                    if let WindowEvent::CloseRequested { api, .. } = event {
+                        api.prevent_close();
+                        let _ = win.hide();
+                    }
+                });
+            }
 
             Ok(())
         })
