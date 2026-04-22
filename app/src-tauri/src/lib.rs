@@ -111,7 +111,7 @@ pub fn run() {
         .setup(|app| {
             // Create the main window with transparent titlebar for macOS
             let win_builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
-                .title("noti-peek")
+                .title("Noti Peek")
                 .inner_size(1120.0, 720.0)
                 .min_inner_size(820.0, 560.0)
                 .resizable(true)
@@ -156,7 +156,7 @@ pub fn run() {
             // Native macOS menu bar.
             // ----------------------------------------------------------
             let about_metadata = AboutMetadataBuilder::new()
-                .name(Some("noti-peek"))
+                .name(Some("Noti Peek"))
                 .version(Some(env!("CARGO_PKG_VERSION")))
                 .copyright(Some("© Rohith Gilla"))
                 .website(Some("https://github.com/Rohithgilla12/noti-peek"))
@@ -167,6 +167,9 @@ pub fn run() {
                 .id("app:preferences")
                 .accelerator("CmdOrCtrl+,")
                 .build(app)?;
+            let check_updates = MenuItemBuilder::new("Check for Updates…")
+                .id("app:check-updates")
+                .build(app)?;
             let refresh = MenuItemBuilder::new("Refresh")
                 .id("view:refresh")
                 .accelerator("CmdOrCtrl+R")
@@ -176,12 +179,14 @@ pub fn run() {
                 .accelerator("CmdOrCtrl+U")
                 .build(app)?;
 
-            let app_submenu = SubmenuBuilder::new(app, "noti-peek")
+            let app_submenu = SubmenuBuilder::new(app, "Noti Peek")
                 .item(&PredefinedMenuItem::about(
                     app,
-                    Some("About noti-peek"),
+                    Some("About Noti Peek"),
                     Some(about_metadata),
                 )?)
+                .separator()
+                .item(&check_updates)
                 .separator()
                 .item(&prefs)
                 .separator()
@@ -232,6 +237,13 @@ pub fn run() {
                         let _ = window.emit("open-preferences", ());
                     }
                 }
+                "app:check-updates" => {
+                    if let Some(window) = app.get_webview_window("main") {
+                        let _ = window.show();
+                        let _ = window.set_focus();
+                        let _ = window.emit("menu-check-updates", ());
+                    }
+                }
                 "view:refresh" => {
                     if let Some(window) = app.get_webview_window("main") {
                         let _ = window.emit("menu-refresh", ());
@@ -249,7 +261,7 @@ pub fn run() {
             // Tray right-click menu — native macOS context menu with
             // Show · Preferences · Quit. Matches every menubar helper
             // the target user already has in their bar.
-            let show_item = MenuItemBuilder::new("Show noti-peek")
+            let show_item = MenuItemBuilder::new("Show Noti Peek")
                 .id("show")
                 .accelerator("CmdOrCtrl+Shift+N")
                 .build(app)?;
@@ -258,7 +270,7 @@ pub fn run() {
                 .accelerator("CmdOrCtrl+,")
                 .build(app)?;
             let separator = PredefinedMenuItem::separator(app)?;
-            let quit_item = MenuItemBuilder::new("Quit noti-peek")
+            let quit_item = MenuItemBuilder::new("Quit Noti Peek")
                 .id("quit")
                 .accelerator("CmdOrCtrl+Q")
                 .build(app)?;

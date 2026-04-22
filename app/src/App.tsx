@@ -39,10 +39,28 @@ function App() {
   const { status: updaterStatus, installNow, checkNow: checkForUpdatesNow } =
     useUpdater({ checkOnMount: true });
 
+  // `manualCheckActive` gates the "checking…" / "up to date" / "check failed"
+  // states in UpdateBanner — they only render for user-initiated checks so
+  // the 30-min auto-checks stay silent.
+  const [manualCheckActive, setManualCheckActive] = useState(false);
+
+  const handleManualCheck = useCallback(() => {
+    setManualCheckActive(true);
+    void checkForUpdatesNow();
+  }, [checkForUpdatesNow]);
+
   useEffect(() => {
     const id = setInterval(() => void checkForUpdatesNow(), 30 * 60 * 1000);
     return () => clearInterval(id);
   }, [checkForUpdatesNow]);
+
+  useEffect(() => {
+    if (!manualCheckActive) return;
+    if (updaterStatus.kind === 'no-update' || updaterStatus.kind === 'error') {
+      const t = setTimeout(() => setManualCheckActive(false), 4000);
+      return () => clearTimeout(t);
+    }
+  }, [manualCheckActive, updaterStatus]);
 
   const initialize = useCallback(async () => {
     try {
@@ -181,11 +199,12 @@ function App() {
       listen('menu-toggle-unread', () =>
         setFilter({ unreadOnly: !filter.unreadOnly }),
       ),
+      listen('menu-check-updates', () => handleManualCheck()),
     ];
     return () => {
       for (const p of unlisteners) void p.then((fn) => fn());
     };
-  }, [fetchNotifications, setFilter, filter.unreadOnly]);
+  }, [fetchNotifications, setFilter, filter.unreadOnly, handleManualCheck]);
 
   if (isInitializing) {
     return (
@@ -207,7 +226,11 @@ function App() {
   return (
     <div className="app-shell">
       <TopNav onOpenSettings={() => setShowSettings(true)} />
-      <UpdateBanner status={updaterStatus} onInstall={() => void installNow()} />
+      <UpdateBanner
+        status={updaterStatus}
+        manualFeedback={manualCheckActive}
+        onInstall={() => void installNow()}
+      />
       <main className="app-main">
         {activeTab === 'inbox' ? (
           <>
@@ -232,9 +255,11 @@ function App() {
 
 function UpdateBanner({
   status,
+  manualFeedback,
   onInstall,
 }: {
   status: ReturnType<typeof useUpdater>['status'];
+  manualFeedback: boolean;
   onInstall: () => void;
 }) {
   if (status.kind === 'available') {
@@ -256,6 +281,15 @@ function UpdateBanner({
   }
   if (status.kind === 'ready') {
     return <div className="update-banner">update installed — relaunching…</div>;
+  }
+  if (manualFeedback && status.kind === 'checking') {
+    return <div className="update-banner">checking for updates…</div>;
+  }
+  if (manualFeedback && status.kind === 'no-update') {
+    return <div className="update-banner">you're on the latest version</div>;
+  }
+  if (manualFeedback && status.kind === 'error') {
+    return <div className="update-banner">update check failed — {status.message}</div>;
   }
   return null;
 }
