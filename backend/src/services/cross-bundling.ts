@@ -362,9 +362,15 @@ export function buildCrossBundle(input: BuildCrossBundleInput): CrossBundleRespo
     if (n.unread) unread_count++;
   }
 
-  const primaryKey = input.pair === 'linear-github'
-    ? extractLinearKey(input.primaryNotif.url)!
-    : extractJiraKey(input.primaryNotif.url)!;
+  const rawKey = input.pair === 'linear-github'
+    ? extractLinearKey(input.primaryNotif.url)
+    : extractJiraKey(input.primaryNotif.url);
+  if (rawKey === null) {
+    throw new Error(
+      `buildCrossBundle: cannot extract key from primaryNotif.url "${input.primaryNotif.url}" for pair "${input.pair}"`,
+    );
+  }
+  const primaryKey = rawKey;
 
   return {
     id: `xbundle:${input.pair}:${primaryKey}:${earliest.updatedAt}`,
