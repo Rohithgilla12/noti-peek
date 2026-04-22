@@ -59,16 +59,16 @@ function createMockDb() {
             if (idx >= 0) suggestions[idx] = row; else suggestions.push(row);
             return { success: true };
           }
-          if (/DELETE FROM suggestion_decisions WHERE user_id = \? AND decision = 'dismissed'/i.test(sql)) {
-            const userId = bound[0] as string;
+          if (/DELETE FROM suggestion_decisions WHERE user_id = \? AND decision = \?/i.test(sql)) {
+            const [userId, decision] = bound as [string, 'dismissed' | 'confirmed'];
             for (let i = suggestions.length - 1; i >= 0; i--) {
-              if (suggestions[i].user_id === userId && suggestions[i].decision === 'dismissed') {
+              if (suggestions[i].user_id === userId && suggestions[i].decision === decision) {
                 suggestions.splice(i, 1);
               }
             }
             return { success: true };
           }
-          return { success: true };
+          throw new Error(`MockDb: unhandled SQL in run(): ${sql.slice(0, 80)}`);
         },
       };
       return api as unknown;
