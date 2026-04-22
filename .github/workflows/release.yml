@@ -135,31 +135,34 @@ jobs:
           projectPath: app
           args: --target ${{ matrix.rust_target }}
 
-      # Stage every artifact tauri-action reported into one flat directory
-      # so the publish job can upload them without caring about per-platform
-      # bundle subfolders (dmg/, msi/, nsis/, appimage/, deb/, rpm/, etc).
+      # Stage every installer, updater bundle, and .sig file into a flat
+      # staged/ dir. We glob the bundle tree directly rather than routing
+      # through tauri-action's artifactPaths output — that output uses
+      # backslash-escaped paths on Windows that Git Bash can't resolve
+      # with `[ -f ]`, even after forward-slash normalisation.
       - name: Stage release files
         shell: bash
-        env:
-          ARTIFACTS_MACOS: ${{ steps.tauri_build_macos.outputs.artifactPaths }}
-          ARTIFACTS_OTHER: ${{ steps.tauri_build_other.outputs.artifactPaths }}
         run: |
           set -euo pipefail
-          if [ "${{ matrix.platform }}" = "macos" ]; then
-            ARTIFACTS="$ARTIFACTS_MACOS"
-          else
-            ARTIFACTS="$ARTIFACTS_OTHER"
-          fi
-
           mkdir -p staged
-          # tauri-action emits Windows backslash paths on windows-latest.
-          # Git Bash's `[ -f ... ]` test fails on them, so normalise to
-          # forward slashes before testing and copying. No-op on mac/linux.
-          echo "$ARTIFACTS" | jq -r '.[]' | while read -r f; do
-            f="${f//\\//}"
-            [ -f "$f" ] || { echo "skip (missing): $f"; continue; }
-            cp "$f" staged/
-          done
+          BUNDLE_DIR="app/src-tauri/target/${{ matrix.rust_target }}/release/bundle"
+          echo "Scanning $BUNDLE_DIR"
+
+          find "$BUNDLE_DIR" -type f \( \
+               -name "*.dmg" \
+            -o -name "*.app.tar.gz" \
+            -o -name "*.app.tar.gz.sig" \
+            -o -name "*.msi" \
+            -o -name "*.msi.sig" \
+            -o -name "*-setup.exe" \
+            -o -name "*-setup.exe.sig" \
+            -o -name "*.AppImage" \
+            -o -name "*.AppImage.sig" \
+            -o -name "*.deb" \
+            -o -name "*.rpm" \
+          \) -print -exec cp {} staged/ \;
+
+          echo "---"
           ls -la staged/
 
       - name: Upload staged bundles
