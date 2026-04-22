@@ -130,7 +130,7 @@ auth.post('/github/start', authMiddleware, async (c) => {
   const url = new URL('https://github.com/login/oauth/authorize');
   url.searchParams.set('client_id', c.env.GITHUB_CLIENT_ID);
   url.searchParams.set('redirect_uri', redirectUri);
-  url.searchParams.set('scope', 'notifications read:user');
+  url.searchParams.set('scope', 'notifications read:user repo');
   url.searchParams.set('state', state);
 
   return c.json({
@@ -392,7 +392,7 @@ auth.post('/jira/start', authMiddleware, async (c) => {
   const url = new URL('https://auth.atlassian.com/authorize');
   url.searchParams.set('audience', 'api.atlassian.com');
   url.searchParams.set('client_id', c.env.JIRA_CLIENT_ID);
-  url.searchParams.set('scope', 'read:jira-work read:jira-user offline_access');
+  url.searchParams.set('scope', 'read:jira-work read:jira-user write:jira-work offline_access');
   url.searchParams.set('redirect_uri', redirectUri);
   url.searchParams.set('state', state);
   url.searchParams.set('response_type', 'code');

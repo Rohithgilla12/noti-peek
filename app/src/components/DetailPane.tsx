@@ -1,6 +1,12 @@
+import { useEffect, useState } from 'react';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { useAppStore } from '../store';
-import type { Notification } from '../lib/types';
+import { sanitizeHtml } from '../lib/sanitize';
+import { api, ReconnectRequiredError } from '../lib/api';
+import type { Notification, DetailResponse } from '../lib/types';
+import { StatusStrip } from './DetailPane/StatusStrip';
+import { CommentsSection } from './DetailPane/CommentsSection';
+import { ActionsBar } from './DetailPane/ActionsBar';
 
 interface Props {
   notification: Notification | null;
@@ -8,12 +14,8 @@ interface Props {
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString(undefined, {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
+    weekday: 'short', month: 'short', day: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: false,
   });
 }
 
@@ -34,22 +36,63 @@ function humanizeType(type: string): string {
 }
 
 async function openExternalUrl(url: string) {
+  try { await openUrl(url); } catch (err) { console.error('Failed to open URL:', err); }
+}
+
+async function reconnect(source: 'github' | 'jira' | string) {
   try {
+    const url = source === 'jira' ? await api.getJiraAuthUrl() : await api.getGitHubAuthUrl();
     await openUrl(url);
   } catch (err) {
-    console.error('Failed to open URL:', err);
+    console.error('Failed to start reconnect:', err);
   }
 }
 
 export function DetailPane({ notification }: Props) {
   const markAsRead = useAppStore((s) => s.markAsRead);
+  const fetchDetails = useAppStore((s) => s.fetchDetails);
+  const [detail, setDetail] = useState<DetailResponse | null>(null);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const [scopeReconnectUrl, setScopeReconnectUrl] = useState<string | null>(null);
+  const [reconnectReason, setReconnectReason] = useState<'insufficient_scope' | 'token_expired' | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!notification) {
+      setDetail(null);
+      setDetailError(null);
+      setScopeReconnectUrl(null);
+      setReconnectReason(null);
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    setDetailError(null);
+    setScopeReconnectUrl(null);
+    setReconnectReason(null);
+
+    fetchDetails(notification)
+      .then((d) => { if (!cancelled) setDetail(d); })
+      .catch((err) => {
+        if (cancelled) return;
+        if (err instanceof ReconnectRequiredError) {
+          setScopeReconnectUrl(err.reconnectUrl);
+          setReconnectReason(err.reason);
+          setDetailError(null);
+        } else {
+          setDetailError(err instanceof Error ? err.message : 'failed to load details');
+        }
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
+
+    return () => { cancelled = true; };
+  }, [notification?.id, notification?.updatedAt, fetchDetails]);
 
   if (!notification) {
     return (
       <div className="detail">
-        <div className="empty">
-          <span>select a notification to read it here</span>
-        </div>
+        <div className="empty"><span>select a notification to read it here</span></div>
       </div>
     );
   }
@@ -62,70 +105,64 @@ export function DetailPane({ notification }: Props) {
     if (n.unread) markAsRead(n.id);
   };
 
+  const details = detail?.details;
+  const isGitHub = details?.kind === 'github_issue' || details?.kind === 'github_pr';
+  const bodyHtml = details
+    ? (details.kind === 'jira_issue' ? details.descriptionHtml : details.bodyHtml)
+    : '';
   return (
     <div className="detail" data-source={n.source}>
       <div className="meta">
-        <span className="src">
-          {n.source} · {humanizeType(n.type)}
-        </span>
+        <span className="src">{n.source} · {humanizeType(n.type)}</span>
         {ref && <span className="ref">{ref}</span>}
         <span title={formatDateTime(n.updatedAt)}>{formatRelative(n.updatedAt)}</span>
       </div>
 
       <h2>{n.title}</h2>
 
-      {n.body && n.body.trim().length > 0 && (
-        <div className="body">{n.body}</div>
+      {details && <StatusStrip details={details} />}
+
+      {loading && <div className="detail-loading">loading…</div>}
+
+      {scopeReconnectUrl && (
+        <div className="detail-banner">
+          <span>
+            {reconnectReason === 'token_expired'
+              ? `your ${n.source} session expired — reconnect to load full details`
+              : `reconnect ${n.source} to load full details and enable actions`}
+          </span>
+          <button type="button" onClick={() => void reconnect(n.source)}>reconnect</button>
+        </div>
       )}
 
-      <dl className="detail-fields">
-        {ref && (
-          <>
-            <dt>{n.repo ? 'repo' : 'project'}</dt>
-            <dd>{ref}</dd>
-          </>
-        )}
-        <dt>type</dt>
-        <dd>{humanizeType(n.type)}</dd>
-        {n.author?.name && (
-          <>
-            <dt>from</dt>
-            <dd className="detail-author">
-              {n.author.avatar && (
-                <img src={n.author.avatar} alt="" width={16} height={16} />
-              )}
-              <span>{n.author.name}</span>
-            </dd>
-          </>
-        )}
-        <dt>updated</dt>
-        <dd>{formatDateTime(n.updatedAt)}</dd>
-        <dt>created</dt>
-        <dd>{formatDateTime(n.createdAt)}</dd>
-        <dt>status</dt>
-        <dd className={n.unread ? 'tag-unread' : 'tag-read'}>
-          {n.unread ? 'unread' : 'read'}
-        </dd>
-        <dt>link</dt>
-        <dd>
-          <button className="detail-link" onClick={() => void openExternalUrl(n.url)}>
-            {n.url}
-          </button>
-        </dd>
-      </dl>
+      {detailError && !scopeReconnectUrl && (
+        <div className="detail-hint">couldn't load full details — showing basics</div>
+      )}
+
+      {bodyHtml && !scopeReconnectUrl && (
+        <div className="body html-body" dangerouslySetInnerHTML={{ __html: sanitizeHtml(bodyHtml) }} />
+      )}
+
+      {!bodyHtml && n.body && <div className="body">{n.body}</div>}
+
+      {details && !scopeReconnectUrl && (
+        <CommentsSection
+          comments={details.comments}
+          totalCount={details.commentCount}
+          fallbackUrl={n.url}
+        />
+      )}
+
+      {details && !scopeReconnectUrl && <ActionsBar notification={n} details={details} />}
 
       <div className="actions">
-        <button className="primary" onClick={() => void handleOpen()} type="button">
-          open
-        </button>
-        {n.unread && (
-          <button onClick={() => markAsRead(n.id)} type="button">
-            mark read
-          </button>
-        )}
+        <button className="primary" onClick={() => void handleOpen()} type="button">open</button>
+        {n.unread && <button onClick={() => markAsRead(n.id)} type="button">mark read</button>}
         <span className="spacer"></span>
         <span className="keys">
-          <kbd>⏎</kbd> open · <kbd>esc</kbd> close
+          <kbd>⏎</kbd> open · <kbd>c</kbd> comment{isGitHub && details?.kind === 'github_pr' ? ' · ' : ''}
+          {details?.kind === 'github_pr' && <><kbd>m</kbd> merge · </>}
+          <kbd>esc</kbd> close
         </span>
       </div>
     </div>

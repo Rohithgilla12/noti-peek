@@ -1,5 +1,5 @@
 import { fetch } from '@tauri-apps/plugin-http';
-import type { Notification, Connection } from './types';
+import type { Notification, Connection, DetailResponse } from './types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787';
 
@@ -7,6 +7,17 @@ export class UnauthorizedError extends Error {
   constructor(message = 'Unauthorized') {
     super(message);
     this.name = 'UnauthorizedError';
+  }
+}
+
+export class ReconnectRequiredError extends Error {
+  constructor(
+    public readonly reconnectUrl: string,
+    public readonly provider: 'github' | 'jira',
+    public readonly reason: 'insufficient_scope' | 'token_expired',
+  ) {
+    super(reason);
+    this.name = 'ReconnectRequiredError';
   }
 }
 
@@ -55,17 +66,32 @@ class ApiClient {
       headers,
     });
 
-    if (response.status === 401 && !retried && !REAUTH_SKIP_PATHS.has(path)) {
-      const newToken = await this.runReauth();
-      if (newToken) {
-        return this.request<T>(path, options, true);
-      }
-      throw new UnauthorizedError();
-    }
-
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Request failed' }));
       const message = (error as { error?: string }).error || 'Request failed';
+
+      if (response.status === 403 && (error as { error?: string }).error === 'insufficient_scope') {
+        const body = error as { reconnectUrl?: string; reconnectProvider?: 'github' | 'jira' };
+        if (body.reconnectUrl && body.reconnectProvider) {
+          throw new ReconnectRequiredError(body.reconnectUrl, body.reconnectProvider, 'insufficient_scope');
+        }
+      }
+      if (response.status === 401 && (error as { error?: string }).error === 'token_expired') {
+        const body = error as { reconnectUrl?: string; reconnectProvider?: 'github' | 'jira' };
+        if (body.reconnectUrl && body.reconnectProvider) {
+          throw new ReconnectRequiredError(body.reconnectUrl, body.reconnectProvider, 'token_expired');
+        }
+      }
+
+      // Device-token expiry — unknown 401s trigger the re-auth handler once.
+      if (response.status === 401 && !retried && !REAUTH_SKIP_PATHS.has(path)) {
+        const newToken = await this.runReauth();
+        if (newToken) {
+          return this.request<T>(path, options, true);
+        }
+        throw new UnauthorizedError();
+      }
+
       if (response.status === 401) {
         throw new UnauthorizedError(message);
       }
@@ -162,6 +188,24 @@ class ApiClient {
       method: 'POST',
       body: source ? JSON.stringify({ source }) : undefined,
     });
+  }
+
+  async fetchDetails(notificationId: string, url: string): Promise<DetailResponse> {
+    const q = new URLSearchParams({ url });
+    return this.request<DetailResponse>(
+      `/notifications/${encodeURIComponent(notificationId)}/details?${q}`,
+    );
+  }
+
+  async performAction(
+    notificationId: string,
+    action: string,
+    payload: Record<string, unknown>,
+  ): Promise<{ success: true; details: DetailResponse }> {
+    return this.request(
+      `/notifications/${encodeURIComponent(notificationId)}/actions/${encodeURIComponent(action)}`,
+      { method: 'POST', body: JSON.stringify(payload) },
+    );
   }
 
   async deleteAccount(): Promise<void> {
