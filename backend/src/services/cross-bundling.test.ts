@@ -8,6 +8,7 @@ import {
   FUZZY_THRESHOLD,
   buildCrossBundle,
   MAX_ACTORS_SHOWN,
+  buildCrossBundles,
 } from './cross-bundling';
 
 describe('extractTitleKey', () => {
@@ -386,5 +387,106 @@ describe('buildCrossBundle', () => {
     expect(bundle.actors).toHaveLength(MAX_ACTORS_SHOWN);
     expect(bundle.extra_actor_count).toBeGreaterThan(0);
     expect(bundle.actors.map((a) => a.name)).not.toContain('alice'); // alice is oldest and gets bumped
+  });
+});
+
+const NOW = Date.parse('2026-04-22T12:00:00.000Z');
+
+describe('buildCrossBundles orchestrator', () => {
+  it('returns empty output when nothing links', () => {
+    const result = buildCrossBundles({
+      notifications: [
+        notif({ id: 'n1', source: 'github', url: 'https://github.com/o/r/pull/1', title: 'unrelated' }),
+      ],
+      pair: 'linear-github',
+      workLinks: [], decisions: [],
+      userId: 'u', now: NOW,
+    });
+    expect(result.crossBundles).toEqual([]);
+    expect(result.strictLinksInferred).toEqual([]);
+    expect(result.fuzzyCandidates).toEqual([]);
+    expect([...result.consumedNotificationIds]).toEqual([]);
+  });
+
+  it('emits a cross_bundle + a strict link upsert when title-prefix matches', () => {
+    const notifs = [
+      notif({
+        id: 'g', source: 'github',
+        url: 'https://github.com/o/r/pull/423', title: '[LIN-142] Add rate limits',
+        updatedAt: '2026-04-22T10:00:00.000Z',
+      }),
+      notif({
+        id: 'l', source: 'linear',
+        url: 'https://linear.app/t/issue/LIN-142/add-rate-limits', title: 'Add rate limits',
+        updatedAt: '2026-04-22T09:00:00.000Z',
+      }),
+    ];
+    const result = buildCrossBundles({
+      notifications: notifs, pair: 'linear-github',
+      workLinks: [], decisions: [],
+      userId: 'u', now: NOW,
+    });
+    expect(result.crossBundles).toHaveLength(1);
+    expect(result.strictLinksInferred).toHaveLength(1);
+    expect(result.strictLinksInferred[0]).toMatchObject({
+      user_id: 'u', pair: 'linear-github',
+      primary_key: 'LIN-142', linked_ref: 'o/r#423',
+      signal: 'strict', strict_source: 'title-prefix',
+    });
+    expect([...result.consumedNotificationIds].sort()).toEqual(['g', 'l']);
+    expect(result.fuzzyCandidates).toEqual([]);
+  });
+
+  it('reuses an existing confirmed-fuzzy link without rescoring', () => {
+    const notifs = [
+      notif({
+        id: 'g', source: 'github',
+        url: 'https://github.com/o/r/pull/9', title: 'unrelated title',
+        updatedAt: '2026-04-22T10:00:00.000Z',
+      }),
+      notif({
+        id: 'l', source: 'linear',
+        url: 'https://linear.app/t/issue/LIN-500/x', title: 'x',
+        updatedAt: '2026-04-22T09:00:00.000Z',
+      }),
+    ];
+    const result = buildCrossBundles({
+      notifications: notifs, pair: 'linear-github',
+      workLinks: [{
+        user_id: 'u', pair: 'linear-github',
+        primary_key: 'LIN-500', linked_ref: 'o/r#9',
+        signal: 'confirmed-fuzzy', strict_source: null,
+        confirmed_at: '2026-04-21T00:00:00.000Z',
+        last_seen_at: '2026-04-21T00:00:00.000Z',
+      }],
+      decisions: [],
+      userId: 'u', now: NOW,
+    });
+    expect(result.crossBundles).toHaveLength(1);
+    expect(result.crossBundles[0].linked[0].signal).toBe('confirmed-fuzzy');
+    expect(result.strictLinksInferred).toEqual([]);
+  });
+
+  it('surfaces fuzzy candidates when no strict match is found', () => {
+    const notifs = [
+      notif({
+        id: 'g', source: 'github',
+        url: 'https://github.com/o/r/pull/11', title: 'add rate limits to actions',
+        author: { name: 'alice' }, updatedAt: '2026-04-22T10:00:00.000Z',
+      }),
+      notif({
+        id: 'l', source: 'linear',
+        url: 'https://linear.app/t/issue/LIN-700/add-rate-limits', title: 'Add rate limits',
+        author: { name: 'alice' }, updatedAt: '2026-04-22T09:00:00.000Z',
+      }),
+    ];
+    const result = buildCrossBundles({
+      notifications: notifs, pair: 'linear-github',
+      workLinks: [], decisions: [],
+      userId: 'u', now: NOW,
+    });
+    expect(result.crossBundles).toEqual([]);
+    expect(result.fuzzyCandidates).toHaveLength(1);
+    expect(result.fuzzyCandidates[0].confidence).toBeGreaterThanOrEqual(FUZZY_THRESHOLD);
   });
 });

@@ -16,6 +16,7 @@ import type {
   LinkHint,
   SuggestionDecision,
   WorkLink,
+  SuggestedLink,
   SuggestedLinkRationale,
   CrossBundleResponse,
   CrossBundleLinkedSide,
@@ -391,5 +392,160 @@ export function buildCrossBundle(input: BuildCrossBundleInput): CrossBundleRespo
     latest_at: latest.updatedAt,
     earliest_at: earliest.updatedAt,
     children: sorted,
+  };
+}
+
+export interface BuildCrossBundlesInput {
+  notifications: NotificationResponse[];
+  pair: WorkLinkPair;
+  workLinks: WorkLink[];
+  decisions: SuggestionDecision[];
+  userId: string;
+  now: number;
+}
+
+export interface BuildCrossBundlesOutput {
+  crossBundles: CrossBundleResponse[];
+  strictLinksInferred: WorkLink[];
+  fuzzyCandidates: SuggestedLink[];
+  consumedNotificationIds: Set<string>;
+}
+
+function shortHash(s: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = (h * 0x01000193) >>> 0;
+  }
+  return h.toString(16).padStart(8, '0');
+}
+
+function suggestedLinkId(pair: WorkLinkPair, primary_key: string, linked_ref: string): string {
+  return `sugg:${pair}:${shortHash(`${pair}:${primary_key}:${linked_ref}`)}`;
+}
+
+export function buildCrossBundles(input: BuildCrossBundlesInput): BuildCrossBundlesOutput {
+  const { notifications, pair, workLinks, decisions, userId, now } = input;
+  const { ticket: ticketSource, pr: prSource } = PAIR_ROLES[pair];
+
+  const strictFromBatch = collectStrictLinks(notifications, pair);
+
+  const ticketByKey = new Map<string, NotificationResponse>();
+  const prByRef = new Map<string, NotificationResponse>();
+  for (const n of notifications) {
+    if (NEVER_BUNDLE_TYPES.has(n.type)) continue;
+    if (n.source === ticketSource) {
+      const key = pair === 'linear-github' ? extractLinearKey(n.url) : extractJiraKey(n.url);
+      if (key) ticketByKey.set(key, n);
+    } else if (n.source === prSource) {
+      const ref = pair === 'linear-github' ? extractGithubRef(n.url) : extractBitbucketRef(n.url);
+      if (ref) prByRef.set(ref, n);
+    }
+  }
+
+  type Active = {
+    primary_key: string;
+    linked_ref: string;
+    ticket: NotificationResponse;
+    pr: NotificationResponse;
+    signal: 'strict' | 'confirmed-fuzzy';
+    strict_source?: StrictSource;
+  };
+  const activeByKeyRef = new Map<string, Active>();
+  const strictLinksInferred: WorkLink[] = [];
+  const nowIso = new Date(now).toISOString();
+
+  for (const cand of strictFromBatch) {
+    const k = `${cand.primary_key}→${cand.linked_ref}`;
+    if (activeByKeyRef.has(k)) continue;
+    const ticket = ticketByKey.get(cand.primary_key);
+    const pr = prByRef.get(cand.linked_ref);
+    if (!ticket || !pr) continue;
+    activeByKeyRef.set(k, { ...cand, ticket, pr, signal: 'strict' });
+    strictLinksInferred.push({
+      user_id: userId, pair, primary_key: cand.primary_key, linked_ref: cand.linked_ref,
+      signal: 'strict', strict_source: cand.strict_source,
+      confirmed_at: nowIso, last_seen_at: nowIso,
+    });
+  }
+
+  for (const w of workLinks) {
+    if (w.pair !== pair) continue;
+    const k = `${w.primary_key}→${w.linked_ref}`;
+    if (activeByKeyRef.has(k)) continue;
+    const ticket = ticketByKey.get(w.primary_key);
+    const pr = prByRef.get(w.linked_ref);
+    if (!ticket || !pr) continue;
+    activeByKeyRef.set(k, {
+      primary_key: w.primary_key, linked_ref: w.linked_ref,
+      ticket, pr, signal: w.signal,
+      strict_source: w.strict_source ?? undefined,
+    });
+  }
+
+  const groupsByKey = new Map<string, Active[]>();
+  for (const a of activeByKeyRef.values()) {
+    const arr = groupsByKey.get(a.primary_key) ?? [];
+    arr.push(a);
+    groupsByKey.set(a.primary_key, arr);
+  }
+
+  const crossBundles: CrossBundleResponse[] = [];
+  const consumed = new Set<string>();
+
+  for (const [primary_key, group] of groupsByKey) {
+    const ticket = group[0].ticket;
+    const linkedNotifs = group.map((g) => g.pr);
+    const linkedSideMeta: CrossBundleLinkedSide[] = group.map((g) => ({
+      source: g.pr.source,
+      ref: g.linked_ref,
+      url: g.pr.url,
+      signal: g.signal,
+      strict_source: g.strict_source,
+    }));
+
+    const refSet = new Set(group.map((g) => g.linked_ref));
+    const extraTicketSide: NotificationResponse[] = [];
+    const extraPrSide: NotificationResponse[] = [];
+    for (const n of notifications) {
+      if (NEVER_BUNDLE_TYPES.has(n.type)) continue;
+      if (n.id === ticket.id || linkedNotifs.some((l) => l.id === n.id)) continue;
+      if (n.source === ticketSource) {
+        const nk = pair === 'linear-github' ? extractLinearKey(n.url) : extractJiraKey(n.url);
+        if (nk === primary_key) extraTicketSide.push(n);
+      } else if (n.source === prSource) {
+        const nr = pair === 'linear-github' ? extractGithubRef(n.url) : extractBitbucketRef(n.url);
+        if (nr && refSet.has(nr)) extraPrSide.push(n);
+      }
+    }
+
+    const bundle = buildCrossBundle({
+      pair, primaryNotif: ticket, linkedNotifs,
+      extraTicketSide, extraPrSide, linkedSideMeta,
+    });
+
+    crossBundles.push(bundle);
+    consumed.add(ticket.id);
+    for (const n of linkedNotifs) consumed.add(n.id);
+    for (const n of extraTicketSide) consumed.add(n.id);
+    for (const n of extraPrSide) consumed.add(n.id);
+  }
+
+  const unconsumed = notifications.filter((n) => !consumed.has(n.id));
+  const fuzzy = scoreFuzzyCandidates(unconsumed, pair, workLinks, decisions);
+  const fuzzyCandidates: SuggestedLink[] = fuzzy.map((f) => ({
+    id: suggestedLinkId(pair, f.primary_key, f.linked_ref),
+    pair: f.pair,
+    primary: f.primary,
+    linked: f.linked,
+    confidence: f.confidence,
+    rationale: f.rationale,
+  }));
+
+  return {
+    crossBundles,
+    strictLinksInferred,
+    fuzzyCandidates,
+    consumedNotificationIds: consumed,
   };
 }
