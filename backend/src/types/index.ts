@@ -118,6 +118,12 @@ export interface CrossBundleLinkedSide {
   ref: string;
   url: string;
   signal: WorkLinkSignal;
+  /**
+   * API-surface provenance. Present for `signal: 'strict'` rows; absent
+   * (rather than `null`) for `signal: 'confirmed-fuzzy'`. This is an
+   * intentional divergence from `WorkLink.strict_source` (the DB row), which
+   * stores explicit `null`. The mapping layer strips the field when null.
+   */
   strict_source?: StrictSource;
 }
 
@@ -149,6 +155,12 @@ export type SuggestedLinkRationale =
   | 'both-open'
   | 'repo-affinity';
 
+/**
+ * `SuggestedLink.primary` / `.linked` carry `updatedAt` where
+ * `CrossBundleResponse.primary` does not — the suggestions UI needs it to
+ * render rationale (e.g. "both active within 24h"). A cross-bundle already
+ * has `latest_at` at the top level, so per-side timestamps would be redundant.
+ */
 export interface SuggestedLink {
   id: string;                       // hash of (pair, primary_key, linked_ref)
   pair: WorkLinkPair;
