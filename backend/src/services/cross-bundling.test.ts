@@ -196,3 +196,116 @@ describe('collectStrictLinks — jira-bitbucket pair', () => {
     expect(collectStrictLinks(notifications, 'jira-bitbucket')).toEqual([]);
   });
 });
+
+import { scoreFuzzyCandidates, FUZZY_THRESHOLD } from './cross-bundling';
+
+describe('scoreFuzzyCandidates — linear-github', () => {
+  it('emits a high-confidence candidate for same author + strong title overlap + same day', () => {
+    const notifications = [
+      notif({
+        id: 'g', source: 'github',
+        url: 'https://github.com/o/r/pull/9',
+        title: 'add rate limits to actions endpoint',
+        author: { name: 'alice' },
+        updatedAt: '2026-04-22T10:00:00.000Z',
+      }),
+      notif({
+        id: 'l', source: 'linear',
+        url: 'https://linear.app/t/issue/LIN-500/add-rate-limits',
+        title: 'Add rate limits',
+        author: { name: 'alice' },
+        updatedAt: '2026-04-22T09:00:00.000Z',
+      }),
+    ];
+    const cands = scoreFuzzyCandidates(notifications, 'linear-github', [], []);
+    expect(cands).toHaveLength(1);
+    expect(cands[0].confidence).toBeGreaterThanOrEqual(FUZZY_THRESHOLD);
+    expect(cands[0].rationale).toEqual(
+      expect.arrayContaining(['author-match', 'title-overlap', 'temporal-close']),
+    );
+  });
+
+  it('drops candidates below 0.7 confidence', () => {
+    const notifications = [
+      notif({
+        id: 'g', source: 'github',
+        url: 'https://github.com/o/r/pull/9',
+        title: 'refactor module boundaries',
+        author: { name: 'alice' },
+        updatedAt: '2026-04-22T10:00:00.000Z',
+      }),
+      notif({
+        id: 'l', source: 'linear',
+        url: 'https://linear.app/t/issue/LIN-500/unrelated-topic',
+        title: 'unrelated topic for ratings',
+        author: { name: 'bob' },
+        updatedAt: '2026-04-10T10:00:00.000Z',
+      }),
+    ];
+    expect(scoreFuzzyCandidates(notifications, 'linear-github', [], [])).toEqual([]);
+  });
+
+  it('does not suggest a pair that is already confirmed', () => {
+    const notifications = [
+      notif({
+        id: 'g', source: 'github',
+        url: 'https://github.com/o/r/pull/9',
+        title: 'add rate limits',
+        author: { name: 'alice' },
+        updatedAt: '2026-04-22T10:00:00.000Z',
+      }),
+      notif({
+        id: 'l', source: 'linear',
+        url: 'https://linear.app/t/issue/LIN-500/add-rate-limits',
+        title: 'Add rate limits',
+        author: { name: 'alice' },
+        updatedAt: '2026-04-22T09:00:00.000Z',
+      }),
+    ];
+    const decisions = [{
+      user_id: 'u', pair: 'linear-github', primary_key: 'LIN-500', linked_ref: 'o/r#9',
+      decision: 'confirmed', decided_at: '2026-04-21T00:00:00.000Z',
+    } as const];
+    expect(scoreFuzzyCandidates(notifications, 'linear-github', [], decisions)).toEqual([]);
+  });
+
+  it('does not suggest a pair the user has dismissed', () => {
+    const notifications = [
+      notif({
+        id: 'g', source: 'github',
+        url: 'https://github.com/o/r/pull/9',
+        title: 'add rate limits',
+        author: { name: 'alice' },
+        updatedAt: '2026-04-22T10:00:00.000Z',
+      }),
+      notif({
+        id: 'l', source: 'linear',
+        url: 'https://linear.app/t/issue/LIN-500/add-rate-limits',
+        title: 'Add rate limits',
+        author: { name: 'alice' },
+        updatedAt: '2026-04-22T09:00:00.000Z',
+      }),
+    ];
+    const decisions = [{
+      user_id: 'u', pair: 'linear-github', primary_key: 'LIN-500', linked_ref: 'o/r#9',
+      decision: 'dismissed', decided_at: '2026-04-21T00:00:00.000Z',
+    } as const];
+    expect(scoreFuzzyCandidates(notifications, 'linear-github', [], decisions)).toEqual([]);
+  });
+
+  it('skips never-bundle types', () => {
+    const notifications = [
+      notif({
+        id: 'g', source: 'github', type: 'release',
+        url: 'https://github.com/o/r/releases/tag/v1', title: 'add rate limits',
+        author: { name: 'alice' }, updatedAt: '2026-04-22T10:00:00.000Z',
+      }),
+      notif({
+        id: 'l', source: 'linear',
+        url: 'https://linear.app/t/issue/LIN-500/x', title: 'Add rate limits',
+        author: { name: 'alice' }, updatedAt: '2026-04-22T09:00:00.000Z',
+      }),
+    ];
+    expect(scoreFuzzyCandidates(notifications, 'linear-github', [], [])).toEqual([]);
+  });
+});

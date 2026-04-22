@@ -13,6 +13,9 @@ import type {
   WorkLinkPair,
   StrictSource,
   LinkHint,
+  SuggestionDecision,
+  WorkLink,
+  SuggestedLinkRationale,
 } from '../types';
 
 // Title-prefix patterns, evaluated in order. The first capture group is the key.
@@ -160,5 +163,151 @@ export function collectStrictLinks(
     }
   }
 
+  return out;
+}
+
+export const FUZZY_THRESHOLD = 0.7;
+
+const STOPWORDS = new Set([
+  'a','an','and','the','of','to','for','in','on','with','is','are','be','it','this','that','pr','mr','issue','ticket',
+  'fix','fixes','fixed','add','adds','added','update','updates','remove','removes','refactor','refactors',
+  'wip','draft','chore','feat','test','tests','bug',
+]);
+
+function tokenize(s: string): string[] {
+  return s.toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter((t) => t.length > 2 && !STOPWORDS.has(t));
+}
+
+function jaccard(a: string[], b: string[]): number {
+  if (a.length === 0 || b.length === 0) return 0;
+  const sa = new Set(a);
+  const sb = new Set(b);
+  let inter = 0;
+  for (const x of sa) if (sb.has(x)) inter++;
+  const union = sa.size + sb.size - inter;
+  return union === 0 ? 0 : inter / union;
+}
+
+function normalizeName(name: string): string {
+  return name.trim().toLowerCase();
+}
+
+function temporalScore(a: string, b: string): number {
+  const ta = Date.parse(a);
+  const tb = Date.parse(b);
+  if (!Number.isFinite(ta) || !Number.isFinite(tb)) return 0;
+  const diffHours = Math.abs(ta - tb) / (60 * 60 * 1000);
+  if (diffHours <= 24) return 1.0;
+  if (diffHours <= 48) return 0.5;
+  return 0;
+}
+
+function decisionKey(pair: WorkLinkPair, primaryKey: string, linkedRef: string): string {
+  return `${pair}:${primaryKey}:${linkedRef}`;
+}
+
+export interface FuzzyCandidate {
+  pair: WorkLinkPair;
+  primary_key: string;
+  linked_ref: string;
+  primary: {
+    source: Provider; key: string; title: string; url: string; updatedAt: string;
+  };
+  linked: {
+    source: Provider; ref: string; title: string; url: string; updatedAt: string;
+  };
+  confidence: number;
+  rationale: SuggestedLinkRationale[];
+}
+
+export function scoreFuzzyCandidates(
+  notifications: NotificationResponse[],
+  pair: WorkLinkPair,
+  workLinks: WorkLink[],
+  decisions: SuggestionDecision[],
+): FuzzyCandidate[] {
+  const { ticket: ticketSource, pr: prSource } = PAIR_ROLES[pair];
+
+  const tickets: Array<{ n: NotificationResponse; key: string }> = [];
+  const prs: Array<{ n: NotificationResponse; ref: string }> = [];
+  for (const n of notifications) {
+    if (NEVER_BUNDLE_TYPES.has(n.type)) continue;
+    if (n.source === ticketSource) {
+      const key = pair === 'linear-github' ? extractLinearKey(n.url) : extractJiraKey(n.url);
+      if (key) tickets.push({ n, key });
+    } else if (n.source === prSource) {
+      const ref = pair === 'linear-github' ? extractGithubRef(n.url) : extractBitbucketRef(n.url);
+      if (ref) prs.push({ n, ref });
+    }
+  }
+
+  const excluded = new Set<string>();
+  for (const w of workLinks) {
+    if (w.pair === pair) excluded.add(decisionKey(pair, w.primary_key, w.linked_ref));
+  }
+  for (const d of decisions) {
+    if (d.pair === pair) excluded.add(decisionKey(pair, d.primary_key, d.linked_ref));
+  }
+
+  const out: FuzzyCandidate[] = [];
+
+  for (const { n: ticket, key } of tickets) {
+    for (const { n: pr, ref } of prs) {
+      if (excluded.has(decisionKey(pair, key, ref))) continue;
+
+      const rationale: SuggestedLinkRationale[] = [];
+      let score = 0;
+
+      if (normalizeName(ticket.author.name) === normalizeName(pr.author.name)) {
+        score += 0.35;
+        rationale.push('author-match');
+      }
+
+      const overlap = jaccard(tokenize(ticket.title), tokenize(pr.title));
+      if (overlap >= 0.4) {
+        score += 0.30 * overlap;
+        rationale.push('title-overlap');
+      }
+
+      const t = temporalScore(ticket.updatedAt, pr.updatedAt);
+      if (t > 0) {
+        score += 0.15 * t;
+        rationale.push('temporal-close');
+      }
+
+      if (ticket.unread && pr.unread) {
+        score += 0.10;
+        rationale.push('both-open');
+      }
+
+      const confirmedAffinity = workLinks.some((w) =>
+        w.pair === pair && w.primary_key.split('-')[0] === key.split('-')[0]);
+      if (confirmedAffinity) {
+        score += 0.10;
+        rationale.push('repo-affinity');
+      }
+
+      if (score >= FUZZY_THRESHOLD) {
+        out.push({
+          pair, primary_key: key, linked_ref: ref,
+          primary: {
+            source: ticket.source, key, title: ticket.title,
+            url: ticket.url, updatedAt: ticket.updatedAt,
+          },
+          linked: {
+            source: pr.source, ref, title: pr.title,
+            url: pr.url, updatedAt: pr.updatedAt,
+          },
+          confidence: Math.min(1, score),
+          rationale,
+        });
+      }
+    }
+  }
+
+  out.sort((a, b) => b.confidence - a.confidence);
   return out;
 }
