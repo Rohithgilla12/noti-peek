@@ -2,7 +2,10 @@
 name = "noti-peek"
 version = "0.4.0"
 description = "A unified notification hub for developers"
-authors = ["Rohith Gilla"]
+authors = ["Rohith Gilla <gillarohith1@gmail.com>"]
+license = "MIT"
+repository = "https://github.com/Rohithgilla12/noti-peek"
+homepage = "https://notipeek.dev"
 edition = "2021"
 
 [lib]

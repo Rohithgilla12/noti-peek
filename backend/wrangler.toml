@@ -21,7 +21,7 @@ invocation_logs = true
 ENVIRONMENT = "production"
 # Shipping on the default workers.dev subdomain for beta. When the custom
 # api.notipeek.dev domain goes live, switch APP_URL here AND update every
-# provider's OAuth callback URL to match (see docs/deploy-e2e.md §1.4b).
+# provider's OAuth callback URL to match.
 APP_URL = "https://noti-peek-api-production.rohithgilla.workers.dev"
 ENABLE_EXPERIMENTAL_PROVIDERS = "true"
 

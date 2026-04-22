@@ -1,7 +1,17 @@
 {
-  "name": "app",
+  "name": "noti-peek-app",
   "private": true,
   "version": "0.4.0",
+  "description": "noti-peek desktop app — Tauri v2 + React",
+  "license": "MIT",
+  "author": "Rohith Gilla <gillarohith1@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Rohithgilla12/noti-peek.git",
+    "directory": "app"
+  },
+  "homepage": "https://notipeek.dev",
+  "bugs": "https://github.com/Rohithgilla12/noti-peek/issues",
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -1,0 +1,100 @@
+name: Bug report
+description: Something is broken or behaving unexpectedly
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug. The more specific you are, the faster I can help.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: A clear description of what went wrong.
+      placeholder: When I click Mark Read on a bundled notification, the UI updates but the bundle re-appears on next refresh.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected to happen
+      placeholder: The bundle should stay marked-read after refresh.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: A minimal recipe someone else can follow.
+      placeholder: |
+        1. Connect GitHub
+        2. Have a PR with 3+ new comments so it bundles
+        3. Click Mark Read
+        4. Press r to refresh
+        5. Bundle re-appears
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: noti-peek version
+      description: "Found in the footer (e.g. v0.4.0). `Unknown` is fine if you can't find it."
+      placeholder: v0.4.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+        - Other (describe below)
+    validations:
+      required: true
+
+  - type: input
+    id: os-version
+    attributes:
+      label: OS version
+      placeholder: macOS 15.1
+    validations:
+      required: false
+
+  - type: dropdown
+    id: providers
+    attributes:
+      label: Which provider(s) are involved?
+      multiple: true
+      options:
+        - GitHub
+        - Linear
+        - Jira
+        - Bitbucket
+        - Not provider-specific / unsure
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / screenshots
+      description: "Screenshots help a lot. If there are console errors, grab them from the devtools (⌘⌥I in a dev build)."
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues and this isn't a duplicate
+          required: true
+        - label: I'm on the latest release (or I've noted my version above)
+          required: true

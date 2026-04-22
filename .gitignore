@@ -1,9 +1,30 @@
+# dependencies & build output
 node_modules/
 dist/
 .wrangler/
-.dev.vars
-*.log
-.DS_Store
 
-# Internal plans, setup guides, and working notes — not for the public repo.
+# secrets & local-only config
+.dev.vars
+.env
+.env.local
+.env.*.local
+
+# logs
+*.log
+
+# os / editor cruft
+.DS_Store
+**/.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+*~
+
+# tool caches / private state — not for the public repo
+.claude/
+.serena/
+.playwright-mcp/
+
+# internal plans, setup guides, and working notes — not for the public repo
 docs/

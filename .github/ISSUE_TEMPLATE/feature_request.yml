@@ -1,0 +1,60 @@
+name: Feature request
+description: Suggest a new feature or improvement
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Lead with the problem, not the solution. If I understand the problem, I can usually find a better fit than the first idea.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: The situation, why it's painful, how often it happens.
+      placeholder: |
+        When I have 20+ GitHub PR notifications, it's hard to tell which ones are from repos I actually care about vs. noisy watched repos.
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: What do you have in mind?
+      description: A rough shape of the solution. Sketches, references, or "I don't know yet" are all fine.
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches, existing tools that solve it differently, etc.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Which part of the app?
+      multiple: true
+      options:
+        - Inbox / day stream
+        - Detail pane
+        - Pulse view
+        - Bundling / grouping
+        - Settings / preferences
+        - Menubar / tray
+        - Backend / API
+        - Other
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues and this isn't a duplicate
+          required: true

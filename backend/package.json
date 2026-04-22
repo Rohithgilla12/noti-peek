@@ -1,7 +1,16 @@
 {
   "name": "noti-peek-backend",
   "version": "0.1.0",
-  "description": "Backend API for noti-peek - unified notification hub",
+  "description": "Backend API for noti-peek — unified notification hub",
+  "license": "MIT",
+  "author": "Rohith Gilla <gillarohith1@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Rohithgilla12/noti-peek.git",
+    "directory": "backend"
+  },
+  "homepage": "https://notipeek.dev",
+  "bugs": "https://github.com/Rohithgilla12/noti-peek/issues",
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",

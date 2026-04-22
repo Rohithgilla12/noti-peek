@@ -1,0 +1,275 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 720" role="img" aria-label="noti-peek — inbox view, dark theme">
+  <title>noti-peek — inbox view</title>
+  <defs>
+    <style><![CDATA[
+      @import url('https://fonts.googleapis.com/css2?family=Chivo:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:ital,wght@0,400;0,500;1,400&display=swap');
+
+      :root {
+        --win: oklch(0.18 0.01 80);
+        --win-elev: oklch(0.22 0.01 80);
+        --win-elev-2: oklch(0.25 0.01 80);
+        --bg-sel: oklch(0.25 0.01 80);
+        --line: oklch(0.35 0.01 80);
+        --line-soft: oklch(0.28 0.01 80);
+        --ink-1: oklch(0.85 0.01 80);
+        --ink-2: oklch(0.70 0.01 80);
+        --ink-3: oklch(0.55 0.01 80);
+        --ink-4: oklch(0.45 0.01 80);
+        --accent: oklch(0.90 0.02 80);
+        --accent-ink: oklch(0.18 0.01 80);
+        
+        --gh: oklch(0.65 0.05 300);
+        --ln: oklch(0.65 0.08 260);
+        --ji: oklch(0.65 0.10 240);
+        --bb: oklch(0.65 0.10 220);
+      }
+
+      .win        { fill: var(--win); }
+      .win-elev   { fill: var(--win-elev); }
+      .win-elev-2 { fill: var(--win-elev-2); }
+      .line       { stroke: var(--line); stroke-width: 1; fill: none; }
+      .line-soft  { stroke: var(--line-soft); stroke-width: 1; fill: none; }
+      .ink-1      { fill: var(--ink-1); }
+      .ink-2      { fill: var(--ink-2); }
+      .ink-3      { fill: var(--ink-3); }
+      .ink-4      { fill: var(--ink-4); }
+      .accent     { fill: var(--accent); }
+      .accent-ink { fill: var(--accent-ink); }
+      .gh         { fill: var(--gh); }
+      .ln         { fill: var(--ln); }
+      .ji         { fill: var(--ji); }
+      .bb         { fill: var(--bb); }
+
+      .f-body  { font-family: 'Chivo', sans-serif; }
+      .f-mono  { font-family: 'JetBrains Mono', monospace; }
+      .f-disp  { font-family: 'JetBrains Mono', monospace; font-style: italic; }
+
+      .cap   { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 500; }
+      .meta  { font-size: 12px; letter-spacing: 0.02em; }
+      .row-t { font-size: 14px; font-weight: 500; }
+      .row-s { font-size: 13px; }
+      .title { font-size: 20px; font-weight: 500; letter-spacing: -0.01em; }
+      .body  { font-size: 14px; line-height: 1.5; }
+      .brand { font-size: 15px; font-weight: 500; letter-spacing: 0.02em; }
+      .tab   { font-size: 13px; letter-spacing: 0.02em; font-weight: 500; }
+      .hint  { font-size: 12px; letter-spacing: 0.01em; }
+
+      @keyframes blink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0; }
+      }
+      .cursor {
+        animation: blink 1s step-end infinite;
+      }
+    ]]></style>
+    <clipPath id="win">
+      <rect x="0" y="0" width="1120" height="720" rx="12" ry="12"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#win)">
+    <!-- window background -->
+    <rect width="1120" height="720" class="win"/>
+
+    <!-- ============================================== -->
+    <!-- TOP NAV  (0 .. 52) -->
+    <!-- ============================================== -->
+    <rect x="0" y="0" width="1120" height="52" class="win-elev"/>
+    <line x1="0" y1="52" x2="1120" y2="52" class="line-soft"/>
+
+    <!-- macOS traffic lights -->
+    <circle cx="22" cy="26" r="6" fill="#ff5f56" stroke="#e0443e" stroke-width="0.5"/>
+    <circle cx="42" cy="26" r="6" fill="#ffbd2e" stroke="#dea123" stroke-width="0.5"/>
+    <circle cx="62" cy="26" r="6" fill="#27c93f" stroke="#1da831" stroke-width="0.5"/>
+
+    <!-- brand mark -->
+    <text x="96" y="31" class="f-mono brand ink-1">noti<tspan class="f-disp" dx="0">peek</tspan><tspan class="cursor" dx="2" fill="var(--accent)">_</tspan></text>
+
+    <!-- tabs -->
+    <g transform="translate(470, 0)">
+      <rect x="0" y="12" width="180" height="28" rx="4" class="win-elev-2"/>
+      <rect x="2" y="14" width="88" height="24" rx="2" fill="var(--bg-sel)" stroke="var(--line-soft)" stroke-width="1"/>
+      <text x="46" y="31" text-anchor="middle" class="f-mono tab ink-1">inbox</text>
+      <text x="134" y="31" text-anchor="middle" class="f-mono tab ink-3">pulse</text>
+    </g>
+
+    <!-- right cluster -->
+    <g transform="translate(990, 19)">
+      <text x="0" y="11" class="f-mono hint ink-3">12 unread</text>
+      <g transform="translate(90, -4)" fill="none" stroke="var(--ink-2)" stroke-width="1.4" stroke-linecap="round">
+        <circle cx="8" cy="8" r="6.5"/>
+        <circle cx="8" cy="8" r="2" fill="var(--ink-2)" stroke="none"/>
+      </g>
+    </g>
+
+    <line x1="440" y1="52" x2="440" y2="680" class="line-soft"/>
+
+    <!-- ============================================== -->
+    <!-- LEFT COLUMN: day stream  (0..440) -->
+    <!-- ============================================== -->
+    <g>
+      <!-- day header -->
+      <text x="24" y="88" class="f-mono cap ink-3">Today · Apr 22</text>
+      <line x1="170" y1="84" x2="416" y2="84" class="line-soft"/>
+
+      <!-- Selected Box -->
+      <rect x="12" y="100" width="416" height="72" rx="4" fill="var(--bg-sel)" stroke="var(--accent)" stroke-width="1.5"/>
+
+      <!-- row 1 -->
+      <g transform="translate(0, 0)">
+        <text x="28" y="120" class="f-mono meta gh">github · Rohithgilla12/noti-peek</text>
+        <text x="360" y="120" class="f-mono meta ink-3">14:32</text>
+        <text x="28" y="142" class="f-body row-t ink-1">fix: harden error paths — token refresh, dedup</text>
+        <text x="28" y="160" class="f-body row-s ink-2">pull request · merged · +124 −38 · 2 files</text>
+      </g>
+
+      <!-- row 2 -->
+      <g transform="translate(0, 80)">
+        <text x="28" y="120" class="f-mono meta ln">linear · ENG-219</text>
+        <text x="360" y="120" class="f-mono meta ink-3">11:20</text>
+        <text x="28" y="142" class="f-body row-t ink-1">Push notification silently drops on relaunch</text>
+        <text x="28" y="160" class="f-body row-s ink-3">issue · assigned to you · 2 comments</text>
+        <circle cx="404" cy="142" r="4" class="accent"/>
+      </g>
+
+      <!-- row 3 -->
+      <g transform="translate(0, 160)">
+        <text x="28" y="120" class="f-mono meta ji">jira · PEEK-44</text>
+        <text x="360" y="120" class="f-mono meta ink-3">09:06</text>
+        <text x="28" y="142" class="f-body row-t ink-1">re: detail pane keyboard shortcuts</text>
+        <text x="28" y="160" class="f-body row-s ink-3">mention · by m.akbar · 4 comments</text>
+        <circle cx="404" cy="142" r="4" class="accent"/>
+      </g>
+
+      <!-- day header 2 -->
+      <text x="24" y="364" class="f-mono cap ink-3">Yesterday · Apr 21</text>
+      <line x1="190" y1="360" x2="416" y2="360" class="line-soft"/>
+
+      <!-- row 4 -->
+      <g transform="translate(0, 276)">
+        <text x="28" y="120" class="f-mono meta bb">bitbucket · infra/deploy</text>
+        <text x="360" y="120" class="f-mono meta ink-3">17:52</text>
+        <text x="28" y="142" class="f-body row-t ink-2">Merged release/0.3 → main</text>
+        <text x="28" y="160" class="f-body row-s ink-3">pull request · 7 commits</text>
+      </g>
+
+      <!-- row 5 -->
+      <g transform="translate(0, 344)">
+        <text x="28" y="120" class="f-mono meta gh">github · Rohithgilla12/noti-peek</text>
+        <text x="360" y="120" class="f-mono meta ink-3">16:14</text>
+        <text x="28" y="142" class="f-body row-t ink-2">chore(release): v0.4.0</text>
+        <text x="28" y="160" class="f-body row-s ink-3">release · draft</text>
+      </g>
+
+      <!-- row 6 -->
+      <g transform="translate(0, 412)">
+        <text x="28" y="120" class="f-mono meta ln">linear · bundle</text>
+        <text x="340" y="120" class="f-mono meta ink-3">3 items · 13:40</text>
+        <text x="28" y="142" class="f-body row-t ink-2">Team review: phase-0 reliability</text>
+        <text x="28" y="160" class="f-body row-s ink-3">ENG-204, ENG-205, ENG-206</text>
+      </g>
+
+      <!-- row 7 -->
+      <g transform="translate(0, 480)">
+        <text x="28" y="120" class="f-mono meta gh">github · tauri-apps/plugins</text>
+        <text x="360" y="120" class="f-mono meta ink-3">10:02</text>
+        <text x="28" y="142" class="f-body row-t ink-2">plugin-updater@2.10.1 released</text>
+        <text x="28" y="160" class="f-body row-s ink-3">watch · release</text>
+      </g>
+    </g>
+
+    <!-- ============================================== -->
+    <!-- RIGHT COLUMN: detail pane  (440..1120) -->
+    <!-- ============================================== -->
+    <g transform="translate(440, 0)">
+      <!-- breadcrumb -->
+      <text x="48" y="88" class="f-mono cap ink-3">github / pull request / merged</text>
+
+      <!-- title -->
+      <text x="48" y="126" class="f-body title ink-1">fix: harden error paths</text>
+      <text x="48" y="148" class="f-body body ink-2">token refresh, in-flight dedup, sanitize guards</text>
+
+      <!-- facts grid -->
+      <g transform="translate(48, 180)">
+        <text x="0" y="12" class="f-mono cap ink-4">Repository</text>
+        <text x="0" y="32" class="f-mono row-s ink-1">Rohithgilla12/noti-peek</text>
+
+        <text x="240" y="12" class="f-mono cap ink-4">Branch</text>
+        <text x="240" y="32" class="f-mono row-s ink-1">ro/edge-reconnect</text>
+
+        <text x="440" y="12" class="f-mono cap ink-4">Author</text>
+        <text x="440" y="32" class="f-mono row-s ink-1">Rohith Gilla</text>
+
+        <text x="580" y="12" class="f-mono cap ink-4">Merged</text>
+        <text x="580" y="32" class="f-mono row-s ink-1">10m ago</text>
+      </g>
+
+      <line x1="48" y1="236" x2="632" y2="236" class="line-soft"/>
+
+      <!-- description -->
+      <text x="48" y="270" class="f-mono cap ink-3">Description</text>
+      <g class="f-body body ink-2">
+        <text x="48" y="300">Replaces the blanket try/catch in the reconnect envelope so</text>
+        <text x="48" y="322">expired tokens surface a typed ScopeError the UI can act on.</text>
+        <text x="48" y="344">Adds regression coverage for Jira token refresh, in-flight</text>
+        <text x="48" y="366">dedup, and sanitization of reconnect payloads.</text>
+      </g>
+
+      <!-- commit list -->
+      <g transform="translate(48, 404)">
+        <text x="0" y="12" class="f-mono cap ink-3">Commits · 3</text>
+        <g class="f-mono row-s">
+          <text x="0" y="42" class="ink-3">6dbe23c</text>
+          <text x="80" y="42" class="ink-1">fix: harden error paths on reconnect</text>
+          <text x="0" y="66" class="ink-3">150a838</text>
+          <text x="80" y="66" class="ink-1">fix(app): structured scope-error propagation</text>
+          <text x="0" y="90" class="ink-3">dedc0d6</text>
+          <text x="80" y="90" class="ink-1">test(backend): cover actions + Jira refresh</text>
+        </g>
+      </g>
+
+      <!-- checks strip -->
+      <g transform="translate(48, 524)">
+        <text x="0" y="12" class="f-mono cap ink-3">Checks</text>
+        <g class="f-mono row-s ink-2">
+          <circle cx="6" cy="38" r="4" fill="oklch(0.65 0.12 140)"/>
+          <text x="20" y="42">ci · 2m 14s</text>
+          
+          <circle cx="140" cy="38" r="4" fill="oklch(0.65 0.12 140)"/>
+          <text x="154" y="42">test · 47s</text>
+          
+          <circle cx="260" cy="38" r="4" fill="oklch(0.65 0.12 140)"/>
+          <text x="274" y="42">build · 1m 02s</text>
+          
+          <circle cx="400" cy="38" r="4" fill="oklch(0.70 0.15 80)"/>
+          <text x="414" y="42">deploy · pending</text>
+        </g>
+      </g>
+
+      <!-- actions -->
+      <g transform="translate(48, 600)">
+        <rect x="0" y="0" width="168" height="40" rx="4" class="accent"/>
+        <text x="84" y="25" text-anchor="middle" class="f-body row-t accent-ink">Open in browser</text>
+        
+        <rect x="184" y="0" width="120" height="40" rx="4" fill="none" stroke="var(--line)" stroke-width="1.5"/>
+        <text x="244" y="25" text-anchor="middle" class="f-body row-s ink-1">Mark read</text>
+        
+        <rect x="316" y="0" width="110" height="40" rx="4" fill="none" stroke="var(--line)" stroke-width="1.5"/>
+        <text x="371" y="25" text-anchor="middle" class="f-body row-s ink-1">Comment</text>
+      </g>
+    </g>
+
+    <!-- ============================================== -->
+    <!-- FOOTER  (680..720) -->
+    <!-- ============================================== -->
+    <rect x="0" y="680" width="1120" height="40" class="win-elev"/>
+    <line x1="0" y1="680" x2="1120" y2="680" class="line-soft"/>
+    
+    <text x="24" y="705" class="f-mono hint ink-3">refreshed 14:33 · auto · every 60s</text>
+    <text x="330" y="705" class="f-mono hint ink-4">github · linear · jira · bitbucket</text>
+    
+    <text x="680" y="705" class="f-mono hint ink-2">↵ open · c comment · m merge · esc dismiss</text>
+    
+    <text x="1096" y="705" text-anchor="end" class="f-mono hint ink-3">v0.4.0</text>
+  </g>
+</svg>
