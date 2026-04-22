@@ -73,12 +73,16 @@ export interface StrictLinkCandidate {
 }
 
 function extractLinearKey(url: string): string | null {
-  const m = url.match(/linear\.app\/[^/]+\/issue\/([A-Z]+-\d+)/i);
+  // Require a path separator, query, fragment, or end-of-string after the key so
+  // we don't false-match partial tokens inside a longer slug.
+  const m = url.match(/linear\.app\/[^/]+\/issue\/([A-Z]{2,10}-\d+)(?:[/?#]|$)/i);
   return m ? m[1].toUpperCase() : null;
 }
 
 function extractJiraKey(url: string): string | null {
-  const m = url.match(/\/browse\/([A-Z][A-Z0-9]+-\d+)/i);
+  // Anchor to the Atlassian-hosted domain so a GitHub/wiki URL containing
+  // "/browse/XYZ-1" elsewhere can't masquerade as a Jira issue ref.
+  const m = url.match(/atlassian\.net\/browse\/([A-Z]{2,10}-\d+)(?:[/?#]|$)/i);
   return m ? m[1].toUpperCase() : null;
 }
 
