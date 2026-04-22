@@ -765,7 +765,7 @@ describe('GET /notifications — v2 envelope with cross-provider bundling', () =
       bundling_version: number | undefined;
     }>();
 
-    expect(body.bundling_version).toBe(2);
+    expect(body.bundling_version).toBe(1);
     expect(Array.isArray(body.rows)).toBe(true);
     const crossBundleRows = body.rows!.filter((r) => r.kind === 'cross_bundle');
     expect(crossBundleRows).toHaveLength(0);

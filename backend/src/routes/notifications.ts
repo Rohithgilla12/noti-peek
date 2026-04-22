@@ -7,7 +7,7 @@ import { fetchGitHubNotifications, markGitHubNotificationAsRead, markAllGitHubNo
 import { fetchLinearNotifications, markLinearNotificationAsRead, markAllLinearNotificationsAsRead } from '../services/linear';
 import { fetchJiraNotifications, markJiraNotificationAsRead, markAllJiraNotificationsAsRead } from '../services/jira';
 import { fetchBitbucketNotifications, markBitbucketNotificationAsRead, markAllBitbucketNotificationsAsRead } from '../services/bitbucket';
-import { bundleNotifications, BUNDLING_VERSION } from '../services/bundling';
+import { bundleNotifications } from '../services/bundling';
 import type { BundleResponse } from '../services/bundling';
 import { buildCrossBundles } from '../services/cross-bundling';
 import { loadUserLinkState, upsertWorkLink, touchWorkLinkLastSeen } from '../services/work-links-repo';
@@ -140,7 +140,7 @@ notifications.get('/', async (c) => {
     const crossBundleRows: Array<{ kind: 'cross_bundle'; bundle: CrossBundleResponse }> = [];
     const allSuggestions: SuggestedLink[] = [];
     const strictToUpsert: WorkLink[] = [];
-    const seenStrictLinks: Array<Pick<WorkLink, 'pair' | 'primary_key' | 'linked_ref'>> = [];
+    const seenLinks: Array<Pick<WorkLink, 'pair' | 'primary_key' | 'linked_ref'>> = [];
 
     try {
       if (crossEnabled) {
@@ -159,7 +159,7 @@ notifications.get('/', async (c) => {
             strictToUpsert.push(...result.strictLinksInferred);
             for (const b of result.crossBundles) {
               for (const linked of b.linked) {
-                seenStrictLinks.push({ pair, primary_key: b.primary.key, linked_ref: linked.ref });
+                seenLinks.push({ pair, primary_key: b.primary.key, linked_ref: linked.ref });
               }
             }
             allSuggestions.push(...result.fuzzyCandidates);
@@ -175,7 +175,7 @@ notifications.get('/', async (c) => {
 
     const v1Rows = bundleNotifications(remaining);
     rows = [...crossBundleRows, ...v1Rows].sort((a, b) => rowLatestMs(b as AnyRow) - rowLatestMs(a as AnyRow));
-    bundlingVersionOut = 2;
+    bundlingVersionOut = crossEnabled ? 2 : 1;
     if (allSuggestions.length > 0) suggested_links = allSuggestions;
 
     // Fire-and-forget persistence — failure logs but does not fail the request.
@@ -187,8 +187,13 @@ notifications.get('/', async (c) => {
           console.error('[cross-bundling] upsert failed', link.pair, link.primary_key, link.linked_ref, err);
         }
       }
+      const freshStrictKeys = new Set(
+        strictToUpsert.map((l) => `${l.pair}:${l.primary_key}:${l.linked_ref}`),
+      );
       const nowIso = new Date(nowMs).toISOString();
-      for (const s of seenStrictLinks) {
+      for (const s of seenLinks) {
+        const k = `${s.pair}:${s.primary_key}:${s.linked_ref}`;
+        if (freshStrictKeys.has(k)) continue;
         try {
           await touchWorkLinkLastSeen(c.env.DB, user.id, s.pair, s.primary_key, s.linked_ref, nowIso);
         } catch (err) {

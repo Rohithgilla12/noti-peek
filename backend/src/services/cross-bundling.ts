@@ -430,6 +430,14 @@ export function buildCrossBundles(input: BuildCrossBundlesInput): BuildCrossBund
 
   const strictFromBatch = collectStrictLinks(notifications, pair);
 
+  // Spec: dismissed pairings must never auto-bundle, even if a strict signal fires.
+  const dismissedKeys = new Set<string>();
+  for (const d of decisions) {
+    if (d.pair === pair && d.decision === 'dismissed') {
+      dismissedKeys.add(`${d.primary_key}→${d.linked_ref}`);
+    }
+  }
+
   const ticketByKey = new Map<string, NotificationResponse>();
   const prByRef = new Map<string, NotificationResponse>();
   for (const n of notifications) {
@@ -457,6 +465,7 @@ export function buildCrossBundles(input: BuildCrossBundlesInput): BuildCrossBund
 
   for (const cand of strictFromBatch) {
     const k = `${cand.primary_key}→${cand.linked_ref}`;
+    if (dismissedKeys.has(k)) continue;
     if (activeByKeyRef.has(k)) continue;
     const ticket = ticketByKey.get(cand.primary_key);
     const pr = prByRef.get(cand.linked_ref);
@@ -472,6 +481,7 @@ export function buildCrossBundles(input: BuildCrossBundlesInput): BuildCrossBund
   for (const w of workLinks) {
     if (w.pair !== pair) continue;
     const k = `${w.primary_key}→${w.linked_ref}`;
+    if (dismissedKeys.has(k)) continue;
     if (activeByKeyRef.has(k)) continue;
     const ticket = ticketByKey.get(w.primary_key);
     const pr = prByRef.get(w.linked_ref);

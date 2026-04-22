@@ -467,6 +467,34 @@ describe('buildCrossBundles orchestrator', () => {
     expect(result.strictLinksInferred).toEqual([]);
   });
 
+  it('does not bundle a pair the user has dismissed, even when a strict signal fires', () => {
+    const notifs = [
+      notif({
+        id: 'g', source: 'github',
+        url: 'https://github.com/o/r/pull/423', title: '[LIN-142] Add rate limits',
+        updatedAt: '2026-04-22T10:00:00.000Z',
+      }),
+      notif({
+        id: 'l', source: 'linear',
+        url: 'https://linear.app/t/issue/LIN-142/add-rate-limits', title: 'Add rate limits',
+        updatedAt: '2026-04-22T09:00:00.000Z',
+      }),
+    ];
+    const result = buildCrossBundles({
+      notifications: notifs, pair: 'linear-github',
+      workLinks: [],
+      decisions: [{
+        user_id: 'u', pair: 'linear-github',
+        primary_key: 'LIN-142', linked_ref: 'o/r#423',
+        decision: 'dismissed', decided_at: '2026-04-21T00:00:00.000Z',
+      }],
+      userId: 'u', now: Date.parse('2026-04-22T12:00:00.000Z'),
+    });
+    expect(result.crossBundles).toEqual([]);
+    expect(result.strictLinksInferred).toEqual([]);
+    expect([...result.consumedNotificationIds]).toEqual([]);
+  });
+
   it('surfaces fuzzy candidates when no strict match is found', () => {
     const notifs = [
       notif({
