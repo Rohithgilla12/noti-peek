@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Privacy — noti-peek</title>
+    <title>Security — noti-peek</title>
     <meta
       name="description"
-      content="What noti-peek stores, where it stores it, and how to delete it."
+      content="How to report a security issue in noti-peek. Scope, response times, and safe-harbor for researchers."
     />
     <meta name="color-scheme" content="dark" />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231c1813'/%3E%3Ccircle cx='32' cy='32' r='18' fill='none' stroke='%23d8cfbf' stroke-width='3'/%3E%3Ccircle cx='42' cy='26' r='4.5' fill='%23e8a83e'/%3E%3C/svg%3E" />
@@ -80,7 +80,6 @@
         padding: 0 24px;
       }
 
-      /* ── Nav ─────────────────────────────────────────── */
       header.nav {
         padding: 28px 0 18px;
         display: flex;
@@ -119,7 +118,6 @@
       nav.links a:hover { color: var(--ink-1); border-bottom: none; }
       nav.links a[aria-current="page"] { color: var(--ink-1); }
 
-      /* ── Title ───────────────────────────────────────── */
       section.title { padding: 48px 0 8px; }
       section.title h1 {
         font-family: var(--font-body);
@@ -148,7 +146,6 @@
         display: inline-block;
       }
 
-      /* ── Body ────────────────────────────────────────── */
       section.doc { padding: var(--space-8) 0 var(--space-16); }
       section.doc h2 {
         font-family: var(--font-display);
@@ -210,35 +207,33 @@
       }
       .callout p { margin: 0; color: var(--ink-2); max-width: none; }
       .callout strong { color: var(--ink-1); }
+      .callout.warn { border-left-color: var(--warn); }
 
-      /* ── Data table ──────────────────────────────────── */
-      .data-table {
-        width: 100%;
-        border-collapse: collapse;
+      .contact-card {
+        background: var(--bg-elev);
+        border: 1px solid var(--line-soft);
+        border-radius: 10px;
+        padding: var(--space-6);
         margin: var(--space-4) 0 var(--space-8);
-        font-size: 0.9375rem;
         max-width: var(--measure);
       }
-      .data-table th, .data-table td {
-        text-align: left;
-        padding: 12px 14px;
-        border-bottom: 1px solid var(--line-soft);
-        vertical-align: top;
-      }
-      .data-table th {
+      .contact-card .label {
         color: var(--ink-4);
         font-family: var(--font-mono);
-        font-weight: 400;
         font-size: 10px;
         text-transform: uppercase;
         letter-spacing: 0.1em;
-        padding-bottom: 10px;
+        display: block;
+        margin-bottom: 6px;
       }
-      .data-table td { color: var(--ink-2); }
-      .data-table td:first-child { color: var(--ink-1); white-space: nowrap; }
-      .data-table td code { font-size: 0.75rem; }
+      .contact-card .value {
+        color: var(--ink-1);
+        font-family: var(--font-mono);
+        font-size: 0.9375rem;
+      }
+      .contact-card .value a { color: var(--ink-1); border-bottom: 1px solid var(--line); }
+      .contact-card .value a:hover { border-color: var(--accent); }
 
-      /* ── Footer ──────────────────────────────────────── */
       footer {
         border-top: 1px solid var(--line-soft);
         padding: var(--space-8) 0 var(--space-16);
@@ -251,15 +246,12 @@
       footer a:hover { color: var(--ink-1); border-bottom: none; }
       footer .sep { margin: 0 8px; color: var(--line); }
 
-      /* ── Responsive ──────────────────────────────────── */
       @media (max-width: 680px) {
         .container { padding: 0 20px; }
         header.nav { padding: 20px 0 12px; }
         nav.links { gap: var(--space-4); }
         section.title { padding: 32px 0 8px; }
         section.doc h2 { font-size: 1.4rem; margin-top: var(--space-8); }
-        .data-table { font-size: 0.875rem; }
-        .data-table th, .data-table td { padding: 10px 10px; }
       }
     </style>
   </head>
@@ -273,158 +265,107 @@
         </a>
         <nav class="links" aria-label="Top nav">
           <a href="/">Home</a>
-          <a href="/privacy.html" aria-current="page">Privacy</a>
+          <a href="/privacy.html">Privacy</a>
           <a href="/terms.html">Terms</a>
-          <a href="/security.html">Security</a>
+          <a href="/security.html" aria-current="page">Security</a>
           <a href="https://github.com/Rohithgilla12/noti-peek" rel="noopener">GitHub</a>
         </nav>
       </header>
 
       <section class="title">
-        <h1>Privacy, <em>plainly.</em></h1>
-        <span class="stamp">Last updated · 2026-04-20</span>
+        <h1>Security, <em>responsibly.</em></h1>
+        <span class="stamp">Last updated · 2026-04-22</span>
       </section>
 
       <section class="doc">
         <div class="callout">
           <p>
-            <strong>The short version.</strong> noti-peek fetches notifications from providers
-            you explicitly connect (GitHub, Linear, Jira, Bitbucket), stores your OAuth tokens
-            in a Cloudflare D1 database scoped to an anonymous device token, and does not sell,
-            share, or analyze your data. Notification bodies live only in your app's memory —
-            never in our database. You can revoke and delete everything from
-            <strong>Settings → Disconnect</strong>.
+            <strong>Found a vulnerability?</strong> Report it privately to
+            <a href="mailto:security@notipeek.dev">security@notipeek.dev</a> before disclosing
+            publicly. We'll acknowledge within 72 hours and work with you on a fix timeline.
+            Acting in good faith under this policy, we won't pursue legal action.
           </p>
         </div>
 
-        <h2><span class="num">§ 1</span>What we store</h2>
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Field</th>
-              <th>Where</th>
-              <th>Why</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><code>device_token</code></td>
-              <td>D1 (server), local store (app)</td>
-              <td>Anonymous identifier so your device can fetch its own notifications. No email, no name.</td>
-            </tr>
-            <tr>
-              <td>OAuth access &amp; refresh tokens</td>
-              <td>D1, per-provider row</td>
-              <td>Needed to call GitHub/Linear/Jira/Bitbucket on your behalf.</td>
-            </tr>
-            <tr>
-              <td>Provider account name / avatar URL</td>
-              <td>D1, per-provider row</td>
-              <td>So the app can show <em class="ink">which</em> GitHub account is connected.</td>
-            </tr>
-            <tr>
-              <td>OAuth <code>state</code> nonces</td>
-              <td>D1, auto-deleted after ~10 min</td>
-              <td>CSRF protection during sign-in.</td>
-            </tr>
-            <tr>
-              <td>Rate-limit counters</td>
-              <td>D1, rolling window</td>
-              <td>So one runaway device doesn't burn the shared quota.</td>
-            </tr>
-          </tbody>
-        </table>
+        <h2><span class="num">§ 1</span>How to report</h2>
+        <div class="contact-card">
+          <span class="label">Email</span>
+          <span class="value"><a href="mailto:security@notipeek.dev">security@notipeek.dev</a></span>
+        </div>
+        <p>
+          Please include: a description of the issue, steps to reproduce (or a proof-of-concept),
+          the affected version or endpoint, and whether you've already disclosed to anyone else.
+          PGP is not required — if you need end-to-end encryption, open a minimal GitHub issue
+          asking for a key and we'll respond with one off-list.
+        </p>
 
-        <h2><span class="num">§ 2</span>What we do <em class="ink">not</em> store</h2>
+        <h2><span class="num">§ 2</span>Scope</h2>
+        <p><strong>In scope:</strong></p>
         <ul>
-          <li>Your name, email, or any provider account data beyond display name + avatar URL.</li>
-          <li>Notification bodies, issue titles, PR diffs, or comment text — those pass through the Worker at request time and are never persisted.</li>
-          <li>Analytics events tied to you personally. No behavioral profile.</li>
-          <li>Your IP address beyond what Cloudflare's edge normally logs for abuse prevention.</li>
-          <li>Any data from providers you haven't explicitly connected.</li>
+          <li>The hosted backend at <code>api.notipeek.dev</code> (Cloudflare Worker + D1).</li>
+          <li>The desktop app distributed from <a href="https://github.com/Rohithgilla12/noti-peek-releases" rel="noopener">noti-peek-releases</a>, including Tauri configuration, OAuth flows, and token storage.</li>
+          <li>The source code in <a href="https://github.com/Rohithgilla12/noti-peek" rel="noopener">the main repo</a>.</li>
+          <li>This landing page and its subdomains.</li>
+        </ul>
+        <p><strong>Out of scope:</strong></p>
+        <ul>
+          <li>Third-party providers (GitHub, Linear, Jira, Bitbucket) — report to them directly.</li>
+          <li>Cloudflare infrastructure — report via <a href="https://www.cloudflare.com/abuse/" rel="noopener">Cloudflare's abuse form</a>.</li>
+          <li>Self-hosted deployments of the backend — those are on the operator.</li>
+          <li>Missing best-practice headers, CSP bypasses without user impact, clickjacking without sensitive action, or other low-severity theoretical issues.</li>
         </ul>
 
-        <h2><span class="num">§ 3</span>How data flows</h2>
-        <p>When the app asks for notifications, the flow is:</p>
-        <ol>
-          <li>App sends its <code>device_token</code> to <code>api.notipeek.dev</code>.</li>
-          <li>Worker looks up which providers that device has connected and fetches from each provider's API, in parallel, using your access token.</li>
-          <li>Results are merged, optionally bundled, and returned to the app.</li>
-          <li>Nothing is written back to D1 except bookkeeping: rate-limit counters and (if a token was refreshed) the new token.</li>
-        </ol>
+        <h2><span class="num">§ 3</span>Safe harbor</h2>
         <p>
-          Requests to <code>api.notipeek.dev</code> are served by Cloudflare Workers,
-          which may log request metadata for abuse prevention. See
-          <a href="https://www.cloudflare.com/privacypolicy/" rel="noopener">Cloudflare's privacy policy</a>
-          for their retention.
+          We authorize good-faith security research on the in-scope systems above. We will not
+          pursue legal action for research that:
         </p>
-
-        <h2><span class="num">§ 4</span>Telemetry &amp; crash reports</h2>
-        <p>
-          The desktop app can optionally send anonymous crash reports via Sentry, scrubbed of
-          notification content. This is <strong>off by default in release builds</strong> and
-          on-by-default only in explicitly labelled beta builds; you can toggle it in
-          <strong>Settings → Diagnostics</strong> at any time. We never log provider names,
-          titles, bodies, URLs, or user identifiers in telemetry — only stack traces and app
-          version.
-        </p>
-
-        <h2><span class="num">§ 5</span>Deletion</h2>
-        <p>
-          In the app, <strong>Settings → Disconnect</strong> on any provider revokes the access
-          token with the provider (where their API supports it) and deletes the corresponding D1
-          row. <strong>Settings → Delete my account</strong> deletes the <code>device_token</code>
-          and every associated connection row. After deletion, the server cannot re-identify you;
-          the data is gone.
-        </p>
-        <p>
-          If you can't reach the app (lost device, etc.), email
-          <a href="mailto:privacy@notipeek.dev">privacy@notipeek.dev</a> with your device token
-          and we will purge it on request.
-        </p>
-
-        <h2><span class="num">§ 6</span>Third parties</h2>
-        <p>Two categories of third parties receive data:</p>
         <ul>
-          <li>
-            <strong>The providers you connect</strong> (GitHub, Linear, Jira, Bitbucket). These
-            receive your API calls because they have to — that is the point. Review their
-            policies for their handling.
-          </li>
-          <li>
-            <strong>Infrastructure:</strong> Cloudflare (Workers + D1) for the API and database,
-            GitHub Releases for app downloads, and optionally Sentry for crash reports if you
-            opt in.
-          </li>
+          <li>Does not degrade service for other users (no DoS, no fuzzing production at scale).</li>
+          <li>Does not access, modify, or destroy data belonging to another user.</li>
+          <li>Uses only your own accounts and device tokens for testing.</li>
+          <li>Follows this disclosure policy and gives us reasonable time to fix before publishing.</li>
         </ul>
         <p>
-          We do not share data with advertisers, data brokers, or analytics vendors. We do not
-          sell data, ever.
+          If in doubt about whether a test crosses the line, email first — we'd rather answer a
+          clarifying question than argue afterwards.
         </p>
 
-        <h2><span class="num">§ 7</span>Security</h2>
+        <h2><span class="num">§ 4</span>Response timeline</h2>
+        <p>This is an indie project maintained part-time, but we take security seriously:</p>
+        <ul>
+          <li><strong>Within 72 hours:</strong> acknowledgement of receipt.</li>
+          <li><strong>Within 7 days:</strong> initial assessment — confirmed / not-reproducible / need-more-info.</li>
+          <li><strong>Within 30 days:</strong> fix deployed for confirmed high/critical issues. Lower-severity issues may take longer.</li>
+        </ul>
         <p>
-          OAuth tokens in D1 are transmitted only over TLS and scoped to a single device token.
-          A stolen device token lets someone read your notifications but not reset your
-          device-token-to-provider binding without your OAuth consent. We recommend revoking
-          in-app if you suspect any compromise; this invalidates the tokens with the provider
-          directly. For responsible disclosure, see the
-          <a href="/security.html">security page</a>.
+          Fix windows can stretch if a vulnerability requires upstream coordination (e.g. a
+          Tauri or Hono bug). We will keep you in the loop and coordinate public disclosure.
         </p>
 
-        <h2><span class="num">§ 8</span>Changes to this policy</h2>
+        <h2><span class="num">§ 5</span>After a fix</h2>
         <p>
-          Material changes will be announced in-app on next launch and in the release notes on
-          GitHub. Dates above reflect the last substantive edit.
+          Confirmed issues are tracked in a private advisory on GitHub until patched, then
+          promoted to a public
+          <a href="https://github.com/Rohithgilla12/noti-peek/security/advisories" rel="noopener">security advisory</a>.
+          With your permission, we credit reporters by name (or handle) in the advisory and
+          release notes. If you prefer to stay anonymous, that's fine too.
         </p>
 
-        <h2><span class="num">§ 9</span>Contact</h2>
+        <h2><span class="num">§ 6</span>What we don't offer</h2>
         <p>
-          Privacy questions: <a href="mailto:privacy@notipeek.dev">privacy@notipeek.dev</a>.<br />
-          Security issues: <a href="mailto:security@notipeek.dev">security@notipeek.dev</a>.<br />
-          Bugs or feature requests:
-          <a href="https://github.com/Rohithgilla12/noti-peek/issues" rel="noopener">the issue tracker</a>.
+          No bug bounty program. noti-peek is free, open-source, and indie-funded — we can't
+          pay cash rewards. We can offer credit, swag-equivalents once those exist, and a
+          genuine thank-you.
         </p>
+
+        <div class="callout warn">
+          <p>
+            <strong>Please do not</strong> open public GitHub issues, post to social media, or
+            email providers about a vulnerability before reporting to us and giving us a chance
+            to fix it. Coordinated disclosure protects users.
+          </p>
+        </div>
       </section>
     </div>
 
@@ -434,9 +375,9 @@
         <span>
           <a href="/">Home</a>
           <span class="sep">·</span>
-          <a href="/terms.html">Terms</a>
+          <a href="/privacy.html">Privacy</a>
           <span class="sep">·</span>
-          <a href="/security.html">Security</a>
+          <a href="/terms.html">Terms</a>
           <span class="sep">·</span>
           <a href="https://github.com/Rohithgilla12/noti-peek" rel="noopener">Source</a>
         </span>

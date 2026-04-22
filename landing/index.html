@@ -15,7 +15,15 @@
       content="One menubar, every dev notification — intelligently bundled."
     />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://notipeek.dev" />
+    <meta property="og:url" content="https://noti-peek.rohithgilla.workers.dev/" />
+    <meta property="og:image" content="https://noti-peek.rohithgilla.workers.dev/brand/og.png" />
+    <meta property="og:image:width" content="2400" />
+    <meta property="og:image:height" content="1260" />
+    <meta property="og:image:alt" content="noti-peek — a menubar for the notifications that matter" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="noti-peek" />
+    <meta name="twitter:description" content="One menubar, every dev notification — intelligently bundled." />
+    <meta name="twitter:image" content="https://noti-peek.rohithgilla.workers.dev/brand/og.png" />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231c1813'/%3E%3Ccircle cx='32' cy='32' r='18' fill='none' stroke='%23d8cfbf' stroke-width='3'/%3E%3Ccircle cx='42' cy='26' r='4.5' fill='%23e8a83e'/%3E%3C/svg%3E" />
     <link rel="apple-touch-icon" href="/brand/icon-128.png" />
 
@@ -192,6 +200,21 @@
         color: var(--ink-3);
       }
       .btn-ghost:hover .glyph { color: var(--ink-1); }
+      .gh-count {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.02em;
+        color: var(--ink-3);
+        padding: 2px 7px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        margin-left: 2px;
+        opacity: 0;
+        transform: translateY(-0.5px);
+        transition: opacity 200ms ease;
+      }
+      .gh-count.loaded { opacity: 1; }
+      .btn-ghost:hover .gh-count { color: var(--ink-1); border-color: var(--ink-3); }
 
       .sub-note {
         margin-top: 22px;
@@ -551,13 +574,14 @@
           <a class="btn btn-primary" href="https://github.com/Rohithgilla12/noti-peek-releases/releases/latest" rel="noopener">
             Download for macOS
           </a>
-          <a class="btn btn-ghost" href="https://github.com/Rohithgilla12/noti-peek" rel="noopener">
-            View on GitHub <span class="glyph" aria-hidden="true">↗</span>
+          <a class="btn btn-ghost" href="https://github.com/Rohithgilla12/noti-peek" rel="noopener" aria-label="Star noti-peek on GitHub">
+            <span class="glyph" aria-hidden="true">★</span> Star on GitHub
+            <span class="gh-count" id="gh-star-count" aria-hidden="true"></span>
           </a>
         </div>
 
         <p class="sub-note">
-          macOS 10.15+<span class="sep">·</span>Apple-signed<span class="sep">·</span>Apple Silicon &amp; Intel<span class="sep">·</span>Auto-updates
+          macOS 11+<span class="sep">·</span>Apple-signed<span class="sep">·</span>Apple Silicon<span class="sep">·</span>Open source (MIT)<span class="sep">·</span>Auto-updates
         </p>
 
         <div class="mock-wrap" aria-hidden="true">
@@ -642,6 +666,19 @@
               </p>
             </div>
           </div>
+
+          <div class="feature">
+            <span class="f-label">04 · Open source</span>
+            <div class="f-body">
+              <h3>MIT-licensed. Read every line.</h3>
+              <p>
+                Client, backend and landing page all live in
+                <a href="https://github.com/Rohithgilla12/noti-peek" rel="noopener">one public repo</a>.
+                Audit the code, fork it, self-host the Worker, or send a
+                pull request — issues and PRs are genuinely welcome.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -684,9 +721,12 @@
         <details class="faq-item">
           <summary>Is this free? <span class="chev" aria-hidden="true">›</span></summary>
           <p>
+            Yes — and it's
+            <a href="https://github.com/Rohithgilla12/noti-peek" rel="noopener">open source under MIT</a>.
             Builds are free during beta. Paid tiers may appear later for
-            heavier providers or team features — existing users get clear
-            notice, nothing swapped under you.
+            heavier providers or team features, but the core app will stay
+            open source and self-hostable — existing users get clear notice,
+            nothing swapped under you.
           </p>
         </details>
 
@@ -736,11 +776,32 @@
         <span>
           <a href="/privacy.html">Privacy</a>
           <span class="sep">·</span>
+          <a href="/terms.html">Terms</a>
+          <span class="sep">·</span>
+          <a href="/security.html">Security</a>
+          <span class="sep">·</span>
           <a href="https://github.com/Rohithgilla12/noti-peek" rel="noopener">Source</a>
           <span class="sep">·</span>
           <a href="https://github.com/Rohithgilla12/noti-peek/issues" rel="noopener">Feedback</a>
         </span>
       </div>
     </footer>
+
+    <script>
+      (async () => {
+        const el = document.getElementById('gh-star-count');
+        if (!el) return;
+        try {
+          const r = await fetch('https://api.github.com/repos/Rohithgilla12/noti-peek', {
+            headers: { Accept: 'application/vnd.github+json' },
+          });
+          if (!r.ok) return;
+          const { stargazers_count: n } = await r.json();
+          if (typeof n !== 'number') return;
+          el.textContent = n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n);
+          el.classList.add('loaded');
+        } catch {}
+      })();
+    </script>
   </body>
 </html>

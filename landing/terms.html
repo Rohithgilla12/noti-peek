@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Privacy — noti-peek</title>
+    <title>Terms — noti-peek</title>
     <meta
       name="description"
-      content="What noti-peek stores, where it stores it, and how to delete it."
+      content="The rules of using noti-peek, plainly. Short version: it's free, it's MIT, use it fairly, don't expect warranties."
     />
     <meta name="color-scheme" content="dark" />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231c1813'/%3E%3Ccircle cx='32' cy='32' r='18' fill='none' stroke='%23d8cfbf' stroke-width='3'/%3E%3Ccircle cx='42' cy='26' r='4.5' fill='%23e8a83e'/%3E%3C/svg%3E" />
@@ -80,7 +80,6 @@
         padding: 0 24px;
       }
 
-      /* ── Nav ─────────────────────────────────────────── */
       header.nav {
         padding: 28px 0 18px;
         display: flex;
@@ -119,7 +118,6 @@
       nav.links a:hover { color: var(--ink-1); border-bottom: none; }
       nav.links a[aria-current="page"] { color: var(--ink-1); }
 
-      /* ── Title ───────────────────────────────────────── */
       section.title { padding: 48px 0 8px; }
       section.title h1 {
         font-family: var(--font-body);
@@ -148,7 +146,6 @@
         display: inline-block;
       }
 
-      /* ── Body ────────────────────────────────────────── */
       section.doc { padding: var(--space-8) 0 var(--space-16); }
       section.doc h2 {
         font-family: var(--font-display);
@@ -211,34 +208,6 @@
       .callout p { margin: 0; color: var(--ink-2); max-width: none; }
       .callout strong { color: var(--ink-1); }
 
-      /* ── Data table ──────────────────────────────────── */
-      .data-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin: var(--space-4) 0 var(--space-8);
-        font-size: 0.9375rem;
-        max-width: var(--measure);
-      }
-      .data-table th, .data-table td {
-        text-align: left;
-        padding: 12px 14px;
-        border-bottom: 1px solid var(--line-soft);
-        vertical-align: top;
-      }
-      .data-table th {
-        color: var(--ink-4);
-        font-family: var(--font-mono);
-        font-weight: 400;
-        font-size: 10px;
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-        padding-bottom: 10px;
-      }
-      .data-table td { color: var(--ink-2); }
-      .data-table td:first-child { color: var(--ink-1); white-space: nowrap; }
-      .data-table td code { font-size: 0.75rem; }
-
-      /* ── Footer ──────────────────────────────────────── */
       footer {
         border-top: 1px solid var(--line-soft);
         padding: var(--space-8) 0 var(--space-16);
@@ -251,15 +220,12 @@
       footer a:hover { color: var(--ink-1); border-bottom: none; }
       footer .sep { margin: 0 8px; color: var(--line); }
 
-      /* ── Responsive ──────────────────────────────────── */
       @media (max-width: 680px) {
         .container { padding: 0 20px; }
         header.nav { padding: 20px 0 12px; }
         nav.links { gap: var(--space-4); }
         section.title { padding: 32px 0 8px; }
         section.doc h2 { font-size: 1.4rem; margin-top: var(--space-8); }
-        .data-table { font-size: 0.875rem; }
-        .data-table th, .data-table td { padding: 10px 10px; }
       }
     </style>
   </head>
@@ -273,155 +239,151 @@
         </a>
         <nav class="links" aria-label="Top nav">
           <a href="/">Home</a>
-          <a href="/privacy.html" aria-current="page">Privacy</a>
-          <a href="/terms.html">Terms</a>
+          <a href="/privacy.html">Privacy</a>
+          <a href="/terms.html" aria-current="page">Terms</a>
           <a href="/security.html">Security</a>
           <a href="https://github.com/Rohithgilla12/noti-peek" rel="noopener">GitHub</a>
         </nav>
       </header>
 
       <section class="title">
-        <h1>Privacy, <em>plainly.</em></h1>
-        <span class="stamp">Last updated · 2026-04-20</span>
+        <h1>Terms, <em>plainly.</em></h1>
+        <span class="stamp">Last updated · 2026-04-22</span>
       </section>
 
       <section class="doc">
         <div class="callout">
           <p>
-            <strong>The short version.</strong> noti-peek fetches notifications from providers
-            you explicitly connect (GitHub, Linear, Jira, Bitbucket), stores your OAuth tokens
-            in a Cloudflare D1 database scoped to an anonymous device token, and does not sell,
-            share, or analyze your data. Notification bodies live only in your app's memory —
-            never in our database. You can revoke and delete everything from
-            <strong>Settings → Disconnect</strong>.
+            <strong>The short version.</strong> noti-peek is a free, open-source macOS app
+            (MIT-licensed) with a hosted backend you're welcome to use or self-host. Use it
+            fairly, don't abuse the shared backend, and understand it's provided
+            <em class="ink">as is</em> — no warranties. We can't promise uptime and you can't
+            hold us liable for downtime, bugs, or lost notifications. If any of that's a
+            dealbreaker, self-hosting the Worker is a ten-minute job.
           </p>
         </div>
 
-        <h2><span class="num">§ 1</span>What we store</h2>
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Field</th>
-              <th>Where</th>
-              <th>Why</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><code>device_token</code></td>
-              <td>D1 (server), local store (app)</td>
-              <td>Anonymous identifier so your device can fetch its own notifications. No email, no name.</td>
-            </tr>
-            <tr>
-              <td>OAuth access &amp; refresh tokens</td>
-              <td>D1, per-provider row</td>
-              <td>Needed to call GitHub/Linear/Jira/Bitbucket on your behalf.</td>
-            </tr>
-            <tr>
-              <td>Provider account name / avatar URL</td>
-              <td>D1, per-provider row</td>
-              <td>So the app can show <em class="ink">which</em> GitHub account is connected.</td>
-            </tr>
-            <tr>
-              <td>OAuth <code>state</code> nonces</td>
-              <td>D1, auto-deleted after ~10 min</td>
-              <td>CSRF protection during sign-in.</td>
-            </tr>
-            <tr>
-              <td>Rate-limit counters</td>
-              <td>D1, rolling window</td>
-              <td>So one runaway device doesn't burn the shared quota.</td>
-            </tr>
-          </tbody>
-        </table>
+        <h2><span class="num">§ 1</span>What you're agreeing to</h2>
+        <p>
+          By installing noti-peek or connecting it to the hosted backend at
+          <code>api.notipeek.dev</code>, you agree to these terms. If you don't agree, don't use
+          the app. You can uninstall at any time from the Applications folder; server-side data
+          tied to your device token can be removed from
+          <strong>Settings → Delete my account</strong> or by emailing
+          <a href="mailto:privacy@notipeek.dev">privacy@notipeek.dev</a>.
+        </p>
 
-        <h2><span class="num">§ 2</span>What we do <em class="ink">not</em> store</h2>
+        <h2><span class="num">§ 2</span>What noti-peek is</h2>
+        <p>
+          A native macOS menubar app that fetches notifications from providers you connect
+          (GitHub, Linear, Jira, Bitbucket) via their official APIs and OAuth flows, bundles
+          them, and displays them locally. A small Cloudflare Worker brokers the OAuth dance
+          and forwards API calls using your tokens. No messages, PRs, issues, or comment bodies
+          are stored on the server — see the <a href="/privacy.html">privacy statement</a> for
+          exact data handling.
+        </p>
+
+        <h2><span class="num">§ 3</span>Your account</h2>
+        <p>
+          There is no user account in the traditional sense. The app generates an anonymous
+          <code>device_token</code> on first launch and uses that to identify your install to
+          the backend. You are responsible for keeping your device and its stored tokens
+          secure. If your device is compromised, disconnect providers in-app (which revokes
+          tokens with the provider) or email
+          <a href="mailto:security@notipeek.dev">security@notipeek.dev</a> with your device
+          token for immediate server-side purge.
+        </p>
+
+        <h2><span class="num">§ 4</span>Acceptable use</h2>
+        <p>
+          The hosted backend is shared across all users on a free Cloudflare Workers plan. You
+          agree not to:
+        </p>
         <ul>
-          <li>Your name, email, or any provider account data beyond display name + avatar URL.</li>
-          <li>Notification bodies, issue titles, PR diffs, or comment text — those pass through the Worker at request time and are never persisted.</li>
-          <li>Analytics events tied to you personally. No behavioral profile.</li>
-          <li>Your IP address beyond what Cloudflare's edge normally logs for abuse prevention.</li>
-          <li>Any data from providers you haven't explicitly connected.</li>
-        </ul>
-
-        <h2><span class="num">§ 3</span>How data flows</h2>
-        <p>When the app asks for notifications, the flow is:</p>
-        <ol>
-          <li>App sends its <code>device_token</code> to <code>api.notipeek.dev</code>.</li>
-          <li>Worker looks up which providers that device has connected and fetches from each provider's API, in parallel, using your access token.</li>
-          <li>Results are merged, optionally bundled, and returned to the app.</li>
-          <li>Nothing is written back to D1 except bookkeeping: rate-limit counters and (if a token was refreshed) the new token.</li>
-        </ol>
-        <p>
-          Requests to <code>api.notipeek.dev</code> are served by Cloudflare Workers,
-          which may log request metadata for abuse prevention. See
-          <a href="https://www.cloudflare.com/privacypolicy/" rel="noopener">Cloudflare's privacy policy</a>
-          for their retention.
-        </p>
-
-        <h2><span class="num">§ 4</span>Telemetry &amp; crash reports</h2>
-        <p>
-          The desktop app can optionally send anonymous crash reports via Sentry, scrubbed of
-          notification content. This is <strong>off by default in release builds</strong> and
-          on-by-default only in explicitly labelled beta builds; you can toggle it in
-          <strong>Settings → Diagnostics</strong> at any time. We never log provider names,
-          titles, bodies, URLs, or user identifiers in telemetry — only stack traces and app
-          version.
-        </p>
-
-        <h2><span class="num">§ 5</span>Deletion</h2>
-        <p>
-          In the app, <strong>Settings → Disconnect</strong> on any provider revokes the access
-          token with the provider (where their API supports it) and deletes the corresponding D1
-          row. <strong>Settings → Delete my account</strong> deletes the <code>device_token</code>
-          and every associated connection row. After deletion, the server cannot re-identify you;
-          the data is gone.
-        </p>
-        <p>
-          If you can't reach the app (lost device, etc.), email
-          <a href="mailto:privacy@notipeek.dev">privacy@notipeek.dev</a> with your device token
-          and we will purge it on request.
-        </p>
-
-        <h2><span class="num">§ 6</span>Third parties</h2>
-        <p>Two categories of third parties receive data:</p>
-        <ul>
-          <li>
-            <strong>The providers you connect</strong> (GitHub, Linear, Jira, Bitbucket). These
-            receive your API calls because they have to — that is the point. Review their
-            policies for their handling.
-          </li>
-          <li>
-            <strong>Infrastructure:</strong> Cloudflare (Workers + D1) for the API and database,
-            GitHub Releases for app downloads, and optionally Sentry for crash reports if you
-            opt in.
-          </li>
+          <li>Abuse the API beyond reasonable personal use (the app's polling cadence is the intended cadence — don't rewrap and hammer).</li>
+          <li>Attempt to access other devices' data, tokens, or notifications.</li>
+          <li>Use noti-peek to aggregate notifications on behalf of third parties as a paid service without self-hosting your own backend.</li>
+          <li>Reverse-engineer the backend to find vulnerabilities (responsible disclosure to <a href="mailto:security@notipeek.dev">security@notipeek.dev</a> is welcome; probing production is not).</li>
+          <li>Use the service for anything unlawful in your jurisdiction.</li>
         </ul>
         <p>
-          We do not share data with advertisers, data brokers, or analytics vendors. We do not
-          sell data, ever.
+          We reserve the right to rate-limit, suspend, or revoke access to the hosted backend
+          for any device token that violates these terms. The app itself is MIT-licensed and
+          will continue to work against your own self-hosted backend.
         </p>
 
-        <h2><span class="num">§ 7</span>Security</h2>
+        <h2><span class="num">§ 5</span>Third-party providers</h2>
         <p>
-          OAuth tokens in D1 are transmitted only over TLS and scoped to a single device token.
-          A stolen device token lets someone read your notifications but not reset your
-          device-token-to-provider binding without your OAuth consent. We recommend revoking
-          in-app if you suspect any compromise; this invalidates the tokens with the provider
-          directly. For responsible disclosure, see the
-          <a href="/security.html">security page</a>.
+          noti-peek is not affiliated with GitHub, Linear, Atlassian (Jira, Bitbucket), or any
+          other provider. Your use of those services through noti-peek is governed by their own
+          terms and privacy policies. Your OAuth scopes are shown at connect time; you can
+          revoke them at any time in the provider's settings UI or via the app's Disconnect
+          flow.
         </p>
 
-        <h2><span class="num">§ 8</span>Changes to this policy</h2>
+        <h2><span class="num">§ 6</span>Open-source code</h2>
+        <p>
+          The client, backend, and landing page are released under the
+          <a href="https://github.com/Rohithgilla12/noti-peek/blob/main/LICENSE" rel="noopener">MIT License</a>.
+          You may audit, fork, modify, or self-host the code consistent with that license.
+          These terms govern use of the <em class="ink">hosted</em> service at
+          <code>api.notipeek.dev</code>; the MIT license governs use of the source code.
+        </p>
+
+        <h2><span class="num">§ 7</span>No warranty</h2>
+        <p>
+          noti-peek is provided <strong>"as is"</strong> and
+          <strong>"as available"</strong>, without warranty of any kind, express or implied —
+          including merchantability, fitness for a particular purpose, or non-infringement. We
+          do not warrant that the service will be uninterrupted, that notifications will arrive
+          on time, or that no notification will be missed. Treat noti-peek as a convenience
+          layer, not a source of truth — for anything load-bearing, check the provider's native
+          UI.
+        </p>
+
+        <h2><span class="num">§ 8</span>Limitation of liability</h2>
+        <p>
+          To the maximum extent permitted by applicable law, in no event will noti-peek, its
+          maintainers, or contributors be liable for any direct, indirect, incidental, special,
+          consequential, or exemplary damages arising from your use of — or inability to use —
+          the service, including missed notifications, delayed responses, lost data, or any
+          business consequence of same. Total aggregate liability, where permissible, is capped
+          at the amount you have paid for the service (which, for a free service, is zero).
+        </p>
+
+        <h2><span class="num">§ 9</span>Termination</h2>
+        <p>
+          You may stop using noti-peek at any time by uninstalling the app and deleting your
+          server-side data via <strong>Settings → Delete my account</strong>. We may terminate
+          or restrict service in the event of policy violation, legal requirement, or
+          decommissioning of the hosted backend (in the latter case, with reasonable notice via
+          the release channel and landing page).
+        </p>
+
+        <h2><span class="num">§ 10</span>Changes to these terms</h2>
         <p>
           Material changes will be announced in-app on next launch and in the release notes on
-          GitHub. Dates above reflect the last substantive edit.
+          GitHub. Continued use after a change means you accept the updated terms. Dates above
+          reflect the last substantive edit; minor typo fixes don't bump the date.
         </p>
 
-        <h2><span class="num">§ 9</span>Contact</h2>
+        <h2><span class="num">§ 11</span>Governing law</h2>
         <p>
-          Privacy questions: <a href="mailto:privacy@notipeek.dev">privacy@notipeek.dev</a>.<br />
-          Security issues: <a href="mailto:security@notipeek.dev">security@notipeek.dev</a>.<br />
+          These terms are governed by the laws of India, without regard to its conflict-of-law
+          rules. Disputes will be resolved in the courts of India, unless the consumer
+          protections of your country of residence provide otherwise and cannot be waived. If
+          any clause of these terms is found unenforceable, the remaining clauses remain in
+          effect.
+        </p>
+
+        <h2><span class="num">§ 12</span>Contact</h2>
+        <p>
+          Terms, billing, or general questions:
+          <a href="mailto:hello@notipeek.dev">hello@notipeek.dev</a>.<br />
+          Privacy questions:
+          <a href="mailto:privacy@notipeek.dev">privacy@notipeek.dev</a>.<br />
+          Security issues (responsible disclosure):
+          <a href="mailto:security@notipeek.dev">security@notipeek.dev</a>.<br />
           Bugs or feature requests:
           <a href="https://github.com/Rohithgilla12/noti-peek/issues" rel="noopener">the issue tracker</a>.
         </p>
@@ -434,7 +396,7 @@
         <span>
           <a href="/">Home</a>
           <span class="sep">·</span>
-          <a href="/terms.html">Terms</a>
+          <a href="/privacy.html">Privacy</a>
           <span class="sep">·</span>
           <a href="/security.html">Security</a>
           <span class="sep">·</span>
