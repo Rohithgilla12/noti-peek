@@ -725,7 +725,7 @@ kbd {
   border-color: var(--accent);
   font-variation-settings: 'wght' 520;
 }
-.detail .actions button:hover { background: var(--bg-2); }
+.detail .actions button:not(.primary):hover { background: var(--bg-2); }
 .detail .actions button.primary:hover { filter: brightness(1.05); }
 .detail .actions .spacer { flex: 1; }
 .detail .actions .keys {
