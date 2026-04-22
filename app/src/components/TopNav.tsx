@@ -14,7 +14,7 @@ export function TopNav({ onOpenSettings }: Props) {
   return (
     <header className="topnav" data-tauri-drag-region>
       <div className="topnav-gutter" aria-hidden="true" data-tauri-drag-region />
-      <nav className="topnav-tabs" role="tablist">
+      <nav className="topnav-tabs" role="tablist" data-tauri-drag-region>
         <button
           aria-current={activeTab === 'inbox'}
           role="tab"
@@ -37,7 +37,7 @@ export function TopNav({ onOpenSettings }: Props) {
           pulse
         </button>
       </nav>
-      <div className="topnav-actions">
+      <div className="topnav-actions" data-tauri-drag-region>
         <button
           onClick={() => fetchNotifications()}
           disabled={isSyncing}
