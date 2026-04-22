@@ -142,27 +142,35 @@ notifications.get('/', async (c) => {
     const strictToUpsert: WorkLink[] = [];
     const seenStrictLinks: Array<Pick<WorkLink, 'pair' | 'primary_key' | 'linked_ref'>> = [];
 
-    if (crossEnabled) {
-      const { workLinks, decisions } = await loadUserLinkState(c.env.DB, user.id);
-      const pairs: WorkLinkPair[] = ['linear-github', 'jira-bitbucket'];
+    try {
+      if (crossEnabled) {
+        const { workLinks, decisions } = await loadUserLinkState(c.env.DB, user.id);
+        const pairs: WorkLinkPair[] = ['linear-github', 'jira-bitbucket'];
 
-      for (const pair of pairs) {
-        const result = buildCrossBundles({
-          notifications: remaining, pair,
-          workLinks, decisions, userId: user.id, now: nowMs,
-        });
-        for (const b of result.crossBundles) {
-          crossBundleRows.push({ kind: 'cross_bundle', bundle: b });
-        }
-        strictToUpsert.push(...result.strictLinksInferred);
-        for (const b of result.crossBundles) {
-          for (const linked of b.linked) {
-            seenStrictLinks.push({ pair, primary_key: b.primary.key, linked_ref: linked.ref });
+        for (const pair of pairs) {
+          try {
+            const result = buildCrossBundles({
+              notifications: remaining, pair,
+              workLinks, decisions, userId: user.id, now: nowMs,
+            });
+            for (const b of result.crossBundles) {
+              crossBundleRows.push({ kind: 'cross_bundle', bundle: b });
+            }
+            strictToUpsert.push(...result.strictLinksInferred);
+            for (const b of result.crossBundles) {
+              for (const linked of b.linked) {
+                seenStrictLinks.push({ pair, primary_key: b.primary.key, linked_ref: linked.ref });
+              }
+            }
+            allSuggestions.push(...result.fuzzyCandidates);
+            remaining = remaining.filter((n) => !result.consumedNotificationIds.has(n.id));
+          } catch (err) {
+            console.error(`[cross-bundling] pair ${pair} failed`, err);
           }
         }
-        allSuggestions.push(...result.fuzzyCandidates);
-        remaining = remaining.filter((n) => !result.consumedNotificationIds.has(n.id));
       }
+    } catch (err) {
+      console.error('[cross-bundling] loadUserLinkState failed', err);
     }
 
     const v1Rows = bundleNotifications(remaining);
@@ -172,14 +180,20 @@ notifications.get('/', async (c) => {
 
     // Fire-and-forget persistence — failure logs but does not fail the request.
     c.executionCtx.waitUntil((async () => {
-      try {
-        for (const link of strictToUpsert) await upsertWorkLink(c.env.DB, link);
-        const nowIso = new Date(nowMs).toISOString();
-        for (const s of seenStrictLinks) {
-          await touchWorkLinkLastSeen(c.env.DB, user.id, s.pair, s.primary_key, s.linked_ref, nowIso);
+      for (const link of strictToUpsert) {
+        try {
+          await upsertWorkLink(c.env.DB, link);
+        } catch (err) {
+          console.error('[cross-bundling] upsert failed', link.pair, link.primary_key, link.linked_ref, err);
         }
-      } catch (err) {
-        console.error('[cross-bundling] link upsert failed', err);
+      }
+      const nowIso = new Date(nowMs).toISOString();
+      for (const s of seenStrictLinks) {
+        try {
+          await touchWorkLinkLastSeen(c.env.DB, user.id, s.pair, s.primary_key, s.linked_ref, nowIso);
+        } catch (err) {
+          console.error('[cross-bundling] touch failed', s.pair, s.primary_key, s.linked_ref, err);
+        }
       }
     })());
   }
