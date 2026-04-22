@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { extractTitleKey, extractBodyTrailerKeys } from './cross-bundling';
+import type { NotificationResponse } from '../types';
+import { extractTitleKey, extractBodyTrailerKeys, collectStrictLinks } from './cross-bundling';
 
 describe('extractTitleKey', () => {
   it('matches bracketed prefix: [LIN-142] title', () => {
@@ -74,5 +75,124 @@ describe('extractBodyTrailerKeys', () => {
 
   it('deduplicates repeated keys', () => {
     expect(extractBodyTrailerKeys('Closes LIN-1. Fixes LIN-1.')).toEqual(['LIN-1']);
+  });
+});
+
+// Fixture builder — the standard shape used across cross-bundling tests.
+function notif(o: Partial<NotificationResponse> & Pick<NotificationResponse, 'id' | 'source' | 'url' | 'title'>): NotificationResponse {
+  return {
+    type: 'pr',
+    body: undefined,
+    author: { name: 'alice' },
+    unread: true,
+    createdAt: '2026-04-20T00:00:00.000Z',
+    updatedAt: '2026-04-20T00:00:00.000Z',
+    ...o,
+  };
+}
+
+describe('collectStrictLinks — linear-github pair', () => {
+  it('matches PR title prefix to a Linear notification in the same batch', () => {
+    const notifications = [
+      notif({ id: 'n1', source: 'github', url: 'https://github.com/o/r/pull/423', title: '[LIN-142] Add rate limits' }),
+      notif({ id: 'n2', source: 'linear', url: 'https://linear.app/t/issue/LIN-142/add-rate-limits', title: 'Add rate limits' }),
+    ];
+    const links = collectStrictLinks(notifications, 'linear-github');
+    expect(links).toHaveLength(1);
+    expect(links[0]).toMatchObject({
+      pair: 'linear-github',
+      primary_key: 'LIN-142',
+      linked_ref: 'o/r#423',
+      strict_source: 'title-prefix',
+    });
+  });
+
+  it('matches body trailer "Closes LIN-142"', () => {
+    const notifications = [
+      notif({ id: 'n1', source: 'github', url: 'https://github.com/o/r/pull/423', title: 'unrelated title', body: 'Closes LIN-142' }),
+      notif({ id: 'n2', source: 'linear', url: 'https://linear.app/t/issue/LIN-142/x', title: 'x' }),
+    ];
+    const links = collectStrictLinks(notifications, 'linear-github');
+    expect(links).toHaveLength(1);
+    expect(links[0].strict_source).toBe('body-trailer');
+  });
+
+  it('matches linkHints { kind: "github-url" } on a Linear notification', () => {
+    const notifications = [
+      notif({
+        id: 'n1', source: 'linear',
+        url: 'https://linear.app/t/issue/LIN-142/x', title: 'x',
+        linkHints: [{ kind: 'github-url', url: 'https://github.com/o/r/pull/423' }],
+      }),
+      notif({ id: 'n2', source: 'github', url: 'https://github.com/o/r/pull/423', title: 'unrelated' }),
+    ];
+    const links = collectStrictLinks(notifications, 'linear-github');
+    expect(links).toHaveLength(1);
+    expect(links[0].strict_source).toBe('linear-attachment');
+  });
+
+  it('emits no link when only one side is in the batch', () => {
+    const notifications = [
+      notif({ id: 'n1', source: 'github', url: 'https://github.com/o/r/pull/423', title: '[LIN-142] ok' }),
+    ];
+    expect(collectStrictLinks(notifications, 'linear-github')).toEqual([]);
+  });
+
+  it('ignores GitHub releases even when title contains a key', () => {
+    const notifications = [
+      notif({ id: 'n1', source: 'github', type: 'release', url: 'https://github.com/o/r/releases/tag/v1', title: '[LIN-142] release' }),
+      notif({ id: 'n2', source: 'linear', url: 'https://linear.app/t/issue/LIN-142/x', title: 'x' }),
+    ];
+    expect(collectStrictLinks(notifications, 'linear-github')).toEqual([]);
+  });
+
+  it('deduplicates when title-prefix and body-trailer both point at the same key', () => {
+    const notifications = [
+      notif({ id: 'n1', source: 'github', url: 'https://github.com/o/r/pull/423', title: '[LIN-142] x', body: 'Closes LIN-142' }),
+      notif({ id: 'n2', source: 'linear', url: 'https://linear.app/t/issue/LIN-142/x', title: 'x' }),
+    ];
+    const links = collectStrictLinks(notifications, 'linear-github');
+    expect(links).toHaveLength(1);
+    // title-prefix wins when both match the same pair
+    expect(links[0].strict_source).toBe('title-prefix');
+  });
+});
+
+describe('collectStrictLinks — jira-bitbucket pair', () => {
+  it('matches PR title prefix to a Jira notification', () => {
+    const notifications = [
+      notif({ id: 'n1', source: 'bitbucket', url: 'https://bitbucket.org/ws/r/pull-requests/42', title: 'ABC-78: ship it' }),
+      notif({ id: 'n2', source: 'jira', url: 'https://company.atlassian.net/browse/ABC-78', title: 'Ship it' }),
+    ];
+    const links = collectStrictLinks(notifications, 'jira-bitbucket');
+    expect(links).toHaveLength(1);
+    expect(links[0]).toMatchObject({
+      pair: 'jira-bitbucket',
+      primary_key: 'ABC-78',
+      linked_ref: 'ws/r#42',
+      strict_source: 'title-prefix',
+    });
+  });
+
+  it('matches linkHints { kind: "bitbucket-pr" } on a Jira notification', () => {
+    const notifications = [
+      notif({
+        id: 'n1', source: 'jira',
+        url: 'https://company.atlassian.net/browse/ABC-78', title: 'x',
+        linkHints: [{ kind: 'bitbucket-pr', workspace: 'ws', repo: 'r', id: '42' }],
+      }),
+      notif({ id: 'n2', source: 'bitbucket', url: 'https://bitbucket.org/ws/r/pull-requests/42', title: 'y' }),
+    ];
+    const links = collectStrictLinks(notifications, 'jira-bitbucket');
+    expect(links).toHaveLength(1);
+    expect(links[0].strict_source).toBe('jira-dev-panel');
+  });
+
+  it('does not leak linear-github matches into jira-bitbucket pair', () => {
+    const notifications = [
+      notif({ id: 'n1', source: 'github', url: 'https://github.com/o/r/pull/1', title: '[LIN-1] x' }),
+      notif({ id: 'n2', source: 'linear', url: 'https://linear.app/t/issue/LIN-1/x', title: 'x' }),
+    ];
+    expect(collectStrictLinks(notifications, 'jira-bitbucket')).toEqual([]);
   });
 });
