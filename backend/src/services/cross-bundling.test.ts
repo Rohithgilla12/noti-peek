@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import type { NotificationResponse } from '../types';
-import { extractTitleKey, extractBodyTrailerKeys, collectStrictLinks } from './cross-bundling';
+import {
+  extractTitleKey,
+  extractBodyTrailerKeys,
+  collectStrictLinks,
+  scoreFuzzyCandidates,
+  FUZZY_THRESHOLD,
+} from './cross-bundling';
 
 describe('extractTitleKey', () => {
   it('matches bracketed prefix: [LIN-142] title', () => {
@@ -196,9 +202,6 @@ describe('collectStrictLinks — jira-bitbucket pair', () => {
     expect(collectStrictLinks(notifications, 'jira-bitbucket')).toEqual([]);
   });
 });
-
-import { scoreFuzzyCandidates, FUZZY_THRESHOLD } from './cross-bundling';
-
 describe('scoreFuzzyCandidates — linear-github', () => {
   it('emits a high-confidence candidate for same author + strong title overlap + same day', () => {
     const notifications = [
