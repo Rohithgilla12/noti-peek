@@ -27,6 +27,12 @@ export async function loadUserLinkState(
   };
 }
 
+/**
+ * Insert-or-refresh a work-link. On conflict, refreshes `signal`,
+ * `strict_source`, and `last_seen_at` but **intentionally preserves
+ * `confirmed_at`** — that timestamp captures first confirmation and must
+ * remain stable across re-encounters.
+ */
 export async function upsertWorkLink(db: D1Database, link: WorkLink): Promise<void> {
   await db.prepare(
     `INSERT INTO work_links (user_id, pair, primary_key, linked_ref, signal, strict_source, confirmed_at, last_seen_at)
@@ -75,6 +81,6 @@ export async function clearDismissedSuggestions(
   userId: string,
 ): Promise<void> {
   await db.prepare(
-    "DELETE FROM suggestion_decisions WHERE user_id = ? AND decision = 'dismissed'"
-  ).bind(userId).run();
+    'DELETE FROM suggestion_decisions WHERE user_id = ? AND decision = ?'
+  ).bind(userId, 'dismissed').run();
 }
