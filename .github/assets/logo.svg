@@ -1,6 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="noti-peek logo">
-  <title>noti-peek</title>
-  <rect width="64" height="64" rx="14" fill="#1c1813"/>
-  <circle cx="32" cy="32" r="18" fill="none" stroke="#d8cfbf" stroke-width="3"/>
-  <circle cx="42" cy="26" r="4.5" fill="#e8a83e"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" aria-label="noti-peek logo" role="img" viewBox="0 0 64 64"><title>noti-peek</title><rect width="64" height="64" fill="#1c1813" rx="14"/><circle cx="32" cy="32" r="18" fill="none" stroke="#d8cfbf" stroke-width="3"/><circle cx="42" cy="26" r="4.5" fill="#e8a83e"/></svg>
