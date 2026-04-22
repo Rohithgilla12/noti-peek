@@ -4,6 +4,27 @@ All notable changes to this project are documented here. The format is loosely b
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-04-22
+
+### Added
+
+- **Pulse analytics dashboard.** Type-filter bars (`TypeBars`) and an active-hours ribbon give a richer rolling view of inbox activity.
+- **Mark all as read** action + keyboard shortcuts from the footer.
+- Connected-source filtering in the day stream — filter to just the providers you currently have connected.
+- Pure reducer tests covering the new Pulse analytics paths.
+
+### Changed
+
+- Landing "Download" CTA now points at the public `noti-peek-releases` repo.
+- Repo prepped for open source: MIT `LICENSE`, `CONTRIBUTING.md`, `SECURITY.md`, issue/PR templates, and a README with dark/light screenshot mocks.
+- Package/crate metadata (author, license, repository) set on both `app/package.json` and `app/src-tauri/Cargo.toml`.
+
+### Fixed
+
+- Primary "Open" button stays readable on hover in the detail pane.
+- Window dragging works again — added the `core:window:default` capability.
+- Empty space in the top nav is draggable on macOS (Tauri v2's `data-tauri-drag-region` does not propagate to children, so it's now applied to `.topnav-tabs` and `.topnav-actions` directly).
+
 ## [0.4.0] — 2026-04-21
 
 ### Added
