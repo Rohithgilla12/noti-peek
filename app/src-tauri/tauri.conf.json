@@ -10,29 +10,7 @@
     "frontendDist": "../dist"
   },
   "app": {
-    "windows": [
-      {
-        "label": "main",
-        "title": "noti-peek",
-        "width": 1120,
-        "height": 720,
-        "minWidth": 820,
-        "minHeight": 560,
-        "resizable": true,
-        "visible": true,
-        "decorations": true,
-        "transparent": true,
-        "shadow": true,
-        "focus": true,
-        "titleBarStyle": "Overlay",
-        "hiddenTitle": true,
-        "trafficLightPosition": { "x": 18, "y": 18 },
-        "windowEffects": {
-          "effects": ["headerView", "underWindowBackground"],
-          "state": "followsWindowActiveState"
-        }
-      }
-    ],
+    "windows": [],
     "macOSPrivateApi": true,
     "security": {
       "csp": "default-src 'self' tauri: asset: blob:; img-src 'self' data: https: blob:; connect-src 'self' ipc: http://ipc.localhost https://api.notipeek.dev https://*.workers.dev http://localhost:*; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self' data:;",

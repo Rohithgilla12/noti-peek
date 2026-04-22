@@ -1,12 +1,12 @@
+use std::sync::Mutex;
 use tauri::{
     menu::{
         AboutMetadataBuilder, MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder,
     },
-    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent, TrayIcon},
-    Emitter, Manager, State, WindowEvent,
+    tray::{MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder, TrayIconEvent},
+    Emitter, Manager, State, TitleBarStyle, WebviewUrl, WebviewWindowBuilder, WindowEvent,
 };
 use tauri_plugin_sql::{Migration, MigrationKind};
-use std::sync::Mutex;
 
 struct TrayState(Mutex<Option<TrayIcon>>);
 
@@ -81,7 +81,11 @@ fn get_migrations() -> Vec<Migration> {
 
 #[tauri::command]
 fn set_badge_count(count: u32, state: State<TrayState>) -> Result<(), String> {
-    let label = if count > 0 { Some(count.to_string()) } else { None };
+    let label = if count > 0 {
+        Some(count.to_string())
+    } else {
+        None
+    };
     let tray_guard = state.0.lock().map_err(|e| e.to_string())?;
     if let Some(tray) = tray_guard.as_ref() {
         tray.set_title(label).map_err(|e| e.to_string())?;
@@ -105,6 +109,49 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .manage(TrayState(Mutex::new(None)))
         .setup(|app| {
+            // Create the main window with transparent titlebar for macOS
+            let win_builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
+                .title("noti-peek")
+                .inner_size(1120.0, 720.0)
+                .min_inner_size(820.0, 560.0)
+                .resizable(true)
+                .visible(true)
+                .transparent(true)
+                .shadow(true)
+                .focused(true);
+
+            // macOS: transparent titlebar, hide the title text, and nudge
+            // the traffic lights inward so they sit comfortably against
+            // the app's content — matches Slack / Linear / Electron apps.
+            #[cfg(target_os = "macos")]
+            let win_builder = win_builder
+                .title_bar_style(TitleBarStyle::Overlay)
+                .hidden_title(true)
+                .traffic_light_position(tauri::LogicalPosition::new(18.0, 18.0));
+
+            let window = win_builder.build().unwrap();
+
+            // Set background color only when building for macOS
+            #[cfg(target_os = "macos")]
+            {
+                use cocoa::appkit::{NSColor, NSWindow};
+                use cocoa::base::{id, nil};
+
+                let ns_window = window.ns_window().unwrap() as id;
+                unsafe {
+                    // Matches --bg in App.css (oklch(13% 0.006 80)) so the
+                    // titlebar blends into the app's warm near-black surface.
+                    let bg_color = NSColor::colorWithRed_green_blue_alpha_(
+                        nil,
+                        24.0 / 255.0,
+                        22.0 / 255.0,
+                        19.0 / 255.0,
+                        1.0,
+                    );
+                    ns_window.setBackgroundColor_(bg_color);
+                }
+            }
+
             // ----------------------------------------------------------
             // Native macOS menu bar.
             // ----------------------------------------------------------
@@ -222,10 +269,9 @@ pub fn run() {
 
             // Menubar glyph is a single-color template image (ring + offset
             // dot). macOS inverts it for dark/light menubars automatically.
-            let tray_icon = tauri::image::Image::from_bytes(include_bytes!(
-                "../icons/tray-template@2x.png"
-            ))
-            .expect("tray-template@2x.png must be a valid PNG");
+            let tray_icon =
+                tauri::image::Image::from_bytes(include_bytes!("../icons/tray-template@2x.png"))
+                    .expect("tray-template@2x.png must be a valid PNG");
             let tray = TrayIconBuilder::new()
                 .icon(tray_icon)
                 .icon_as_template(true)
