@@ -53,15 +53,6 @@ interface BitbucketTokenResponse {
   token_type: string;
 }
 
-interface BitbucketUser {
-  uuid: string;
-  display_name: string;
-  account_id: string;
-  links: {
-    avatar: { href: string };
-  };
-}
-
 interface BitbucketFetchOptions {
   maxPages?: number;
   perPage?: number;
@@ -133,21 +124,6 @@ export async function refreshBitbucketToken(
   return tokenData.access_token;
 }
 
-async function getCurrentUser(accessToken: string): Promise<BitbucketUser> {
-  const response = await fetch('https://api.bitbucket.org/2.0/user', {
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'Accept': 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to get Bitbucket user: ${response.status}`);
-  }
-
-  return response.json() as Promise<BitbucketUser>;
-}
-
 export async function fetchBitbucketNotifications(
   connection: Connection,
   env: Env,
@@ -161,21 +137,24 @@ export async function fetchBitbucketNotifications(
     accessToken = await refreshBitbucketToken(connection, env, db);
   }
 
+  if (!connection.account_id) {
+    throw new Error('Bitbucket connection missing account_id; reconnect required');
+  }
+
   const authHeaders = {
     'Authorization': `Bearer ${accessToken}`,
     'Accept': 'application/json',
   };
 
-  const currentUser = await getCurrentUser(accessToken);
   const allPullRequests: BitbucketPullRequest[] = [];
+  const seenPrIds = new Set<number>();
 
-  // Bitbucket's cross-workspace endpoints were sunset on 2026-04-14 (CHANGE-2770):
-  //   - GET /2.0/pullrequests/{selected_user}  -> 404 (removed outright)
-  //   - GET /2.0/repositories?role=...         -> 410 Gone
-  //   - GET /2.0/user/permissions/{workspaces,repositories} -> 410 Gone
-  // We now walk: user -> workspaces -> repos -> pullrequests per repo.
+  // Bitbucket has no notifications API and no cross-workspace PR endpoint
+  // (the latter was sunset 2026-04-14 / CHANGE-2770). The workspace-scoped
+  // user-PR endpoint survived, so we enumerate workspaces and ask each one
+  // for PRs involving this user. Two calls per workspace beats walking
+  // every repo and reproducing the filter client-side.
 
-  // Step 1: enumerate workspaces the user belongs to.
   const workspaceSlugs: string[] = [];
   let workspaceUrl: string | undefined = `https://api.bitbucket.org/2.0/user/workspaces?pagelen=${perPage}`;
   let workspacePages = 0;
@@ -197,46 +176,27 @@ export async function fetchBitbucketNotifications(
     workspacePages++;
   }
 
-  // Step 2: for each workspace, list repos the user has access to.
-  const repoPRUrls: string[] = [];
+  const userParam = encodeURIComponent(connection.account_id);
   for (const slug of workspaceSlugs) {
-    let repoUrl: string | undefined = `https://api.bitbucket.org/2.0/repositories/${encodeURIComponent(slug)}?role=member&pagelen=${perPage}`;
-    let repoPages = 0;
-    while (repoUrl && repoPages < 2) {
-      const response = await fetch(repoUrl, { headers: authHeaders });
+    let prUrl: string | undefined = `https://api.bitbucket.org/2.0/workspaces/${encodeURIComponent(slug)}/pullrequests/${userParam}?state=OPEN&pagelen=${perPage}`;
+    let prPages = 0;
+    while (prUrl && prPages < maxPages) {
+      const response = await fetch(prUrl, { headers: authHeaders });
       if (!response.ok) {
+        if (response.status === 401) {
+          throw new TokenExpiredError('Bitbucket token expired or revoked');
+        }
         break;
       }
-      const data = await response.json() as BitbucketPaginatedResponse<{ full_name: string; links: { pullrequests: { href: string } } }>;
-      for (const repo of data.values) {
-        if (repo.links?.pullrequests?.href) {
-          repoPRUrls.push(repo.links.pullrequests.href);
+      const data = await response.json() as BitbucketPaginatedResponse<BitbucketPullRequest>;
+      for (const pr of data.values) {
+        if (!seenPrIds.has(pr.id)) {
+          seenPrIds.add(pr.id);
+          allPullRequests.push(pr);
         }
       }
-      repoUrl = data.next;
-      repoPages++;
-    }
-  }
-
-  // Step 3: fetch recent open PRs per repo and keep the ones the user is involved in.
-  for (const prUrl of repoPRUrls.slice(0, 20)) {
-    try {
-      const response = await fetch(`${prUrl}?state=OPEN&pagelen=10`, { headers: authHeaders });
-
-      if (response.ok) {
-        const data = await response.json() as BitbucketPaginatedResponse<BitbucketPullRequest>;
-        for (const pr of data.values) {
-          const isAuthor = pr.author.uuid === currentUser.uuid;
-          const isReviewer = pr.participants?.some(p => p.user.uuid === currentUser.uuid) ?? false;
-          if (isAuthor || isReviewer) {
-            if (!allPullRequests.some(existing => existing.id === pr.id)) {
-              allPullRequests.push(pr);
-            }
-          }
-        }
-      }
-    } catch {
-      // Continue on error for individual repos
+      prUrl = data.next;
+      prPages++;
     }
   }
 

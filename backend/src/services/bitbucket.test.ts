@@ -1,11 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Connection, Env } from '../types';
 
-// Mock fetch globally
 const mockFetch = vi.fn();
 globalThis.fetch = mockFetch;
 
-// Import after mocking
 import {
   fetchBitbucketNotifications,
   refreshBitbucketToken,
@@ -20,8 +18,8 @@ describe('Bitbucket Service', () => {
     provider: 'bitbucket',
     access_token: 'test-access-token',
     refresh_token: 'test-refresh-token',
-    token_expires_at: new Date(Date.now() + 3600000).toISOString(), // 1 hour from now
-    account_id: '{account-uuid}',
+    token_expires_at: new Date(Date.now() + 3600000).toISOString(),
+    account_id: '{user-uuid}',
     account_name: 'Test User',
     account_avatar: 'https://example.com/avatar.png',
     created_at: new Date().toISOString(),
@@ -82,19 +80,7 @@ describe('Bitbucket Service', () => {
   });
 
   describe('fetchBitbucketNotifications', () => {
-    // Helpers for the new fetch flow: user -> workspaces -> repos/workspace -> PRs/repo.
-    const mockUser = (uuid = '{user-uuid}') => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          uuid,
-          display_name: 'Test User',
-          account_id: 'account-123',
-          links: { avatar: { href: 'https://avatar.url' } },
-        }),
-      });
-    };
-
+    // New flow: workspaces -> PRs/workspace (server-filtered to current user).
     const mockWorkspaces = (slugs: string[] = ['team']) => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -105,24 +91,7 @@ describe('Bitbucket Service', () => {
       });
     };
 
-    const mockRepos = (
-      repos: Array<{ full_name: string; pullrequestsUrl: string }> = [
-        { full_name: 'team/repo', pullrequestsUrl: 'https://api.bitbucket.org/2.0/repositories/team/repo/pullrequests' },
-      ],
-    ) => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          values: repos.map(r => ({
-            full_name: r.full_name,
-            links: { pullrequests: { href: r.pullrequestsUrl } },
-          })),
-          size: repos.length,
-        }),
-      });
-    };
-
-    const mockRepoPRs = (prs: unknown[]) => {
+    const mockWorkspacePRs = (prs: unknown[]) => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({ values: prs, size: prs.length }),
@@ -130,12 +99,8 @@ describe('Bitbucket Service', () => {
     };
 
     it('should fetch and transform Bitbucket PRs into notifications', async () => {
-      const authoredPR = { ...mockPullRequest, author: { ...mockPullRequest.author, uuid: '{user-uuid}' } };
-
-      mockUser();
       mockWorkspaces(['team']);
-      mockRepos();
-      mockRepoPRs([authoredPR]);
+      mockWorkspacePRs([mockPullRequest]);
 
       const result = await fetchBitbucketNotifications(mockConnection, mockEnv, mockDb);
 
@@ -152,13 +117,21 @@ describe('Bitbucket Service', () => {
       });
     });
 
-    it('should handle merged PRs correctly', async () => {
-      const mergedPR = { ...mockPullRequest, state: 'MERGED', author: { ...mockPullRequest.author, uuid: '{user-uuid}' } };
-
-      mockUser();
+    it('should call the workspace-scoped per-user PR endpoint with the connection account_id', async () => {
       mockWorkspaces(['team']);
-      mockRepos();
-      mockRepoPRs([mergedPR]);
+      mockWorkspacePRs([]);
+
+      await fetchBitbucketNotifications(mockConnection, mockEnv, mockDb);
+
+      const prCallUrl = mockFetch.mock.calls[1][0] as string;
+      expect(prCallUrl).toContain('/2.0/workspaces/team/pullrequests/');
+      expect(prCallUrl).toContain(encodeURIComponent('{user-uuid}'));
+      expect(prCallUrl).toContain('state=OPEN');
+    });
+
+    it('should handle merged PRs correctly', async () => {
+      mockWorkspaces(['team']);
+      mockWorkspacePRs([{ ...mockPullRequest, state: 'MERGED' }]);
 
       const result = await fetchBitbucketNotifications(mockConnection, mockEnv, mockDb);
 
@@ -166,12 +139,8 @@ describe('Bitbucket Service', () => {
     });
 
     it('should handle declined PRs correctly', async () => {
-      const declinedPR = { ...mockPullRequest, state: 'DECLINED', author: { ...mockPullRequest.author, uuid: '{user-uuid}' } };
-
-      mockUser();
       mockWorkspaces(['team']);
-      mockRepos();
-      mockRepoPRs([declinedPR]);
+      mockWorkspacePRs([{ ...mockPullRequest, state: 'DECLINED' }]);
 
       const result = await fetchBitbucketNotifications(mockConnection, mockEnv, mockDb);
 
@@ -179,53 +148,55 @@ describe('Bitbucket Service', () => {
     });
 
     it('should handle empty PR response', async () => {
-      mockUser();
       mockWorkspaces(['team']);
-      mockRepos();
-      mockRepoPRs([]);
+      mockWorkspacePRs([]);
 
       const result = await fetchBitbucketNotifications(mockConnection, mockEnv, mockDb);
 
       expect(result.notifications).toHaveLength(0);
     });
 
-    it('should throw TokenExpiredError on 401 response from workspaces', async () => {
-      mockUser();
-      mockFetch.mockResolvedValueOnce({
-        ok: false,
-        status: 401,
-      });
+    it('should return empty when user belongs to no workspaces', async () => {
+      mockWorkspaces([]);
+
+      const result = await fetchBitbucketNotifications(mockConnection, mockEnv, mockDb);
+
+      expect(result.notifications).toHaveLength(0);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('should throw TokenExpiredError on 401 from workspaces', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 401 });
 
       await expect(fetchBitbucketNotifications(mockConnection, mockEnv, mockDb)).rejects.toThrow(
         'Bitbucket token expired or revoked'
       );
     });
 
-    it('should filter out PRs the user is not involved in', async () => {
-      const strangerPR = { ...mockPullRequest, id: 999, author: { ...mockPullRequest.author, uuid: '{someone-else}' }, participants: [] };
-
-      mockUser();
+    it('should throw TokenExpiredError on 401 from PRs endpoint', async () => {
       mockWorkspaces(['team']);
-      mockRepos();
-      mockRepoPRs([strangerPR]);
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 401 });
 
-      const result = await fetchBitbucketNotifications(mockConnection, mockEnv, mockDb);
-
-      expect(result.notifications).toHaveLength(0);
+      await expect(fetchBitbucketNotifications(mockConnection, mockEnv, mockDb)).rejects.toThrow(
+        'Bitbucket token expired or revoked'
+      );
     });
 
-    it('should deduplicate PRs across repos', async () => {
-      const pr1 = { ...mockPullRequest, id: 1, author: { ...mockPullRequest.author, uuid: '{user-uuid}' } };
-      const pr2 = { ...mockPullRequest, id: 2, author: { ...mockPullRequest.author, uuid: '{user-uuid}' } };
+    it('should throw when account_id is missing', async () => {
+      const connectionNoAccount = { ...mockConnection, account_id: null };
 
-      mockUser();
-      mockWorkspaces(['team']);
-      mockRepos([
-        { full_name: 'team/repo', pullrequestsUrl: 'https://api.bitbucket.org/2.0/repositories/team/repo/pullrequests' },
-        { full_name: 'team/other', pullrequestsUrl: 'https://api.bitbucket.org/2.0/repositories/team/other/pullrequests' },
-      ]);
-      mockRepoPRs([pr1, pr2]);
-      mockRepoPRs([{ ...pr1 }]); // same id as pr1 from a different repo listing
+      await expect(
+        fetchBitbucketNotifications(connectionNoAccount, mockEnv, mockDb)
+      ).rejects.toThrow('Bitbucket connection missing account_id');
+    });
+
+    it('should deduplicate PRs that show up in multiple workspaces', async () => {
+      const pr1 = { ...mockPullRequest, id: 1 };
+      const pr2 = { ...mockPullRequest, id: 2 };
+
+      mockWorkspaces(['team', 'other']);
+      mockWorkspacePRs([pr1, pr2]);
+      mockWorkspacePRs([{ ...pr1 }]);
 
       const result = await fetchBitbucketNotifications(mockConnection, mockEnv, mockDb);
 
@@ -271,10 +242,7 @@ describe('Bitbucket Service', () => {
     });
 
     it('should throw TokenExpiredError on failed refresh', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: false,
-        status: 400,
-      });
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 400 });
 
       await expect(refreshBitbucketToken(mockConnection, mockEnv, mockDb)).rejects.toThrow(
         'Failed to refresh Bitbucket token'
@@ -302,7 +270,6 @@ describe('Bitbucket Service', () => {
 
   describe('markBitbucketNotificationAsRead', () => {
     it('should handle marking notification as read', async () => {
-      // This is a no-op in Bitbucket, but we test it doesn't throw
       await expect(
         markBitbucketNotificationAsRead(mockConnection, 'bitbucket:123')
       ).resolves.not.toThrow();
@@ -311,7 +278,6 @@ describe('Bitbucket Service', () => {
 
   describe('markAllBitbucketNotificationsAsRead', () => {
     it('should handle marking all notifications as read', async () => {
-      // This is a no-op in Bitbucket, but we test it doesn't throw
       await expect(
         markAllBitbucketNotificationsAsRead(mockConnection)
       ).resolves.not.toThrow();
@@ -319,13 +285,12 @@ describe('Bitbucket Service', () => {
   });
 
   describe('token expiration check', () => {
-    it('should refresh token when expired', async () => {
+    it('should refresh token when expired before fetching', async () => {
       const expiredConnection = {
         ...mockConnection,
-        token_expires_at: new Date(Date.now() - 1000).toISOString(), // Already expired
+        token_expires_at: new Date(Date.now() - 1000).toISOString(),
       };
 
-      // Mock refresh token response
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
@@ -334,12 +299,6 @@ describe('Bitbucket Service', () => {
           expires_in: 7200,
         }),
       });
-
-      // user -> workspaces -> repos
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ uuid: '{user-uuid}', display_name: 'Test User' }),
-      });
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({ values: [], size: 0 }),
@@ -347,7 +306,6 @@ describe('Bitbucket Service', () => {
 
       await fetchBitbucketNotifications(expiredConnection, mockEnv, mockDb);
 
-      // Verify refresh was called first
       expect(mockFetch).toHaveBeenNthCalledWith(
         1,
         'https://bitbucket.org/site/oauth2/access_token',
@@ -356,11 +314,6 @@ describe('Bitbucket Service', () => {
     });
 
     it('should not refresh token when not expired', async () => {
-      // user -> workspaces (empty, so no repo fetches)
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ uuid: '{user-uuid}', display_name: 'Test User' }),
-      });
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({ values: [], size: 0 }),
@@ -368,42 +321,20 @@ describe('Bitbucket Service', () => {
 
       await fetchBitbucketNotifications(mockConnection, mockEnv, mockDb);
 
-      // First call should be to user endpoint, not token refresh
-      expect(mockFetch).toHaveBeenNthCalledWith(
-        1,
-        'https://api.bitbucket.org/2.0/user',
-        expect.anything()
-      );
+      const firstUrl = mockFetch.mock.calls[0][0] as string;
+      expect(firstUrl).toContain('/2.0/user/workspaces');
     });
   });
 
   describe('PR sorting', () => {
     it('should sort PRs by updated date descending', async () => {
-      const me = { ...mockPullRequest.author, uuid: '{user-uuid}' };
-      const olderPR = { ...mockPullRequest, id: 1, updated_on: '2024-01-10T10:00:00Z', author: me };
-      const newerPR = { ...mockPullRequest, id: 2, updated_on: '2024-01-15T10:00:00Z', author: me };
-      const middlePR = { ...mockPullRequest, id: 3, updated_on: '2024-01-12T10:00:00Z', author: me };
+      const olderPR = { ...mockPullRequest, id: 1, updated_on: '2024-01-10T10:00:00Z' };
+      const newerPR = { ...mockPullRequest, id: 2, updated_on: '2024-01-15T10:00:00Z' };
+      const middlePR = { ...mockPullRequest, id: 3, updated_on: '2024-01-12T10:00:00Z' };
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ uuid: '{user-uuid}', display_name: 'Test User' }),
-      });
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          values: [{ workspace: { slug: 'team' } }],
-          size: 1,
-        }),
-      });
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          values: [{
-            full_name: 'team/repo',
-            links: { pullrequests: { href: 'https://api.bitbucket.org/2.0/repositories/team/repo/pullrequests' } },
-          }],
-          size: 1,
-        }),
+        json: async () => ({ values: [{ workspace: { slug: 'team' } }], size: 1 }),
       });
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -412,11 +343,10 @@ describe('Bitbucket Service', () => {
 
       const result = await fetchBitbucketNotifications(mockConnection, mockEnv, mockDb);
 
-      // Should be sorted newest first
       expect(result.notifications.map(n => n.id)).toEqual([
-        'bitbucket:2', // newest
-        'bitbucket:3', // middle
-        'bitbucket:1', // oldest
+        'bitbucket:2',
+        'bitbucket:3',
+        'bitbucket:1',
       ]);
     });
   });
