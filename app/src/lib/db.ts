@@ -211,6 +211,7 @@ export async function clearAllCache(): Promise<void> {
 export interface ArchiveQuery {
   since?: string;
   source?: Provider;
+  type?: string;
   actor?: string;
   repo?: string;
   hour?: number;
@@ -229,6 +230,10 @@ export async function fetchArchiveWindow(q: ArchiveQuery): Promise<Notification[
   if (q.source) {
     wheres.push(`source = $${params.length + 1}`);
     params.push(q.source);
+  }
+  if (q.type) {
+    wheres.push(`type = $${params.length + 1}`);
+    params.push(q.type);
   }
   if (q.actor) {
     wheres.push(`LOWER(author_name) = LOWER($${params.length + 1})`);
@@ -265,6 +270,10 @@ export async function countArchive(q: ArchiveQuery): Promise<number> {
   if (q.source) {
     wheres.push(`source = $${params.length + 1}`);
     params.push(q.source);
+  }
+  if (q.type) {
+    wheres.push(`type = $${params.length + 1}`);
+    params.push(q.type);
   }
   if (q.actor) {
     wheres.push(`LOWER(author_name) = LOWER($${params.length + 1})`);

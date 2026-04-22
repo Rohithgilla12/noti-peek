@@ -2,11 +2,12 @@ interface Props {
   today: number;
   avg30: number;
   hourBuckets: number[];
+  mostActiveHour: number | null;
   activeHour: number | null;
   onPickHour: (h: number) => void;
 }
 
-export function VolumeRibbon({ today, avg30, hourBuckets, activeHour, onPickHour }: Props) {
+export function VolumeRibbon({ today, avg30, hourBuckets, mostActiveHour, activeHour, onPickHour }: Props) {
   const max = Math.max(1, ...hourBuckets);
   return (
     <div className="pulse-volume">
@@ -14,6 +15,11 @@ export function VolumeRibbon({ today, avg30, hourBuckets, activeHour, onPickHour
         <span className="pulse-today">{String(today).padStart(2, '0')}</span>
         <span className="pulse-today-label">today</span>
         <span className="pulse-avg">~{avg30} avg</span>
+        {mostActiveHour !== null && (
+          <span className="pulse-avg pulse-most-active" style={{ marginLeft: 'auto' }}>
+            most active {String(mostActiveHour).padStart(2, '0')}:00
+          </span>
+        )}
       </div>
       <div className="pulse-spark" role="group" aria-label="notifications by hour">
         {hourBuckets.map((count, h) => {

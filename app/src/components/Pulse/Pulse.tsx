@@ -53,10 +53,12 @@ export function Pulse() {
       <StatsStrip
         metrics={metrics}
         activeSource={filter.source ?? null}
+        activeType={filter.type ?? null}
         activeActor={filter.actor ?? null}
         activeRepo={filter.repo ?? null}
         activeHour={typeof filter.hour === 'number' ? filter.hour : null}
         onPickSource={(s) => setFilter({ source: filter.source === s ? undefined : s })}
+        onPickType={(t) => setFilter({ type: filter.type === t ? undefined : t })}
         onPickActor={(name) => setFilter({ actor: filter.actor === name ? undefined : name })}
         onPickRepo={(repo) => setFilter({ repo: filter.repo === repo ? undefined : repo })}
         onPickHour={(h) => setFilter({ hour: filter.hour === h ? undefined : h })}
