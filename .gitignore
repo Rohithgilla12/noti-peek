@@ -23,6 +23,7 @@ dist/
 
 # tool caches / private state — not for the public repo
 .claude/
+.claudekit/
 .serena/
 .playwright-mcp/
 .superpowers/
