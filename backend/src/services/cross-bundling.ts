@@ -9,6 +9,7 @@
 
 import type {
   NotificationResponse,
+  NotificationAuthor,
   Provider,
   WorkLinkPair,
   StrictSource,
@@ -16,6 +17,8 @@ import type {
   SuggestionDecision,
   WorkLink,
   SuggestedLinkRationale,
+  CrossBundleResponse,
+  CrossBundleLinkedSide,
 } from '../types';
 
 // Title-prefix patterns, evaluated in order. The first capture group is the key.
@@ -310,4 +313,77 @@ export function scoreFuzzyCandidates(
 
   out.sort((a, b) => b.confidence - a.confidence);
   return out;
+}
+
+export const MAX_ACTORS_SHOWN = 3;
+
+function toMs(iso: string): number {
+  const t = Date.parse(iso);
+  return Number.isFinite(t) ? t : 0;
+}
+
+export interface BuildCrossBundleInput {
+  pair: WorkLinkPair;
+  primaryNotif: NotificationResponse;
+  linkedNotifs: NotificationResponse[];
+  extraTicketSide: NotificationResponse[];
+  extraPrSide: NotificationResponse[];
+  linkedSideMeta: CrossBundleLinkedSide[];
+}
+
+export function buildCrossBundle(input: BuildCrossBundleInput): CrossBundleResponse {
+  const all = [
+    input.primaryNotif,
+    ...input.linkedNotifs,
+    ...input.extraTicketSide,
+    ...input.extraPrSide,
+  ];
+  const sorted = [...all].sort((a, b) => toMs(b.updatedAt) - toMs(a.updatedAt));
+  const latest = sorted[0];
+  const earliest = sorted[sorted.length - 1];
+
+  const actorSeen = new Set<string>();
+  const actors: NotificationAuthor[] = [];
+  for (const n of sorted) {
+    const key = n.author.name.trim().toLowerCase();
+    if (actorSeen.has(key)) continue;
+    actorSeen.add(key);
+    actors.push({ name: n.author.name, avatar: n.author.avatar });
+  }
+  const extra_actor_count = Math.max(0, actors.length - MAX_ACTORS_SHOWN);
+  const actorsCapped = actors.slice(0, MAX_ACTORS_SHOWN);
+
+  const type_summary: Record<string, number> = {};
+  const source_summary: Partial<Record<Provider, number>> = {};
+  let unread_count = 0;
+  for (const n of sorted) {
+    type_summary[n.type] = (type_summary[n.type] ?? 0) + 1;
+    source_summary[n.source] = (source_summary[n.source] ?? 0) + 1;
+    if (n.unread) unread_count++;
+  }
+
+  const primaryKey = input.pair === 'linear-github'
+    ? extractLinearKey(input.primaryNotif.url)!
+    : extractJiraKey(input.primaryNotif.url)!;
+
+  return {
+    id: `xbundle:${input.pair}:${primaryKey}:${earliest.updatedAt}`,
+    pair: input.pair,
+    primary: {
+      source: input.primaryNotif.source,
+      key: primaryKey,
+      title: input.primaryNotif.title,
+      url: input.primaryNotif.url,
+    },
+    linked: input.linkedSideMeta,
+    event_count: sorted.length,
+    unread_count,
+    actors: actorsCapped,
+    extra_actor_count,
+    type_summary,
+    source_summary,
+    latest_at: latest.updatedAt,
+    earliest_at: earliest.updatedAt,
+    children: sorted,
+  };
 }

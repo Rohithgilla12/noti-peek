@@ -6,6 +6,8 @@ import {
   collectStrictLinks,
   scoreFuzzyCandidates,
   FUZZY_THRESHOLD,
+  buildCrossBundle,
+  MAX_ACTORS_SHOWN,
 } from './cross-bundling';
 
 describe('extractTitleKey', () => {
@@ -310,5 +312,79 @@ describe('scoreFuzzyCandidates — linear-github', () => {
       }),
     ];
     expect(scoreFuzzyCandidates(notifications, 'linear-github', [], [])).toEqual([]);
+  });
+});
+
+describe('buildCrossBundle', () => {
+  it('assembles a bundle anchored on the ticket side, children newest-first', () => {
+    const ticket = notif({
+      id: 'l', source: 'linear',
+      url: 'https://linear.app/t/issue/LIN-1/x', title: 'LIN title',
+      author: { name: 'alice' },
+      updatedAt: '2026-04-22T08:00:00.000Z',
+    });
+    const pr = notif({
+      id: 'g', source: 'github',
+      url: 'https://github.com/o/r/pull/9', title: 'pr title',
+      author: { name: 'bob' },
+      type: 'review',
+      updatedAt: '2026-04-22T10:00:00.000Z',
+    });
+    const extraLinear = notif({
+      id: 'l2', source: 'linear',
+      url: 'https://linear.app/t/issue/LIN-1/x', title: 'comment',
+      author: { name: 'carol' },
+      type: 'comment',
+      updatedAt: '2026-04-22T09:00:00.000Z',
+    });
+
+    const bundle = buildCrossBundle({
+      pair: 'linear-github',
+      primaryNotif: ticket,
+      linkedNotifs: [pr],
+      extraTicketSide: [extraLinear],
+      extraPrSide: [],
+      linkedSideMeta: [{
+        source: 'github', ref: 'o/r#9', url: pr.url,
+        signal: 'strict', strict_source: 'title-prefix',
+      }],
+    });
+
+    expect(bundle.primary).toEqual({ source: 'linear', key: 'LIN-1', title: 'LIN title', url: ticket.url });
+    expect(bundle.linked[0].ref).toBe('o/r#9');
+    expect(bundle.children.map((c) => c.id)).toEqual(['g', 'l2', 'l']); // newest-first
+    expect(bundle.event_count).toBe(3);
+    expect(bundle.unread_count).toBe(3);
+    expect(bundle.source_summary).toEqual({ linear: 2, github: 1 });
+    expect(bundle.type_summary).toEqual({ pr: 1, review: 1, comment: 1 });
+    expect(bundle.actors.map((a) => a.name)).toEqual(['bob', 'carol', 'alice']);
+    expect(bundle.extra_actor_count).toBe(0);
+    expect(bundle.latest_at).toBe('2026-04-22T10:00:00.000Z');
+    expect(bundle.earliest_at).toBe('2026-04-22T08:00:00.000Z');
+    expect(bundle.id).toBe('xbundle:linear-github:LIN-1:2026-04-22T08:00:00.000Z');
+  });
+
+  it('caps actors at MAX_ACTORS_SHOWN and reports extra_actor_count', () => {
+    const ticket = notif({
+      id: 'l', source: 'linear',
+      url: 'https://linear.app/t/issue/LIN-2/x', title: 'x',
+      author: { name: 'alice' }, updatedAt: '2026-04-22T08:00:00.000Z',
+    });
+    const prs = ['bob','carol','dan','eve'].map((name, i) => notif({
+      id: `g${i}`, source: 'github', type: 'review',
+      url: 'https://github.com/o/r/pull/9', title: 'pr',
+      author: { name },
+      updatedAt: `2026-04-22T1${i}:00:00.000Z`,
+    }));
+
+    const bundle = buildCrossBundle({
+      pair: 'linear-github', primaryNotif: ticket,
+      linkedNotifs: [prs[0]], extraTicketSide: [], extraPrSide: prs.slice(1),
+      linkedSideMeta: [{ source: 'github', ref: 'o/r#9', url: prs[0].url, signal: 'strict', strict_source: 'title-prefix' }],
+    });
+
+    expect(bundle.actors).toHaveLength(MAX_ACTORS_SHOWN);
+    expect(bundle.extra_actor_count).toBeGreaterThan(0);
+    expect(bundle.actors.map((a) => a.name)).not.toContain('alice'); // alice is oldest and gets bumped
   });
 });
