@@ -38,8 +38,15 @@ describe('extractTitleKey', () => {
     expect(extractTitleKey('LIN-142 + LIN-200 — combined PR')).toBe('LIN-142');
   });
 
-  it('does not match inside a longer alphanumeric token', () => {
+  it('rejects keys whose letter-prefix contains a digit (not letters-only)', () => {
+    // ABCD1-2 — the prefix has a digit, which [A-Z]{2,10} forbids.
     expect(extractTitleKey('ABCD1-2 should not match')).toBeNull();
+  });
+
+  it('rejects a key glued to a preceding digit run (word-boundary enforcement)', () => {
+    // 123AB-1 — at position 3 ('A'), the preceding '3' is a word char so \b fails.
+    // No other position satisfies \b([A-Z]{2,10}-\d+)\b.
+    expect(extractTitleKey('123AB-1 should not match')).toBeNull();
   });
 });
 
