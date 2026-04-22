@@ -3,6 +3,8 @@ import {
   volumeStats,
   hourBuckets,
   sourceBreakdown,
+  typeBreakdown,
+  mostActiveHour,
   topActors,
   topRepos,
 } from './reducers';
@@ -73,6 +75,20 @@ describe('hourBuckets', () => {
   });
 });
 
+describe('mostActiveHour', () => {
+  it('returns null for all zeros', () => {
+    expect(mostActiveHour(new Array(24).fill(0))).toBeNull();
+  });
+  
+  it('returns the hour index with the max notifications', () => {
+    const buckets = new Array(24).fill(0);
+    buckets[9] = 5;
+    buckets[10] = 10;
+    buckets[11] = 2;
+    expect(mostActiveHour(buckets)).toBe(10);
+  });
+});
+
 describe('sourceBreakdown', () => {
   it('returns counts and percentages per source, ordered by count desc', () => {
     const rows = [
@@ -89,6 +105,25 @@ describe('sourceBreakdown', () => {
 
   it('returns empty array on empty input', () => {
     expect(sourceBreakdown([])).toEqual([]);
+  });
+});
+
+describe('typeBreakdown', () => {
+  it('returns counts and percentages per type, ordered by count desc', () => {
+    const rows = [
+      n({ id: '1', type: 'PullRequest', firstSeenAt: '2026-04-21T03:00:00Z' }),
+      n({ id: '2', type: 'PullRequest', firstSeenAt: '2026-04-21T03:00:00Z' }),
+      n({ id: '3', type: 'Issue', firstSeenAt: '2026-04-21T03:00:00Z' }),
+    ];
+    const r = typeBreakdown(rows);
+    expect(r).toEqual([
+      { type: 'PullRequest', count: 2, pct: 67 },
+      { type: 'Issue', count: 1, pct: 33 },
+    ]);
+  });
+
+  it('returns empty array on empty input', () => {
+    expect(typeBreakdown([])).toEqual([]);
   });
 });
 

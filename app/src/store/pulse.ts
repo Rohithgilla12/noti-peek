@@ -29,11 +29,12 @@ export const usePulseStore = create<PulseState>((set, get) => ({
 }));
 
 export function isFilterActive(f: PulseFilter): boolean {
-  return !!(f.source || f.actor || f.repo || typeof f.hour === 'number');
+  return !!(f.source || f.type || f.actor || f.repo || typeof f.hour === 'number');
 }
 
 export function describeFilter(f: PulseFilter): string {
   if (f.source) return f.source;
+  if (f.type) return f.type;
   if (f.actor) return `@${f.actor}`;
   if (f.repo) return f.repo;
   if (typeof f.hour === 'number') return `${String(f.hour).padStart(2, '0')}:00`;

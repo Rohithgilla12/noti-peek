@@ -2,6 +2,7 @@ import type { Notification, Provider } from '../types';
 
 export interface PulseFilter {
   source?: Provider;
+  type?: string;
   actor?: string;
   repo?: string;
   hour?: number;
@@ -9,6 +10,12 @@ export interface PulseFilter {
 
 export interface SourceSlice {
   source: Provider;
+  count: number;
+  pct: number;
+}
+
+export interface TypeSlice {
+  type: string;
   count: number;
   pct: number;
 }
@@ -53,6 +60,19 @@ export function hourBuckets(rows: RowWithFirstSeen[]): number[] {
   return b;
 }
 
+export function mostActiveHour(buckets: number[]): number | null {
+  if (buckets.every((b) => b === 0)) return null;
+  let max = 0;
+  let maxHour = 0;
+  for (let i = 0; i < buckets.length; i++) {
+    if (buckets[i] > max) {
+      max = buckets[i];
+      maxHour = i;
+    }
+  }
+  return maxHour;
+}
+
 export function sourceBreakdown(rows: RowWithFirstSeen[]): SourceSlice[] {
   if (rows.length === 0) return [];
   const counts = new Map<Provider, number>();
@@ -61,6 +81,16 @@ export function sourceBreakdown(rows: RowWithFirstSeen[]): SourceSlice[] {
   return Array.from(counts.entries())
     .map(([source, count]) => ({ source, count, pct: Math.round((count / total) * 100) }))
     .sort((a, b) => b.count - a.count || a.source.localeCompare(b.source));
+}
+
+export function typeBreakdown(rows: RowWithFirstSeen[]): TypeSlice[] {
+  if (rows.length === 0) return [];
+  const counts = new Map<string, number>();
+  for (const r of rows) counts.set(r.type, (counts.get(r.type) ?? 0) + 1);
+  const total = rows.length;
+  return Array.from(counts.entries())
+    .map(([type, count]) => ({ type, count, pct: Math.round((count / total) * 100) }))
+    .sort((a, b) => b.count - a.count || a.type.localeCompare(b.type));
 }
 
 export function topActors(rows: RowWithFirstSeen[], limit: number): ActorSlice[] {

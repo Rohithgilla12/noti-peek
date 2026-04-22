@@ -14,6 +14,7 @@ function buildQuery(filter: PulseFilter): ArchiveQuery {
   return {
     since: sinceDaysAgo(30),
     source: filter.source,
+    type: filter.type,
     actor: filter.actor,
     repo: filter.repo,
     hour: filter.hour,
@@ -35,6 +36,7 @@ export async function fetchArchivePage(
 ): Promise<{ rows: Notification[]; hasMore: boolean }> {
   const q: ArchiveQuery = {
     source: filter.source,
+    type: filter.type,
     actor: filter.actor,
     repo: filter.repo,
     hour: filter.hour,
