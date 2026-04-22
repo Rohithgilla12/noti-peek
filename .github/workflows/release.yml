@@ -152,7 +152,11 @@ jobs:
           fi
 
           mkdir -p staged
+          # tauri-action emits Windows backslash paths on windows-latest.
+          # Git Bash's `[ -f ... ]` test fails on them, so normalise to
+          # forward slashes before testing and copying. No-op on mac/linux.
           echo "$ARTIFACTS" | jq -r '.[]' | while read -r f; do
+            f="${f//\\//}"
             [ -f "$f" ] || { echo "skip (missing): $f"; continue; }
             cp "$f" staged/
           done
