@@ -171,7 +171,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       const existingById = new Map(existingNotifications.map((n) => [n.id, n]));
       const notifications = incoming.map((n) => {
         const prev = existingById.get(n.id);
-        if (prev && !prev.unread && n.updatedAt <= prev.updatedAt) {
+        if (prev && !prev.unread && new Date(n.updatedAt).getTime() <= new Date(prev.updatedAt).getTime()) {
           return { ...n, unread: false };
         }
         return n;
