@@ -25,6 +25,8 @@ dist/
 .claude/
 .serena/
 .playwright-mcp/
+.superpowers/
 
 # internal plans, setup guides, and working notes — not for the public repo
 docs/
+design/
