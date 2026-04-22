@@ -26,6 +26,8 @@ export function DayStream() {
   const selectedId = useAppStore((s) => s.selectedNotificationId);
   const setSelectedId = useAppStore((s) => s.setSelectedNotification);
   const markAsRead = useAppStore((s) => s.markAsRead);
+  const markAllAsRead = useAppStore((s) => s.markAllAsRead);
+  const connections = useAppStore((s) => s.connections);
 
   const notifications = useFilteredNotifications();
   const unread = useUnreadCount();
@@ -72,6 +74,7 @@ export function DayStream() {
         <div className="filter-chips" role="tablist">
           {SOURCES
             .filter((s) => !s.experimental || enableExperimentalProviders)
+            .filter((s) => s.value === 'all' || connections.some(c => c.provider === s.value))
             .map((s) => (
               <button
                 key={s.value}
@@ -84,15 +87,24 @@ export function DayStream() {
               </button>
             ))}
         </div>
-        <div></div>
-        <button
-          className="unread-toggle"
-          aria-pressed={filter.unreadOnly}
-          onClick={() => setFilter({ unreadOnly: !filter.unreadOnly })}
-          type="button"
-        >
-          unread only
-        </button>
+        <div className="stream-actions">
+          <button
+            className="mark-all-read"
+            onClick={() => void markAllAsRead()}
+            type="button"
+            title="Mark all as read (Shift+E)"
+          >
+            mark all read
+          </button>
+          <button
+            className="unread-toggle"
+            aria-pressed={filter.unreadOnly}
+            onClick={() => setFilter({ unreadOnly: !filter.unreadOnly })}
+            type="button"
+          >
+            unread only
+          </button>
+        </div>
         <div className="count">
           <b>{String(unread).padStart(2, '0')}</b> unread ·{' '}
           <span>{notifications.length}</span> total
@@ -152,4 +164,3 @@ export function DayStream() {
     </>
   );
 }
-

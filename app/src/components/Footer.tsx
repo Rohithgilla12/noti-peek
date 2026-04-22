@@ -42,6 +42,10 @@ export function Footer() {
         </span>
         <span className="sep">·</span>
         <span>
+          <kbd>E</kbd> mark read
+        </span>
+        <span className="sep">·</span>
+        <span>
           <kbd>R</kbd> refresh
         </span>
       </div>

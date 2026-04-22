@@ -30,6 +30,7 @@ function App() {
   const setSelectedId = useAppStore((s) => s.setSelectedNotification);
   const notifications = useAppStore((s) => s.notifications);
   const markAsRead = useAppStore((s) => s.markAsRead);
+  const markAllAsRead = useAppStore((s) => s.markAllAsRead);
   const activeTab = useAppStore((s) => s.activeTab);
   const setActiveTab = useAppStore((s) => s.setActiveTab);
 
@@ -155,10 +156,18 @@ function App() {
         e.preventDefault();
         (document.querySelector('button[data-action="merge"]') as HTMLButtonElement)?.click();
       }
+      if (e.key === 'e' && !e.metaKey && !e.ctrlKey && !e.shiftKey && selected) {
+        e.preventDefault();
+        if (selected.unread) markAsRead(selected.id);
+      }
+      if (e.key === 'E' && e.shiftKey && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        void markAllAsRead();
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [fetchNotifications, showSettings, selectedId, selected, setSelectedId, markAsRead, setActiveTab]);
+  }, [fetchNotifications, showSettings, selectedId, selected, setSelectedId, markAsRead, markAllAsRead, setActiveTab]);
 
   const setFilter = useAppStore((s) => s.setFilter);
   const filter = useAppStore((s) => s.filter);

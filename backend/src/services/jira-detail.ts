@@ -90,7 +90,7 @@ export async function fetchJiraIssueDetails(
   if (!myselfRes.ok) throwForStatus(myselfRes.status, myselfUrl);
   const myself = (await myselfRes.json()) as { accountId: string; displayName: string; avatarUrls?: { '48x48'?: string } };
 
-  const issueUrl = `${base}/rest/api/3/issue/${encodeURIComponent(issueKey)}?expand=renderedFields&fields=summary,status,priority,assignee,reporter,comment`;
+  const issueUrl = `${base}/rest/api/3/issue/${encodeURIComponent(issueKey)}?expand=renderedFields&fields=summary,description,status,priority,assignee,reporter,comment`;
   const issueRes = await fetch(issueUrl, { headers: jiraHeaders(token) });
   if (!issueRes.ok) throwForStatus(issueRes.status, issueUrl);
   const issue = (await issueRes.json()) as {
