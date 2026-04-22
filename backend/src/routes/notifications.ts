@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import type { Env, Variables, Connection, NotificationResponse, Provider, RateLimitInfo, DetailResponse } from '../types';
+import type { Env, Variables, Connection, NotificationResponse, Provider, RateLimitInfo, DetailResponse, WorkLinkPair, CrossBundleResponse, SuggestedLink, WorkLink } from '../types';
 import { RateLimitError, InsufficientScopeError, TokenExpiredError } from '../types';
 import { authMiddleware } from '../middleware/auth';
 import { rateLimitMiddleware } from '../middleware/rateLimiter';
@@ -8,6 +8,9 @@ import { fetchLinearNotifications, markLinearNotificationAsRead, markAllLinearNo
 import { fetchJiraNotifications, markJiraNotificationAsRead, markAllJiraNotificationsAsRead } from '../services/jira';
 import { fetchBitbucketNotifications, markBitbucketNotificationAsRead, markAllBitbucketNotificationsAsRead } from '../services/bitbucket';
 import { bundleNotifications, BUNDLING_VERSION } from '../services/bundling';
+import type { BundleResponse } from '../services/bundling';
+import { buildCrossBundles } from '../services/cross-bundling';
+import { loadUserLinkState, upsertWorkLink, touchWorkLinkLastSeen } from '../services/work-links-repo';
 import { parseGitHubIssueOrPRUrl } from '../services/github-urls';
 import {
   fetchIssueDetails, fetchPRDetails,
@@ -32,6 +35,21 @@ async function getConnection(db: D1Database, userId: string, provider: Provider)
 
 function experimentalProvidersEnabled(env: Env): boolean {
   return env.ENABLE_EXPERIMENTAL_PROVIDERS === 'true';
+}
+
+function crossProviderBundlingEnabled(env: Env): boolean {
+  // Default on. Engineer-side kill switch via wrangler env var.
+  return env.CROSS_PROVIDER_BUNDLING !== 'false';
+}
+
+type AnyRow =
+  | { kind: 'single'; notification: { updatedAt: string } }
+  | { kind: 'bundle'; bundle: { latest_at: string } }
+  | { kind: 'cross_bundle'; bundle: { latest_at: string } };
+
+function rowLatestMs(row: AnyRow): number {
+  if (row.kind === 'single') return Date.parse(row.notification.updatedAt);
+  return Date.parse(row.bundle.latest_at);
 }
 
 notifications.get('/', async (c) => {
@@ -102,19 +120,77 @@ notifications.get('/', async (c) => {
   );
 
   // Bundling is on by default. Client may opt out with ?bundle=false (useful
-  // for debugging / A-B comparison). Heuristic is pure and cheap — runs on the
-  // already-aggregated in-memory list, never persisted.
+  // for debugging / A-B comparison). ?bundle=false disables ALL bundling (v1 +
+  // cross). CROSS_PROVIDER_BUNDLING=false kills only the cross branch.
   const bundleParam = c.req.query('bundle');
   const bundlingEnabled = bundleParam !== 'false' && bundleParam !== '0';
+  const crossEnabled = crossProviderBundlingEnabled(c.env);
+  const nowMs = Date.now();
 
-  const rows = bundlingEnabled ? bundleNotifications(allNotifications) : undefined;
+  let rows: Array<
+    | { kind: 'single'; notification: NotificationResponse }
+    | { kind: 'bundle'; bundle: BundleResponse }
+    | { kind: 'cross_bundle'; bundle: CrossBundleResponse }
+  > | undefined;
+  let suggested_links: SuggestedLink[] | undefined;
+  let bundlingVersionOut: number | undefined;
+
+  if (bundlingEnabled) {
+    let remaining = allNotifications;
+    const crossBundleRows: Array<{ kind: 'cross_bundle'; bundle: CrossBundleResponse }> = [];
+    const allSuggestions: SuggestedLink[] = [];
+    const strictToUpsert: WorkLink[] = [];
+    const seenStrictLinks: Array<Pick<WorkLink, 'pair' | 'primary_key' | 'linked_ref'>> = [];
+
+    if (crossEnabled) {
+      const { workLinks, decisions } = await loadUserLinkState(c.env.DB, user.id);
+      const pairs: WorkLinkPair[] = ['linear-github', 'jira-bitbucket'];
+
+      for (const pair of pairs) {
+        const result = buildCrossBundles({
+          notifications: remaining, pair,
+          workLinks, decisions, userId: user.id, now: nowMs,
+        });
+        for (const b of result.crossBundles) {
+          crossBundleRows.push({ kind: 'cross_bundle', bundle: b });
+        }
+        strictToUpsert.push(...result.strictLinksInferred);
+        for (const b of result.crossBundles) {
+          for (const linked of b.linked) {
+            seenStrictLinks.push({ pair, primary_key: b.primary.key, linked_ref: linked.ref });
+          }
+        }
+        allSuggestions.push(...result.fuzzyCandidates);
+        remaining = remaining.filter((n) => !result.consumedNotificationIds.has(n.id));
+      }
+    }
+
+    const v1Rows = bundleNotifications(remaining);
+    rows = [...crossBundleRows, ...v1Rows].sort((a, b) => rowLatestMs(b as AnyRow) - rowLatestMs(a as AnyRow));
+    bundlingVersionOut = 2;
+    if (allSuggestions.length > 0) suggested_links = allSuggestions;
+
+    // Fire-and-forget persistence — failure logs but does not fail the request.
+    c.executionCtx.waitUntil((async () => {
+      try {
+        for (const link of strictToUpsert) await upsertWorkLink(c.env.DB, link);
+        const nowIso = new Date(nowMs).toISOString();
+        for (const s of seenStrictLinks) {
+          await touchWorkLinkLastSeen(c.env.DB, user.id, s.pair, s.primary_key, s.linked_ref, nowIso);
+        }
+      } catch (err) {
+        console.error('[cross-bundling] link upsert failed', err);
+      }
+    })());
+  }
 
   return c.json({
     // Flat list retained for back-compat with older app builds. New app builds
     // should prefer `rows` (NotificationRow[]) when present.
     notifications: allNotifications,
     rows,
-    bundling_version: bundlingEnabled ? BUNDLING_VERSION : undefined,
+    bundling_version: bundlingVersionOut,
+    suggested_links,
     errors: errors.length > 0 ? errors : undefined,
     rateLimitInfo: githubRateLimit,
   });

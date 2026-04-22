@@ -6,6 +6,7 @@ compatibility_date = "2025-01-15"
 ENVIRONMENT = "development"
 APP_URL = "http://localhost:8787"
 ENABLE_EXPERIMENTAL_PROVIDERS = "false"
+CROSS_PROVIDER_BUNDLING = "true"
 
 [[d1_databases]]
 binding = "DB"
@@ -24,6 +25,7 @@ ENVIRONMENT = "production"
 # provider's OAuth callback URL to match.
 APP_URL = "https://noti-peek-api-production.rohithgilla.workers.dev"
 ENABLE_EXPERIMENTAL_PROVIDERS = "true"
+CROSS_PROVIDER_BUNDLING = "true"
 
 [[env.production.d1_databases]]
 binding = "DB"
