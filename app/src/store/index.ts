@@ -5,6 +5,7 @@ import type { Notification, Connection, Provider, DetailResponse, NotificationRo
 import { api } from '../lib/api';
 import * as db from '../lib/db';
 import { notifyNew } from '../lib/notify';
+import { buildExistingById, preserveMany, preserveRows } from '../lib/preserve-read';
 import {
   trackSuggestedLinkConfirmed,
   trackSuggestedLinkDismissed,
@@ -291,19 +292,12 @@ export const useAppStore = create<AppState>((set, get) => ({
       const response = await api.getNotifications();
       const { notifications: incoming, errors } = response;
 
-      // Preserve local "read" intent across syncs. Providers like GitHub are
-      // eventually consistent — right after mark-all-as-read, GET still
-      // returns unread:true for the same threads, which would otherwise
-      // clobber the local state. We only trust the provider's unread flag
-      // when updatedAt has advanced (i.e. there's genuine new activity).
-      const existingById = new Map(existingNotifications.map((n) => [n.id, n]));
-      const notifications = incoming.map((n) => {
-        const prev = existingById.get(n.id);
-        if (prev && !prev.unread && new Date(n.updatedAt).getTime() <= new Date(prev.updatedAt).getTime()) {
-          return { ...n, unread: false };
-        }
-        return n;
-      });
+      // Preserve local "read" intent across syncs on both the flat list AND
+      // the rows envelope — the UI renders from `rows`, so if we only merge
+      // `notifications` the inbox shows everything as stale-unread.
+      // See `lib/preserve-read.ts`.
+      const existingById = buildExistingById(existingNotifications);
+      const notifications = preserveMany(incoming, existingById);
 
       // Diff against the previous fetch to find notifications we haven't
       // told the OS about yet. Only fire system notifications once we
@@ -314,7 +308,9 @@ export const useAppStore = create<AppState>((set, get) => ({
         : [];
 
       const prefs = await readBundlingPrefs();
-      const incomingRows = response.rows ?? [];
+      const incomingRowsRaw = response.rows ?? [];
+      // Apply the same preservation to rows' children + recompute unread_count.
+      const incomingRows = preserveRows(incomingRowsRaw, existingById);
       const rows: NotificationRow[] = prefs.crossEnabled
         ? incomingRows
         : incomingRows.flatMap((r) =>
