@@ -1531,3 +1531,29 @@ kbd {
 }
 .topnav-avatar-menu button:hover { background: var(--bg-2); }
 .topnav-avatar-menu kbd { font-size: 11px; color: var(--ink-3); }
+
+.detail-bookmark {
+  all: unset; cursor: pointer;
+  padding: 4px 8px; border-radius: 6px; color: var(--ink-2);
+}
+.detail-bookmark:hover { background: var(--bg-1); color: var(--ink-1); }
+.detail-bookmark[aria-pressed='true'] { color: var(--accent); }
+
+.detail-overflow { position: relative; }
+.detail-overflow > button {
+  all: unset; cursor: pointer; padding: 4px 8px; border-radius: 6px; color: var(--ink-2);
+}
+.detail-overflow > button:hover { background: var(--bg-1); color: var(--ink-1); }
+.detail-overflow-menu {
+  position: absolute; right: 0; top: calc(100% + 6px);
+  min-width: 160px; background: var(--bg-1); border: 1px solid var(--line);
+  border-radius: 8px; padding: 4px;
+  display: flex; flex-direction: column; gap: 2px; z-index: 20;
+}
+.detail-overflow-menu button {
+  all: unset; cursor: pointer; padding: 6px 10px; font-size: 13px;
+  color: var(--ink-1); border-radius: 6px;
+}
+.detail-overflow-menu button:hover { background: var(--bg-2); }
+.detail-overflow-menu button:disabled { color: var(--ink-3); cursor: not-allowed; }
+.detail-overflow-menu button:disabled:hover { background: transparent; }

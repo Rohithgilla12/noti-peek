@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { useAppStore } from '../store';
 import { sanitizeHtml } from '../lib/sanitize';
@@ -48,8 +48,74 @@ async function reconnect(source: 'github' | 'jira' | string) {
   }
 }
 
+function OverflowMenu({ notification }: { notification: Notification }) {
+  const archiveNotification = useAppStore((s) => s.archiveNotification);
+  const unarchiveNotification = useAppStore((s) => s.unarchiveNotification);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(notification.url);
+    } catch (err) {
+      console.error('Failed to copy link:', err);
+    }
+    setOpen(false);
+  };
+
+  return (
+    <div className="detail-overflow" ref={ref}>
+      <button type="button" onClick={() => setOpen((v) => !v)} aria-label="More actions">…</button>
+      {open && (
+        <div className="detail-overflow-menu" role="menu">
+          {notification.archived ? (
+            <button
+              type="button"
+              onClick={() => {
+                void unarchiveNotification(notification.id);
+                setOpen(false);
+              }}
+            >
+              Unarchive
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                void archiveNotification(notification.id);
+                setOpen(false);
+              }}
+            >
+              Archive
+            </button>
+          )}
+          <button type="button" onClick={() => void handleCopy()}>Copy link</button>
+          <button type="button" disabled title="Coming soon">Mute thread</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function DetailPane({ notification }: Props) {
   const markAsRead = useAppStore((s) => s.markAsRead);
+  const toggleBookmark = useAppStore((s) => s.toggleBookmark);
   const fetchDetails = useAppStore((s) => s.fetchDetails);
   const [detail, setDetail] = useState<DetailResponse | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
@@ -116,6 +182,17 @@ export function DetailPane({ notification }: Props) {
         <span className="src">{n.source} · {humanizeType(n.type)}</span>
         {ref && <span className="ref">{ref}</span>}
         <span title={formatDateTime(n.updatedAt)}>{formatRelative(n.updatedAt)}</span>
+        <span className="spacer"></span>
+        <button
+          type="button"
+          className="detail-bookmark"
+          aria-pressed={!!n.bookmarked}
+          onClick={() => void toggleBookmark(n.id)}
+          title={n.bookmarked ? 'Remove bookmark' : 'Bookmark (saves locally)'}
+        >
+          {n.bookmarked ? '★' : '☆'}
+        </button>
+        <OverflowMenu notification={n} />
       </div>
 
       <h2>{n.title}</h2>
