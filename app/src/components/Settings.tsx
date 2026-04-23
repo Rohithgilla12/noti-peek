@@ -62,7 +62,9 @@ export function Settings({ onClose }: SettingsProps) {
 
   const [crossProviderEnabled, setCrossProviderEnabled] = useState(true);
   const [suggestNewLinksEnabled, setSuggestNewLinksEnabled] = useState(true);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
   const clearDismissed = useAppStore((s) => s.clearDismissedSuggestions);
+  const fetchNotifications = useAppStore((s) => s.fetchNotifications);
 
   useEffect(() => {
     (async () => {
@@ -75,17 +77,33 @@ export function Settings({ onClose }: SettingsProps) {
   }, []);
 
   const onToggleCross = async (checked: boolean) => {
+    const previous = crossProviderEnabled;
     setCrossProviderEnabled(checked);
-    const store = await load('config.json');
-    await store.set('crossProviderBundling', checked);
-    await store.save();
+    setSettingsError(null);
+    try {
+      const store = await load('config.json');
+      await store.set('crossProviderBundling', checked);
+      await store.save();
+      await fetchNotifications();
+    } catch (err) {
+      setCrossProviderEnabled(previous);
+      setSettingsError(err instanceof Error ? err.message : 'Failed to update bundling preference');
+    }
   };
 
   const onToggleSuggest = async (checked: boolean) => {
+    const previous = suggestNewLinksEnabled;
     setSuggestNewLinksEnabled(checked);
-    const store = await load('config.json');
-    await store.set('suggestNewLinks', checked);
-    await store.save();
+    setSettingsError(null);
+    try {
+      const store = await load('config.json');
+      await store.set('suggestNewLinks', checked);
+      await store.save();
+      await fetchNotifications();
+    } catch (err) {
+      setSuggestNewLinksEnabled(previous);
+      setSettingsError(err instanceof Error ? err.message : 'Failed to update suggestion preference');
+    }
   };
 
   const isGitHubConnected = connections.some((c) => c.provider === 'github');
@@ -419,6 +437,9 @@ export function Settings({ onClose }: SettingsProps) {
             <h3 className="text-[length:var(--text-sm)] font-medium text-[var(--text-primary)] mb-3">
               Bundling
             </h3>
+            {settingsError && (
+              <p className="mb-3 text-[length:var(--text-xs)] text-[var(--error)]">{settingsError}</p>
+            )}
             <div className="space-y-3">
               <label className="flex items-start gap-3 p-3 bg-[var(--bg-surface)] rounded-[var(--radius-md)] border border-[var(--border-muted)] cursor-pointer">
                 <input

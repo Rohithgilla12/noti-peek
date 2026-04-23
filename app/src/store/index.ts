@@ -11,6 +11,43 @@ import {
   trackCrossBundleMarkAllRead,
 } from '../lib/telemetry-events';
 
+function markRowsReadOne(rows: NotificationRow[], id: string): NotificationRow[] {
+  return rows.map((r) => {
+    if (r.kind === 'single') {
+      return r.notification.id === id
+        ? { ...r, notification: { ...r.notification, unread: false } }
+        : r;
+    }
+    const childIdx = r.bundle.children.findIndex((c) => c.id === id);
+    if (childIdx < 0) return r;
+    const children = r.bundle.children.map((c) =>
+      c.id === id ? { ...c, unread: false } : c,
+    );
+    const unread_count = children.filter((c) => c.unread).length;
+    if (r.kind === 'bundle') {
+      return { ...r, bundle: { ...r.bundle, children, unread_count } };
+    }
+    return { ...r, bundle: { ...r.bundle, children, unread_count } };
+  });
+}
+
+function markRowsReadAll(rows: NotificationRow[]): NotificationRow[] {
+  return rows.map((r) => {
+    if (r.kind === 'single') {
+      return r.notification.unread
+        ? { ...r, notification: { ...r.notification, unread: false } }
+        : r;
+    }
+    const children = r.bundle.children.map((c) =>
+      c.unread ? { ...c, unread: false } : c,
+    );
+    if (r.kind === 'bundle') {
+      return { ...r, bundle: { ...r.bundle, children, unread_count: 0 } };
+    }
+    return { ...r, bundle: { ...r.bundle, children, unread_count: 0 } };
+  });
+}
+
 async function readBundlingPrefs(): Promise<{ crossEnabled: boolean; suggestEnabled: boolean }> {
   try {
     const s = await loadTauriStore('config.json');
@@ -148,23 +185,23 @@ export const useAppStore = create<AppState>((set, get) => ({
   collapseAll: () => set({ expandedBundleIds: new Set<string>() }),
 
   confirmLink: async (link) => {
-    trackSuggestedLinkConfirmed(link.pair);
     await api.confirmSuggestedLink({
       pair: link.pair,
       primary_key: link.primary.key,
       linked_ref: link.linked.ref,
     });
+    trackSuggestedLinkConfirmed(link.pair);
     set((s) => ({ suggestedLinks: s.suggestedLinks.filter((x) => x.id !== link.id) }));
     await get().fetchNotifications();
   },
 
   dismissSuggestion: async (link) => {
-    trackSuggestedLinkDismissed(link.pair);
     await api.dismissSuggestedLink({
       pair: link.pair,
       primary_key: link.primary.key,
       linked_ref: link.linked.ref,
     });
+    trackSuggestedLinkDismissed(link.pair);
     set((s) => ({ suggestedLinks: s.suggestedLinks.filter((x) => x.id !== link.id) }));
   },
 
@@ -340,7 +377,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       );
       const unreadCount = notifications.filter(n => n.unread).length;
       updateBadgeCount(unreadCount);
-      return { notifications };
+      return { notifications, rows: markRowsReadOne(state.rows, id) };
     });
 
     await db.updateNotificationReadStatus(id, false);
@@ -364,7 +401,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       );
       const unreadCount = notifications.filter(n => n.unread).length;
       updateBadgeCount(unreadCount);
-      return { notifications };
+      return { notifications, rows: markRowsReadAll(state.rows) };
     });
 
     await db.markAllNotificationsRead(source);

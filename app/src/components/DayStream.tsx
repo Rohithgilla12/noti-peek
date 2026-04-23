@@ -40,6 +40,7 @@ export function DayStream() {
   const toggleExpanded = useAppStore((s) => s.toggleExpanded);
   const markCrossBundleRead = useAppStore((s) => s.markCrossBundleRead);
 
+  const allNotifications = useAppStore((s) => s.notifications);
   const notifications = useFilteredNotifications();
   const unread = useUnreadCount();
 
@@ -49,12 +50,15 @@ export function DayStream() {
   }, [rows, notifications]);
 
   const filteredRows: NotificationRow[] = useMemo(() => {
-    if (filter.source === 'all') return effectiveRows;
+    const matches = (n: Notification) =>
+      (filter.source === 'all' || n.source === filter.source) &&
+      (filter.type === 'all' || n.type === filter.type);
+
     return effectiveRows.filter((r) => {
-      if (r.kind === 'single') return r.notification.source === filter.source;
-      return r.bundle.children.some((c: Notification) => c.source === filter.source);
+      if (r.kind === 'single') return matches(r.notification);
+      return r.bundle.children.some((c: Notification) => matches(c));
     });
-  }, [effectiveRows, filter.source]);
+  }, [effectiveRows, filter.source, filter.type]);
 
   const visibleRows: NotificationRow[] = useMemo(() => {
     if (!filter.unreadOnly) return filteredRows;
@@ -201,7 +205,7 @@ export function DayStream() {
                     onSelect={setSelectedId}
                     onOpen={(url, id) => {
                       void openUrl(url).catch((err) => console.error('open url failed:', err));
-                      const target = notifications.find((n) => n.id === id);
+                      const target = allNotifications.find((n) => n.id === id);
                       if (target?.unread) markAsRead(id);
                     }}
                     onToggleExpand={toggleExpanded}
