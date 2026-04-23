@@ -137,12 +137,6 @@ interface AppState {
   archiveNotification: (id: string) => Promise<void>;
   unarchiveNotification: (id: string) => Promise<void>;
 
-  // Back-compat shim — remove in Task 10
-  setActiveTab: (tab: 'inbox' | 'pulse' | 'links') => void;
-  setFilter: (filter: { source?: Provider | 'all'; unreadOnly?: boolean; type?: string | 'all' }) => void;
-  activeTab: 'inbox' | 'pulse' | 'links';
-  filter: { source: Provider | 'all'; unreadOnly: boolean; type: string | 'all' };
-
   selectedNotificationId: string | null;
 
   refreshInterval: number;
@@ -206,17 +200,9 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   view: DEFAULT_VIEW,
 
-  setTab: (tab) => set((s) => ({
-    view: { ...s.view, tab },
-    activeTab: tab, // shim mirror, removed in Task 10
-  })),
+  setTab: (tab) => set((s) => ({ view: { ...s.view, tab } })),
 
-  setScope: (scope) => set((s) => ({
-    view: { ...s.view, scope },
-    activeTab: scope === 'bookmarks' || scope === 'archive' || scope === 'mentions' || scope === 'links'
-      ? s.view.tab
-      : s.view.tab,
-  })),
+  setScope: (scope) => set((s) => ({ view: { ...s.view, scope } })),
 
   toggleQuickFilter: (f) => set((s) => {
     const filters = new Set(s.view.filters);
@@ -264,35 +250,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     }));
     await db.setNotificationArchived(id, false);
   },
-
-  // ---- back-compat shim (removed in Task 10) ----
-  activeTab: 'inbox',
-  filter: { source: 'all', unreadOnly: false, type: 'all' },
-  setActiveTab: (tab) => set((s) => {
-    const topLevel: 'inbox' | 'pulse' = tab === 'pulse' ? 'pulse' : 'inbox';
-    const scope: Scope = tab === 'links' ? 'links' : 'inbox';
-    return {
-      activeTab: tab,
-      view: { ...s.view, tab: topLevel, scope: tab === 'pulse' ? s.view.scope : scope },
-    };
-  }),
-  setFilter: (f) => set((s) => {
-    const next = { ...s.view };
-    if (f.source !== undefined) {
-      const sources = new Set<Provider>();
-      if (f.source !== 'all') sources.add(f.source);
-      next.sources = sources;
-    }
-    if (f.unreadOnly !== undefined) {
-      const filters = new Set(next.filters);
-      if (f.unreadOnly) filters.add('unread'); else filters.delete('unread');
-      next.filters = filters;
-    }
-    return {
-      view: next,
-      filter: { ...s.filter, ...f },
-    };
-  }),
 
   selectedNotificationId: null,
 
