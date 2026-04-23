@@ -43,7 +43,6 @@ const rowLatestMs = (r: NotificationRow): number => {
 
 export function DayStream() {
   const view = useAppStore((s) => s.view);
-  const toggleQuickFilter = useAppStore((s) => s.toggleQuickFilter);
   const toggleSource = useAppStore((s) => s.toggleSource);
   const clearSources = useAppStore((s) => s.clearSources);
   const scope = view.scope;
@@ -175,7 +174,12 @@ export function DayStream() {
               ))}
           </div>
         )}
-        <div className="stream-actions">
+        <div className="stream-head-right">
+          <div className="count" aria-label={`${unread} unread of ${notifications.length}`}>
+            <b>{String(unread).padStart(2, '0')}</b>
+            <span className="sep">/</span>
+            <span className="total">{notifications.length}</span>
+          </div>
           <button
             className="mark-all-read"
             onClick={() => void markAllAsRead()}
@@ -184,18 +188,6 @@ export function DayStream() {
           >
             mark all read
           </button>
-          <button
-            className="unread-toggle"
-            aria-pressed={unreadOnly}
-            onClick={() => toggleQuickFilter('unread')}
-            type="button"
-          >
-            unread only
-          </button>
-        </div>
-        <div className="count">
-          <b>{String(unread).padStart(2, '0')}</b> unread ·{' '}
-          <span>{notifications.length}</span> total
         </div>
       </div>
 

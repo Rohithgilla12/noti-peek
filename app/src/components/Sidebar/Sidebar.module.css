@@ -3,61 +3,54 @@
   flex-direction: column;
   min-width: 0;
   height: 100%;
-  padding: 12px 8px 8px;
+  padding: 14px 10px 10px;
   border-right: 1px solid var(--line-soft);
   background: var(--bg);
-  gap: 18px;
+  gap: 20px;
   overflow-y: auto;
 }
 
-.sidebar[data-rail='true'] {
-  padding: 12px 4px 8px;
-}
-
+.sidebar[data-rail='true'] { padding: 14px 4px 10px; }
 .sidebar[data-rail='true'] .sectionLabel,
 .sidebar[data-rail='true'] .itemLabel,
-.sidebar[data-rail='true'] .itemCount {
-  display: none;
-}
-
-.sidebar[data-rail='true'] .item {
-  justify-content: center;
-  padding: 8px 0;
-}
+.sidebar[data-rail='true'] .itemCount { display: none; }
+.sidebar[data-rail='true'] .item { justify-content: center; padding: 8px 0; }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 8px 8px;
-  color: var(--ink-2);
-  font-size: 13px;
+  gap: 10px;
+  padding: 2px 10px 6px;
+  color: var(--ink-1);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  font-variation-settings: 'wght' 520;
 }
 
 .brandLogo {
-  width: 16px; height: 16px; border-radius: 4px;
-  background: var(--accent);
+  width: 12px; height: 12px; border-radius: 2px;
+  background: var(--ink-1);
 }
 
 .section {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
 
 .sectionLabel {
-  font-size: 10px;
-  letter-spacing: 0.06em;
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--ink-3);
-  padding: 0 8px;
-  margin-bottom: 4px;
+  color: var(--ink-4);
+  padding: 0 10px;
+  margin-bottom: 6px;
+  font-variation-settings: 'wght' 500;
 }
 
 .sectionItems {
   display: flex;
   flex-direction: column;
-  gap: 1px;
 }
 
 .item {
@@ -66,49 +59,66 @@
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  border-radius: 6px;
-  font-size: 13px;
+  gap: 10px;
+  padding: 4px 10px;
+  border-radius: 3px;
+  font-size: 12px;
   color: var(--ink-2);
   min-width: 0;
+  line-height: 1.5;
+  transition: background 100ms ease-out, color 100ms ease-out;
 }
 
 .item:hover { background: var(--bg-1); color: var(--ink-1); }
 
-.item[data-disabled] { opacity: 0.55; cursor: not-allowed; }
+.item:focus-visible {
+  outline: 1px solid var(--line);
+  outline-offset: -1px;
+}
+
+.item[data-disabled] { opacity: 0.5; cursor: not-allowed; }
 .item[data-disabled]:hover { background: transparent; color: var(--ink-2); }
 
 .item[data-active] {
   background: var(--bg-2);
   color: var(--ink-1);
-  font-weight: 500;
+  font-variation-settings: 'wght' 480;
 }
 
 .itemIcon {
-  width: 14px; height: 14px; display: inline-flex;
-  align-items: center; justify-content: center;
-  color: var(--ink-3);
+  width: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-4);
+  font-size: 11px;
+  letter-spacing: 0;
+  font-variation-settings: 'wght' 440;
+  text-transform: lowercase;
 }
 
-.item[data-active] .itemIcon { color: var(--accent); }
+.item[data-active] .itemIcon { color: var(--ink-2); }
+.item:hover .itemIcon { color: var(--ink-3); }
+
+/* Items without the mnemonic glyph still align to the same label column. */
+.item:not([data-has-icon]) { padding-left: 24px; }
 
 .itemLabel { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 
 .itemCount {
-  font-size: 11px;
+  font-size: 10.5px;
   color: var(--ink-3);
-  background: var(--bg-1);
-  border-radius: 999px;
-  padding: 1px 8px;
-  min-width: 22px;
-  text-align: center;
+  background: transparent;
+  padding: 0;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
 }
 
-.item[data-active] .itemCount { color: var(--ink-1); background: var(--bg-3); }
+.item[data-active] .itemCount { color: var(--ink-1); }
+.item:hover .itemCount { color: var(--ink-2); }
 
 .footer {
   margin-top: auto;
-  padding-top: 8px;
+  padding-top: 10px;
   border-top: 1px solid var(--line-soft);
 }

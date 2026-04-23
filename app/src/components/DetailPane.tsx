@@ -158,7 +158,12 @@ export function DetailPane({ notification }: Props) {
   if (!notification) {
     return (
       <div className="detail">
-        <div className="empty"><span>select a notification to read it here</span></div>
+        <div className="empty">
+          <div className="box">
+            <span className="prompt">no message</span>
+            <span className="hint"><kbd>j</kbd> <kbd>k</kbd> to move · <kbd>↵</kbd> to open</span>
+          </div>
+        </div>
       </div>
     );
   }
