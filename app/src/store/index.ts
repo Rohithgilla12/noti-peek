@@ -1,9 +1,24 @@
 import { create } from 'zustand';
 import { invoke } from '@tauri-apps/api/core';
+import { load as loadTauriStore } from '@tauri-apps/plugin-store';
 import type { Notification, Connection, Provider, DetailResponse, NotificationRow, SuggestedLink } from '../lib/types';
 import { api } from '../lib/api';
 import * as db from '../lib/db';
 import { notifyNew } from '../lib/notify';
+
+async function readBundlingPrefs(): Promise<{ crossEnabled: boolean; suggestEnabled: boolean }> {
+  try {
+    const s = await loadTauriStore('config.json');
+    const cpb = await s.get<boolean>('crossProviderBundling');
+    const snl = await s.get<boolean>('suggestNewLinks');
+    return {
+      crossEnabled: cpb !== false,
+      suggestEnabled: snl !== false,
+    };
+  } catch {
+    return { crossEnabled: true, suggestEnabled: true };
+  }
+}
 
 const updateBadgeCount = async (count: number) => {
   try {
@@ -240,12 +255,23 @@ export const useAppStore = create<AppState>((set, get) => ({
         ? notifications.filter((n) => n.unread && !previousIds.has(n.id))
         : [];
 
+      const prefs = await readBundlingPrefs();
+      const incomingRows = response.rows ?? [];
+      const rows: NotificationRow[] = prefs.crossEnabled
+        ? incomingRows
+        : incomingRows.flatMap((r) =>
+            r.kind === 'cross_bundle'
+              ? r.bundle.children.map((n) => ({ kind: 'single' as const, notification: n }))
+              : [r]
+          );
+      const suggestedLinks = prefs.suggestEnabled ? (response.suggested_links ?? []) : [];
+
       set({
         notifications,
         lastSyncTime: new Date(),
-        rows: response.rows ?? [],
+        rows,
         bundlingVersion: response.bundling_version ?? 1,
-        suggestedLinks: response.suggested_links ?? [],
+        suggestedLinks,
       });
 
       const unreadCount = notifications.filter((n) => n.unread).length;
