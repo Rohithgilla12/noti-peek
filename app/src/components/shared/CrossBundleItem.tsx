@@ -1,6 +1,7 @@
 import type { CrossBundleResponse, Provider } from '../../lib/types';
 import { NotificationRow as SingleRow } from './NotificationRow';
 import { trackCrossBundleExpanded } from '../../lib/telemetry-events';
+import { humanizeType } from '../../lib/notification-labels';
 
 export interface CrossBundleItemProps {
   bundle: CrossBundleResponse;
@@ -18,7 +19,10 @@ function summaryLine(bundle: CrossBundleResponse): string {
     .join(' + ');
   const types = Object.entries(bundle.type_summary)
     .sort((a, b) => b[1] - a[1])
-    .map(([t, n]) => `${n} ${t}${n === 1 ? '' : 's'}`)
+    .map(([t, n]) => {
+      const label = humanizeType(t);
+      return `${n} ${label}${n === 1 ? '' : 's'}`;
+    })
     .join(' · ');
   return `${bundle.event_count} updates across ${sourcesList}: ${types}`;
 }

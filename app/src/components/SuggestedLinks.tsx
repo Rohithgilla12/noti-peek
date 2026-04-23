@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useAppStore } from '../store';
 import type { SuggestedLink, SuggestedLinkRationale } from '../lib/types';
 import { trackSuggestedLinkShown } from '../lib/telemetry-events';
@@ -52,9 +52,12 @@ function SuggestionCard({ link }: { link: SuggestedLink }) {
 export function SuggestedLinks() {
   const suggestedLinks = useAppStore((s) => s.suggestedLinks);
   const clearDismissed = useAppStore((s) => s.clearDismissedSuggestions);
+  const shownIds = useRef(new Set<string>());
 
   useEffect(() => {
     for (const link of suggestedLinks) {
+      if (shownIds.current.has(link.id)) continue;
+      shownIds.current.add(link.id);
       trackSuggestedLinkShown(link.pair, link.confidence);
     }
   }, [suggestedLinks]);

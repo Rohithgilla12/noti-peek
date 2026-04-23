@@ -228,8 +228,14 @@
 
       /* ── Hero demo placeholder ───────────────────────── */
       .hero-demo { margin-top: var(--space-8); }
+      .hero-demo-img {
+        display: block;
+        max-width: 100%;
+        height: auto;
+        border-radius: 12px;
+      }
       .hero-demo-placeholder {
-        display: grid;
+        display: none;
         place-items: center;
         border: 2px dashed rgba(255,255,255,0.2);
         border-radius: 12px;
@@ -599,9 +605,14 @@
         </p>
 
         <div class="hero-demo" id="hero-demo">
-          <!-- TODO: replace with recorded GIF at /assets/cross-provider-demo.gif before v0.7.0 GA -->
-          <div class="hero-demo-placeholder">
-            <span>Demo GIF goes here</span>
+          <img
+            src="/assets/cross-provider-demo.gif"
+            alt="Noti Peek cross-provider bundling demo"
+            class="hero-demo-img"
+            onerror="this.style.display='none';var p=document.getElementById('hero-demo-placeholder');if(p)p.style.display='grid';"
+          />
+          <div id="hero-demo-placeholder" class="hero-demo-placeholder" style="display:none" aria-hidden="true">
+            <span>Demo coming soon</span>
           </div>
         </div>
 

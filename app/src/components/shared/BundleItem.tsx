@@ -1,5 +1,6 @@
 import type { BundleResponse } from '../../lib/types';
 import { NotificationRow as SingleRow } from './NotificationRow';
+import { humanizeType } from '../../lib/notification-labels';
 
 export interface BundleItemProps {
   bundle: BundleResponse;
@@ -12,7 +13,10 @@ export interface BundleItemProps {
 
 function summarize(typeSummary: Record<string, number>): string {
   const parts = Object.entries(typeSummary).sort((a, b) => b[1] - a[1]);
-  return parts.map(([t, n]) => `${n} ${t}${n === 1 ? '' : 's'}`).join(' · ');
+  return parts.map(([t, n]) => {
+    const label = humanizeType(t);
+    return `${n} ${label}${n === 1 ? '' : 's'}`;
+  }).join(' · ');
 }
 
 export function BundleItem({ bundle, expanded, selectedId, onToggleExpand, onSelect, onOpen }: BundleItemProps) {

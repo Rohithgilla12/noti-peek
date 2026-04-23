@@ -1308,9 +1308,9 @@ kbd {
   border: 1px solid var(--line);
   padding: 4px 10px;
   border-radius: 6px;
+  font: inherit;
   font-size: 12px;
   cursor: pointer;
-  font: inherit;
 }
 
 .mark-bundle-read:hover {
@@ -1337,6 +1337,8 @@ kbd {
 /* Suggested Links view */
 
 .suggestions-view {
+  flex: 1;
+  min-height: 0;
   padding: 16px 20px;
   overflow-y: auto;
 }
@@ -1426,9 +1428,9 @@ kbd {
   border: 1px solid var(--line);
   padding: 6px 14px;
   border-radius: 999px;
+  font: inherit;
   font-size: 12px;
   cursor: pointer;
-  font: inherit;
   background: var(--bg-1);
   color: var(--ink-1);
 }
@@ -1458,9 +1460,9 @@ kbd {
   border: 1px solid var(--line);
   padding: 6px 12px;
   border-radius: 6px;
+  font: inherit;
   font-size: 12px;
   cursor: pointer;
-  font: inherit;
 }
 
 .clear-dismissed-btn:hover {
@@ -1471,6 +1473,7 @@ kbd {
 
 .links-col {
   grid-column: 1 / -1;
+  min-height: 0;
   padding: 0;
   overflow: hidden;
   display: flex;
