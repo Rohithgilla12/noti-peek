@@ -14,8 +14,9 @@ const PROVIDERS: Array<{ id: Provider; label: string }> = [
   { id: 'bitbucket', label: 'Bitbucket' },
 ];
 
-// Single-glyph icons keep the shell dependency-free.
-const Icon = ({ ch }: { ch: string }) => <span aria-hidden>{ch}</span>;
+// The left glyph is the keyboard mnemonic — load-bearing chrome that
+// teaches the shortcut, not a decorative icon.
+const Key = ({ ch }: { ch: string }) => <span aria-hidden>{ch}</span>;
 
 export function Sidebar({ onOpenSettings }: Props) {
   const view = useAppStore((s) => s.view);
@@ -35,17 +36,16 @@ export function Sidebar({ onOpenSettings }: Props) {
       </div>
 
       <SidebarSection label="Views">
-        <SidebarItem icon={<Icon ch="#" />} label="Inbox"     count={countForScope(notifications, 'inbox')}     active={!rail && view.scope === 'inbox'}     onClick={() => setScope('inbox')}     title="Inbox (g i)" />
-        <SidebarItem icon={<Icon ch="@" />} label="Mentions"  count={countForScope(notifications, 'mentions')}  active={!rail && view.scope === 'mentions'}  onClick={() => setScope('mentions')}  title="Mentions (g m)" />
-        <SidebarItem icon={<Icon ch="★" />} label="Bookmarks" count={countForScope(notifications, 'bookmarks')} active={!rail && view.scope === 'bookmarks'} onClick={() => setScope('bookmarks')} title="Bookmarks (g b)" />
-        <SidebarItem icon={<Icon ch="↗" />} label="Links"     active={!rail && view.scope === 'links'}     onClick={() => setScope('links')}     title="Suggested links (g l)" />
-        <SidebarItem icon={<Icon ch="▣" />} label="Archive"   count={countForScope(notifications, 'archive')}   active={!rail && view.scope === 'archive'}   onClick={() => setScope('archive')}   title="Archive (g a)" />
+        <SidebarItem icon={<Key ch="i" />} label="Inbox"     count={countForScope(notifications, 'inbox')}     active={!rail && view.scope === 'inbox'}     onClick={() => setScope('inbox')}     title="Inbox (g i)" />
+        <SidebarItem icon={<Key ch="m" />} label="Mentions"  count={countForScope(notifications, 'mentions')}  active={!rail && view.scope === 'mentions'}  onClick={() => setScope('mentions')}  title="Mentions (g m)" />
+        <SidebarItem icon={<Key ch="b" />} label="Bookmarks" count={countForScope(notifications, 'bookmarks')} active={!rail && view.scope === 'bookmarks'} onClick={() => setScope('bookmarks')} title="Bookmarks (g b)" />
+        <SidebarItem icon={<Key ch="l" />} label="Links"     active={!rail && view.scope === 'links'}     onClick={() => setScope('links')}     title="Suggested links (g l)" />
+        <SidebarItem icon={<Key ch="a" />} label="Archive"   count={countForScope(notifications, 'archive')}   active={!rail && view.scope === 'archive'}   onClick={() => setScope('archive')}   title="Archive (g a)" />
       </SidebarSection>
 
       <SidebarSection label="Filters">
-        <SidebarItem icon={<Icon ch="●" />} label="Unread"  count={countForQuickFilter(notifications, 'unread')} active={!rail && view.filters.has('unread')} onClick={() => toggleQuickFilter('unread')} title="Toggle unread-only (u)" />
+        <SidebarItem icon={<Key ch="u" />} label="Unread" count={countForQuickFilter(notifications, 'unread')} active={!rail && view.filters.has('unread')} onClick={() => toggleQuickFilter('unread')} title="Toggle unread-only (u)" />
         <SidebarItem
-          icon={<Icon ch="!" />}
           label="Errors"
           count={erroringProviders.length}
           active={false}
@@ -53,14 +53,14 @@ export function Sidebar({ onOpenSettings }: Props) {
           onClick={() => { /* no-op while disabled */ }}
           title="Errors surface will land in 1.1"
         />
-        <SidebarItem icon={<Icon ch="⇄" />} label="PRs"     count={countForQuickFilter(notifications, 'prs')}    active={!rail && view.filters.has('prs')}    onClick={() => toggleQuickFilter('prs')} />
+        <SidebarItem label="PRs" count={countForQuickFilter(notifications, 'prs')} active={!rail && view.filters.has('prs')} onClick={() => toggleQuickFilter('prs')} />
       </SidebarSection>
 
       <SidebarSection label="Integrations">
         {PROVIDERS.map((p) => (
           <SidebarItem
             key={p.id}
-            icon={<Icon ch={p.label[0]} />}
+            icon={<Key ch={p.label[0].toLowerCase()} />}
             label={p.label}
             count={countForSource(notifications, p.id)}
             active={!rail && view.sources.has(p.id)}
@@ -70,7 +70,7 @@ export function Sidebar({ onOpenSettings }: Props) {
       </SidebarSection>
 
       <div className={styles.footer}>
-        <SidebarItem icon={<Icon ch="⚙" />} label="Settings" onClick={onOpenSettings} title="Settings (⌘,)" />
+        <SidebarItem label="Settings" onClick={onOpenSettings} title="Settings (⌘,)" />
       </div>
     </aside>
   );
