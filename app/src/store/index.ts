@@ -5,6 +5,11 @@ import type { Notification, Connection, Provider, DetailResponse, NotificationRo
 import { api } from '../lib/api';
 import * as db from '../lib/db';
 import { notifyNew } from '../lib/notify';
+import {
+  trackSuggestedLinkConfirmed,
+  trackSuggestedLinkDismissed,
+  trackCrossBundleMarkAllRead,
+} from '../lib/telemetry-events';
 
 async function readBundlingPrefs(): Promise<{ crossEnabled: boolean; suggestEnabled: boolean }> {
   try {
@@ -143,6 +148,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   collapseAll: () => set({ expandedBundleIds: new Set<string>() }),
 
   confirmLink: async (link) => {
+    trackSuggestedLinkConfirmed(link.pair);
     await api.confirmSuggestedLink({
       pair: link.pair,
       primary_key: link.primary.key,
@@ -153,6 +159,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   dismissSuggestion: async (link) => {
+    trackSuggestedLinkDismissed(link.pair);
     await api.dismissSuggestedLink({
       pair: link.pair,
       primary_key: link.primary.key,
@@ -179,6 +186,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         console.error('markCrossBundleRead: child failed', c.id, err);
       }));
     await Promise.all(markPromises);
+    trackCrossBundleMarkAllRead(bundle.pair, bundle.children.length);
   },
 
   setAuth: (deviceToken, userId) => {

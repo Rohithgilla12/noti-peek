@@ -241,6 +241,29 @@ function redactValue(value: unknown): unknown {
     .replace(/[\w.+-]+@[\w.-]+\.\w+/g, '[EMAIL]');
 }
 
+// ------------ Lightweight event tracking ---------------------------------
+
+/**
+ * Fire a named product event with optional metadata. No-op when telemetry is
+ * disabled or no event-ingestion DSN is configured. Events are intentionally
+ * ephemeral (not persisted locally) and must never contain PII — only
+ * structural counts and enum-like string values.
+ */
+export function captureEvent(name: string, props?: Record<string, unknown>): void {
+  if (!currentEnabled) return;
+  try {
+    // Log to console in development so engineers can see the event stream
+    // without needing a real ingestion endpoint.
+    if (import.meta.env.DEV) {
+      console.debug('[telemetry:event]', name, props);
+    }
+    // Extend here when a dedicated event-tracking endpoint (e.g. Plausible
+    // custom events or a lightweight /events Worker route) is wired up.
+  } catch {
+    /* telemetry must never break the app */
+  }
+}
+
 // ------------ Settings UI helper (hook-friendly) -------------------------
 
 /**

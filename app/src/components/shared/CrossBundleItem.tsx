@@ -1,5 +1,6 @@
 import type { CrossBundleResponse, Provider } from '../../lib/types';
 import { NotificationRow as SingleRow } from './NotificationRow';
+import { trackCrossBundleExpanded } from '../../lib/telemetry-events';
 
 export interface CrossBundleItemProps {
   bundle: CrossBundleResponse;
@@ -41,7 +42,10 @@ export function CrossBundleItem({
         type="button"
         className="cross-bundle-header"
         aria-expanded={expanded}
-        onClick={onToggleExpand}
+        onClick={() => {
+          if (!expanded) trackCrossBundleExpanded(bundle.pair);
+          onToggleExpand();
+        }}
       >
         <span className="unread-dot" aria-hidden="true" />
         <div className="cross-bundle-body">

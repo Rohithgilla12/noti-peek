@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { useAppStore } from '../store';
 import type { SuggestedLink, SuggestedLinkRationale } from '../lib/types';
+import { trackSuggestedLinkShown } from '../lib/telemetry-events';
 
 const RATIONALE_LABEL: Record<SuggestedLinkRationale, string> = {
   'author-match': 'Same author',
@@ -50,6 +52,12 @@ function SuggestionCard({ link }: { link: SuggestedLink }) {
 export function SuggestedLinks() {
   const suggestedLinks = useAppStore((s) => s.suggestedLinks);
   const clearDismissed = useAppStore((s) => s.clearDismissedSuggestions);
+
+  useEffect(() => {
+    for (const link of suggestedLinks) {
+      trackSuggestedLinkShown(link.pair, link.confidence);
+    }
+  }, [suggestedLinks]);
 
   return (
     <div className="suggestions-view">

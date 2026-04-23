@@ -4,6 +4,7 @@ import { useAppStore, useFilteredNotifications, useUnreadCount } from '../store'
 import type { Notification, Provider, NotificationRow } from '../lib/types';
 import { startOfDay, dayLabel } from '../lib/days';
 import { RowDispatcher } from './shared/RowDispatcher';
+import { trackCrossBundleRendered } from '../lib/telemetry-events';
 
 type FilterSource = Provider | 'all';
 
@@ -85,6 +86,11 @@ export function DayStream() {
     }
     return out;
   }, [visibleRows, expandedIds]);
+
+  useEffect(() => {
+    const count = rows.filter((r) => r.kind === 'cross_bundle').length;
+    if (count > 0) trackCrossBundleRendered(count);
+  }, [rows]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
