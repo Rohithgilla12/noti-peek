@@ -604,15 +604,55 @@
           macOS 11+<span class="sep">·</span>Apple-signed<span class="sep">·</span>Apple Silicon<span class="sep">·</span>Open source (MIT)<span class="sep">·</span>Auto-updates
         </p>
 
-        <div class="hero-demo" id="hero-demo">
-          <img
-            src="/assets/cross-provider-demo.gif"
-            alt="Noti Peek cross-provider bundling demo"
-            class="hero-demo-img"
-            onerror="this.style.display='none';var p=document.getElementById('hero-demo-placeholder');if(p)p.style.display='grid';"
-          />
-          <div id="hero-demo-placeholder" class="hero-demo-placeholder" style="display:none" aria-hidden="true">
-            <span>Demo coming soon</span>
+        <div class="hero-demo" id="hero-demo" aria-hidden="true">
+          <div class="demo-menubar">
+            <div class="demo-menu-left">
+              <svg width="16" height="18" viewBox="0 0 14 16" fill="var(--ink-1)"><path d="M7 0C3.13 0 0 3.13 0 7c0 3.87 3.13 7 7 7s7-3.13 7-7c0-3.87-3.13-7-7-7zm0 12.5c-3.03 0-5.5-2.47-5.5-5.5S3.97 1.5 7 1.5 12.5 3.97 12.5 7 9.03 12.5 7 12.5z"/></svg>
+              <span>File</span><span>Edit</span><span>View</span>
+            </div>
+            <div class="demo-menu-right">
+              <span class="demo-tray-icon">
+                <svg width="14" height="14" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4">
+                  <rect width="64" height="64" rx="14" fill="transparent" stroke="none" />
+                  <circle cx="32" cy="32" r="18" />
+                  <circle cx="42" cy="26" r="4.5" fill="currentColor" stroke="none" />
+                </svg>
+              </span>
+              <span>10:42 PM</span>
+            </div>
+          </div>
+          
+          <div class="demo-app-panel">
+            <div class="demo-head">
+              <span class="tray" style="width:12px;height:12px;border:1.25px solid var(--ink-2);border-radius:50%;position:relative"><span style="position:absolute;width:3.5px;height:3.5px;border-radius:50%;background:var(--ink-2);top:1px;right:0.5px"></span></span>
+              <span>noti-peek</span>
+              <span class="count">2 unread</span>
+            </div>
+            
+            <div class="demo-row">
+              <div class="avatar stack">
+                <span>RG</span><span>JP</span><span>MK</span>
+              </div>
+              <div class="demo-row-content">
+                <div class="demo-title"><span class="demo-dot"></span>rohithgilla/noti-peek#42</div>
+                <div class="demo-meta">3 reviews · 2 comments · bundle of 5</div>
+                
+                <div class="demo-bundle-items">
+                  <div class="demo-bundle-inner">
+                    <div class="demo-sub-item"><span class="avatar">JP</span> Approved these changes</div>
+                    <div class="demo-sub-item"><span class="avatar">RG</span> Pushed new commit: smart layout</div>
+                    <div class="demo-sub-item"><span class="avatar">MK</span> Left a review comment</div>
+                  </div>
+                </div>
+              </div>
+              <div class="demo-mark-read">Mark read</div>
+            </div>
+          </div>
+
+          <div class="demo-cursor">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M5.5 2L11.5 20.5L14.5 13.5L21.5 10.5L5.5 2Z" fill="black" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
+            </svg>
           </div>
         </div>
 
