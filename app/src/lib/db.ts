@@ -31,6 +31,8 @@ interface NotificationRow {
   created_at: string;
   updated_at: string;
   first_seen_at: string | null;
+  bookmarked: number;
+  archived: number;
 }
 
 interface ConnectionRow {
@@ -65,6 +67,8 @@ function rowToNotification(row: NotificationRow): Notification {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     firstSeenAt: row.first_seen_at ?? undefined,
+    bookmarked: row.bookmarked === 1,
+    archived: row.archived === 1,
   };
 }
 
@@ -95,14 +99,16 @@ export async function cacheNotifications(notifications: Notification[]): Promise
       `INSERT INTO notifications
          (id, source, type, title, body, url, repo, project,
           author_name, author_avatar, unread,
-          created_at, updated_at, cached_at, first_seen_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+          created_at, updated_at, cached_at, first_seen_at,
+          bookmarked, archived)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
        ON CONFLICT(id) DO UPDATE SET
          unread     = excluded.unread,
          updated_at = excluded.updated_at,
          cached_at  = excluded.cached_at,
          title      = excluded.title,
-         body       = excluded.body`,
+         body       = excluded.body
+         -- NOTE: bookmarked and archived are device-local; do not touch on upsert`,
       [
         n.id,
         n.source,
@@ -119,6 +125,8 @@ export async function cacheNotifications(notifications: Notification[]): Promise
         n.updatedAt,
         now,
         now,
+        n.bookmarked ? 1 : 0,
+        n.archived ? 1 : 0,
       ],
     );
   }
@@ -293,4 +301,20 @@ export async function countArchive(q: ArchiveQuery): Promise<number> {
     params,
   );
   return rows[0]?.n ?? 0;
+}
+
+export async function setNotificationBookmarked(id: string, bookmarked: boolean): Promise<void> {
+  const database = await getDatabase();
+  await database.execute(
+    'UPDATE notifications SET bookmarked = $1 WHERE id = $2',
+    [bookmarked ? 1 : 0, id],
+  );
+}
+
+export async function setNotificationArchived(id: string, archived: boolean): Promise<void> {
+  const database = await getDatabase();
+  await database.execute(
+    'UPDATE notifications SET archived = $1 WHERE id = $2',
+    [archived ? 1 : 0, id],
+  );
 }
