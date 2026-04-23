@@ -182,7 +182,7 @@ function App() {
       if (gSequence && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
         const { setScope } = useAppStore.getState();
         const keyToScope: Record<string, Parameters<typeof setScope>[0]> = {
-          i: 'inbox', m: 'mentions', b: 'bookmarks', l: 'links', e: 'archive',
+          i: 'inbox', m: 'mentions', b: 'bookmarks', l: 'links', a: 'archive',
         };
         const scope = keyToScope[e.key];
         if (scope) {
