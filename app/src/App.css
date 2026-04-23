@@ -283,19 +283,6 @@ kbd {
 /*  inset at {x: 18, y: 18}. The bar is 44px tall to give   */
 /*  them room. Whole bar is a drag region; buttons opt out. */
 /* -------------------------------------------------------- */
-.topnav {
-  display: grid;
-  grid-template-columns: 82px 1fr auto;
-  align-items: center;
-  height: 44px;
-  padding: 0 14px 0 0;
-  /* Transparent so the window's HeaderView vibrancy shows through.
-     Hair-line bottom keeps it visually distinct from the content. */
-  background: transparent;
-  border-bottom: 1px solid var(--line-soft);
-  -webkit-user-select: none;
-  user-select: none;
-}
 .topnav-gutter {
   /* Reserves space for the macOS traffic lights. The drag region
      extends underneath them so dragging from that corner still works. */
@@ -306,29 +293,6 @@ kbd {
   align-items: center;
   gap: 10px;
   line-height: 1;
-}
-.topnav-wordmark {
-  font-family: var(--font-serif);
-  font-size: 18px;
-  color: var(--ink-1);
-  letter-spacing: -0.01em;
-  font-weight: 500;
-}
-.topnav-wordmark em {
-  color: var(--accent);
-  font-style: italic;
-  font-weight: 500;
-}
-.topnav-unread {
-  font-family: var(--font-mono);
-  font-style: normal;
-  font-size: 10.5px;
-  color: var(--accent-ink);
-  background: var(--accent);
-  padding: 1px 5px;
-  border-radius: 2px;
-  font-variation-settings: 'wght' 520;
-  letter-spacing: 0.02em;
 }
 .topnav-actions {
   display: flex;
@@ -389,12 +353,6 @@ kbd {
 .topnav-tabs button[aria-current='true'] {
   color: var(--ink-1);
   background: var(--bg-1);
-}
-.topnav-tab-badge {
-  font-variant-numeric: tabular-nums;
-  font-size: 10px;
-  color: var(--accent);
-  letter-spacing: 0.02em;
 }
 
 /* -------------------------------------------------------- */
@@ -1494,24 +1452,21 @@ kbd {
   flex-direction: column;
 }
 
-/* Presence-only indicator (no number) — used for Links tab when suggestions pending */
-.topnav-tab-badge:empty {
-  width: 6px;
-  height: 6px;
-  padding: 0;
-  min-width: 6px;
-  border-radius: 50%;
-  display: inline-block;
-  background: var(--accent);
-}
-
-/* Three-pane shell: restructured top nav grid, brand, search, unread chip, avatar menu. */
+/* top nav */
 .topnav {
   display: grid;
   grid-template-columns: auto 1fr auto minmax(200px, 280px) auto;
   grid-template-areas: 'gutter brand tabs search actions';
   gap: 12px;
   align-items: center;
+  height: 44px;
+  padding: 0 14px 0 0;
+  /* Transparent so the window's HeaderView vibrancy shows through.
+     Hair-line bottom keeps it visually distinct from the content. */
+  background: transparent;
+  border-bottom: 1px solid var(--line-soft);
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .topnav-gutter  { grid-area: gutter; width: 72px; }
