@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { load } from '@tauri-apps/plugin-store';
 import { useAppStore } from '../store';
@@ -59,6 +59,52 @@ export function Settings({ onClose }: SettingsProps) {
   const [error, setError] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const [crossProviderEnabled, setCrossProviderEnabled] = useState(true);
+  const [suggestNewLinksEnabled, setSuggestNewLinksEnabled] = useState(true);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
+  const clearDismissed = useAppStore((s) => s.clearDismissedSuggestions);
+  const fetchNotifications = useAppStore((s) => s.fetchNotifications);
+
+  useEffect(() => {
+    (async () => {
+      const store = await load('config.json');
+      const cpb = await store.get<boolean>('crossProviderBundling');
+      const snl = await store.get<boolean>('suggestNewLinks');
+      if (typeof cpb === 'boolean') setCrossProviderEnabled(cpb);
+      if (typeof snl === 'boolean') setSuggestNewLinksEnabled(snl);
+    })();
+  }, []);
+
+  const onToggleCross = async (checked: boolean) => {
+    const previous = crossProviderEnabled;
+    setCrossProviderEnabled(checked);
+    setSettingsError(null);
+    try {
+      const store = await load('config.json');
+      await store.set('crossProviderBundling', checked);
+      await store.save();
+      await fetchNotifications();
+    } catch (err) {
+      setCrossProviderEnabled(previous);
+      setSettingsError(err instanceof Error ? err.message : 'Failed to update bundling preference');
+    }
+  };
+
+  const onToggleSuggest = async (checked: boolean) => {
+    const previous = suggestNewLinksEnabled;
+    setSuggestNewLinksEnabled(checked);
+    setSettingsError(null);
+    try {
+      const store = await load('config.json');
+      await store.set('suggestNewLinks', checked);
+      await store.save();
+      await fetchNotifications();
+    } catch (err) {
+      setSuggestNewLinksEnabled(previous);
+      setSettingsError(err instanceof Error ? err.message : 'Failed to update suggestion preference');
+    }
+  };
 
   const isGitHubConnected = connections.some((c) => c.provider === 'github');
   const isLinearConnected = connections.some((c) => c.provider === 'linear');
@@ -385,6 +431,56 @@ export function Settings({ onClose }: SettingsProps) {
                 </option>
               ))}
             </select>
+          </section>
+
+          <section>
+            <h3 className="text-[length:var(--text-sm)] font-medium text-[var(--text-primary)] mb-3">
+              Bundling
+            </h3>
+            {settingsError && (
+              <p className="mb-3 text-[length:var(--text-xs)] text-[var(--error)]">{settingsError}</p>
+            )}
+            <div className="space-y-3">
+              <label className="flex items-start gap-3 p-3 bg-[var(--bg-surface)] rounded-[var(--radius-md)] border border-[var(--border-muted)] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={crossProviderEnabled}
+                  onChange={(e) => void onToggleCross(e.target.checked)}
+                  className="mt-0.5 accent-[var(--accent)]"
+                />
+                <div>
+                  <div className="text-[length:var(--text-sm)] font-medium text-[var(--text-primary)]">
+                    Cross-provider bundling
+                  </div>
+                  <div className="text-[length:var(--text-xs)] text-[var(--text-secondary)] mt-0.5">
+                    Collapse linked Linear/Jira tickets and their GitHub/Bitbucket PRs into one row.
+                  </div>
+                </div>
+              </label>
+              <label className="flex items-start gap-3 p-3 bg-[var(--bg-surface)] rounded-[var(--radius-md)] border border-[var(--border-muted)] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={suggestNewLinksEnabled}
+                  onChange={(e) => void onToggleSuggest(e.target.checked)}
+                  className="mt-0.5 accent-[var(--accent)]"
+                />
+                <div>
+                  <div className="text-[length:var(--text-sm)] font-medium text-[var(--text-primary)]">
+                    Suggest new links
+                  </div>
+                  <div className="text-[length:var(--text-xs)] text-[var(--text-secondary)] mt-0.5">
+                    Surface likely-related tickets and PRs in the Suggested Links view.
+                  </div>
+                </div>
+              </label>
+              <button
+                type="button"
+                onClick={() => void clearDismissed()}
+                className="w-full px-3 py-2 text-[length:var(--text-xs)] text-[var(--text-secondary)] border border-[var(--border-default)] rounded-[var(--radius-sm)] hover:bg-[var(--bg-overlay)] transition-colors duration-150"
+              >
+                Clear dismissed suggestions
+              </button>
+            </div>
           </section>
 
           <section>

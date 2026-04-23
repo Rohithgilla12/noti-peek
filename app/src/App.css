@@ -1185,3 +1185,308 @@ kbd {
 .detail-banner button:hover {
   filter: brightness(1.1);
 }
+
+/* Bundle rows (same-thread v1) + cross-bundle rows (v2) */
+
+.bundle-row,
+.cross-bundle-row {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  background: var(--bg-1);
+}
+
+.bundle-row.is-unread,
+.cross-bundle-row.is-unread {
+  border-color: var(--line-soft);
+}
+
+.bundle-header,
+.cross-bundle-header {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px;
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.bundle-header:hover,
+.cross-bundle-header:hover {
+  background: var(--bg-2);
+}
+
+.bundle-header-body,
+.cross-bundle-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.bundle-title-line,
+.cross-bundle-title-line {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.bundle-title,
+.cross-bundle-title {
+  font-weight: 600;
+  color: var(--ink-1);
+}
+
+.bundle-summary,
+.cross-bundle-summary {
+  color: var(--ink-2);
+  font-size: 12.5px;
+  margin-top: 6px;
+}
+
+.bundle-actors,
+.cross-bundle-actors {
+  color: var(--ink-3);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.bundle-time,
+.cross-bundle-time {
+  margin-left: auto;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.bundle-children,
+.cross-bundle-children {
+  padding: 4px 12px 12px 32px;
+}
+
+.linked-pill {
+  font-size: 11px;
+  font-family: "Martian Mono Variable", ui-monospace, monospace;
+  background: color-mix(in oklch, var(--ink-2) 10%, transparent);
+  color: var(--ink-2);
+  border: 1px solid var(--line-soft);
+  padding: 1px 8px;
+  border-radius: 999px;
+}
+
+.cross-bundle-child-wrap {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.cross-bundle-child-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-top: 14px;
+  flex: none;
+}
+
+.cross-bundle-child-dot.source-github    { background: #c9d1d9; }
+.cross-bundle-child-dot.source-linear    { background: #a1a5e0; }
+.cross-bundle-child-dot.source-jira      { background: #88adcc; }
+.cross-bundle-child-dot.source-bitbucket { background: #9fbff0; }
+
+.cross-bundle-actions {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+}
+
+.mark-bundle-read {
+  background: none;
+  color: var(--ink-2);
+  border: 1px solid var(--line);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.mark-bundle-read:hover {
+  color: var(--ink-1);
+  border-color: var(--ink-3);
+}
+
+/* Source badges (shared across bundle / cross-bundle) */
+
+.source-badge {
+  font-family: "Martian Mono Variable", ui-monospace, monospace;
+  font-size: 10.5px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+}
+
+.source-badge.source-github    { background: var(--bg-3); color: var(--ink-1); }
+.source-badge.source-linear    { background: color-mix(in oklch, #5e6ad2 25%, var(--bg-2)); color: var(--ink-1); }
+.source-badge.source-jira      { background: color-mix(in oklch, #0052cc 25%, var(--bg-2)); color: var(--ink-1); }
+.source-badge.source-bitbucket { background: color-mix(in oklch, #2684ff 25%, var(--bg-2)); color: var(--ink-1); }
+
+/* Suggested Links view */
+
+.suggestions-view {
+  flex: 1;
+  min-height: 0;
+  padding: 16px 20px;
+  overflow-y: auto;
+}
+
+.suggestions-head h4 {
+  margin: 0 0 6px 0;
+  color: var(--ink-1);
+}
+
+.suggestions-head .subtle {
+  margin: 0 0 16px 0;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.suggestions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.suggestion-card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px;
+  background: var(--bg-1);
+}
+
+.suggestion-sides {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.suggestion-side {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.suggestion-arrow {
+  color: var(--ink-3);
+  font-size: 16px;
+}
+
+.suggestion-ref {
+  font-family: "Martian Mono Variable", ui-monospace, monospace;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.suggestion-title {
+  color: var(--ink-1);
+  font-weight: 500;
+}
+
+.suggestion-meta {
+  margin-top: 10px;
+  display: flex;
+  gap: 14px;
+  color: var(--ink-2);
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+
+.suggestion-confidence {
+  font-family: "Martian Mono Variable", ui-monospace, monospace;
+  color: var(--ink-1);
+}
+
+.suggestion-rationale {
+  color: var(--ink-3);
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+.suggestion-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+}
+
+.btn-confirm,
+.btn-dismiss {
+  border: 1px solid var(--line);
+  padding: 6px 14px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  background: var(--bg-1);
+  color: var(--ink-1);
+}
+
+.btn-confirm:hover {
+  border-color: var(--ink-2);
+}
+
+.btn-dismiss {
+  color: var(--ink-2);
+}
+
+.btn-dismiss:hover {
+  color: var(--ink-1);
+  border-color: var(--ink-3);
+}
+
+.suggestions-footer {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.clear-dismissed-btn {
+  background: none;
+  color: var(--ink-2);
+  border: 1px solid var(--line);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.clear-dismissed-btn:hover {
+  color: var(--ink-1);
+}
+
+/* Links tab layout */
+
+.links-col {
+  grid-column: 1 / -1;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Presence-only indicator (no number) — used for Links tab when suggestions pending */
+.topnav-tab-badge:empty {
+  width: 6px;
+  height: 6px;
+  padding: 0;
+  min-width: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  background: var(--accent);
+}

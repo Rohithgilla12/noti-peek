@@ -1,5 +1,5 @@
 import { fetch } from '@tauri-apps/plugin-http';
-import type { Notification, Connection, DetailResponse } from './types';
+import type { Notification, Connection, DetailResponse, NotificationRow, SuggestedLink } from './types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787';
 
@@ -159,7 +159,13 @@ class ApiClient {
     return this.request('/connections');
   }
 
-  async getNotifications(): Promise<{ notifications: Notification[]; errors?: Array<{ provider: string; error: string }> }> {
+  async getNotifications(): Promise<{
+    notifications: Notification[];
+    rows?: NotificationRow[];
+    bundling_version?: number;
+    suggested_links?: SuggestedLink[];
+    errors?: Array<{ provider: string; error: string; resetAt?: number }>;
+  }> {
     return this.request('/notifications');
   }
 
@@ -188,6 +194,32 @@ class ApiClient {
       method: 'POST',
       body: source ? JSON.stringify({ source }) : undefined,
     });
+  }
+
+  async confirmSuggestedLink(payload: {
+    pair: 'linear-github' | 'jira-bitbucket';
+    primary_key: string;
+    linked_ref: string;
+  }): Promise<{ success: true }> {
+    return this.request('/notifications/links/confirm', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async dismissSuggestedLink(payload: {
+    pair: 'linear-github' | 'jira-bitbucket';
+    primary_key: string;
+    linked_ref: string;
+  }): Promise<{ success: true }> {
+    return this.request('/notifications/links/dismiss', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async clearDismissedSuggestions(): Promise<{ success: true }> {
+    return this.request('/notifications/links/clear-dismissed', { method: 'POST' });
   }
 
   async fetchDetails(notificationId: string, url: string): Promise<DetailResponse> {

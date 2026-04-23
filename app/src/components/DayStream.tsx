@@ -1,9 +1,10 @@
 import { useMemo, useEffect } from 'react';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { useAppStore, useFilteredNotifications, useUnreadCount } from '../store';
-import type { Notification, Provider } from '../lib/types';
+import type { Notification, Provider, NotificationRow } from '../lib/types';
 import { startOfDay, dayLabel } from '../lib/days';
-import { NotificationRow } from './shared/NotificationRow';
+import { RowDispatcher } from './shared/RowDispatcher';
+import { trackCrossBundleRendered } from '../lib/telemetry-events';
 
 type FilterSource = Provider | 'all';
 
@@ -18,6 +19,11 @@ const SOURCES: Array<{ value: FilterSource; label: string; experimental?: boolea
 const enableExperimentalProviders =
   import.meta.env.VITE_ENABLE_EXPERIMENTAL_PROVIDERS === 'true';
 
+const rowLatestMs = (r: NotificationRow): number => {
+  if (r.kind === 'single') return new Date(r.notification.updatedAt).getTime();
+  return new Date(r.bundle.latest_at).getTime();
+};
+
 export function DayStream() {
   const filter = useAppStore((s) => s.filter);
   const setFilter = useAppStore((s) => s.setFilter);
@@ -29,44 +35,87 @@ export function DayStream() {
   const markAllAsRead = useAppStore((s) => s.markAllAsRead);
   const connections = useAppStore((s) => s.connections);
 
+  const rows = useAppStore((s) => s.rows);
+  const expandedIds = useAppStore((s) => s.expandedBundleIds);
+  const toggleExpanded = useAppStore((s) => s.toggleExpanded);
+  const markCrossBundleRead = useAppStore((s) => s.markCrossBundleRead);
+
+  const allNotifications = useAppStore((s) => s.notifications);
   const notifications = useFilteredNotifications();
   const unread = useUnreadCount();
 
+  const effectiveRows: NotificationRow[] = useMemo(() => {
+    if (rows.length > 0) return rows;
+    return notifications.map((n) => ({ kind: 'single' as const, notification: n }));
+  }, [rows, notifications]);
+
+  const filteredRows: NotificationRow[] = useMemo(() => {
+    const matches = (n: Notification) =>
+      (filter.source === 'all' || n.source === filter.source) &&
+      (filter.type === 'all' || n.type === filter.type);
+
+    return effectiveRows.filter((r) => {
+      if (r.kind === 'single') return matches(r.notification);
+      return r.bundle.children.some((c: Notification) => matches(c));
+    });
+  }, [effectiveRows, filter.source, filter.type]);
+
+  const visibleRows: NotificationRow[] = useMemo(() => {
+    if (!filter.unreadOnly) return filteredRows;
+    return filteredRows.filter((r) => {
+      if (r.kind === 'single') return r.notification.unread;
+      return r.bundle.unread_count > 0;
+    });
+  }, [filteredRows, filter.unreadOnly]);
+
   const grouped = useMemo(() => {
-    const m = new Map<number, Notification[]>();
-    for (const n of notifications) {
-      const key = startOfDay(n.updatedAt);
+    const m = new Map<number, NotificationRow[]>();
+    for (const r of visibleRows) {
+      const ms = rowLatestMs(r);
+      const key = startOfDay(new Date(ms).toISOString());
       if (!m.has(key)) m.set(key, []);
-      m.get(key)!.push(n);
+      m.get(key)!.push(r);
     }
     return Array.from(m.entries()).sort((a, b) => b[0] - a[0]);
-  }, [notifications]);
+  }, [visibleRows]);
 
-  // Keyboard j/k navigation through the flat ordered list.
+  const flatIds = useMemo((): string[] => {
+    const out: string[] = [];
+    for (const r of visibleRows) {
+      if (r.kind === 'single') {
+        out.push(r.notification.id);
+      } else if (expandedIds.has(r.bundle.id)) {
+        for (const c of r.bundle.children) out.push(c.id);
+      }
+    }
+    return out;
+  }, [visibleRows, expandedIds]);
+
+  useEffect(() => {
+    const count = rows.filter((r) => r.kind === 'cross_bundle').length;
+    if (count > 0) trackCrossBundleRendered(count);
+  }, [rows]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const typing = (e.target as HTMLElement)?.closest('input, textarea, [contenteditable]');
       if (typing) return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
-      if (notifications.length === 0) return;
-
-      const idx = selectedId
-        ? notifications.findIndex((n) => n.id === selectedId)
-        : -1;
-
+      if (flatIds.length === 0) return;
+      const idx = selectedId ? flatIds.indexOf(selectedId) : -1;
       if (e.key === 'j' || e.key === 'ArrowDown') {
         e.preventDefault();
-        const next = Math.min(notifications.length - 1, idx + 1);
-        setSelectedId(notifications[next]?.id ?? null);
+        const next = Math.min(flatIds.length - 1, idx + 1);
+        setSelectedId(flatIds[next] ?? null);
       } else if (e.key === 'k' || e.key === 'ArrowUp') {
         e.preventDefault();
         const prev = Math.max(0, idx - 1);
-        setSelectedId(notifications[prev]?.id ?? null);
+        setSelectedId(flatIds[prev] ?? null);
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [notifications, selectedId, setSelectedId]);
+  }, [flatIds, selectedId, setSelectedId]);
 
   return (
     <>
@@ -129,7 +178,7 @@ export function DayStream() {
           <div className="empty-state">loading…</div>
         )}
 
-        {!isLoading && notifications.length === 0 && !error && (
+        {!isLoading && visibleRows.length === 0 && !error && (
           <div className="empty-state">
             you're all caught up
           </div>
@@ -145,18 +194,25 @@ export function DayStream() {
                   {sub} · {items.length} event{items.length === 1 ? '' : 's'}
                 </span>
               </h5>
-              {items.map((n) => (
-                <NotificationRow
-                  key={n.id}
-                  n={n}
-                  selected={n.id === selectedId}
-                  onSelect={() => setSelectedId(n.id)}
-                  onOpen={() => {
-                    void openUrl(n.url).catch((err) => console.error('open url failed:', err));
-                    if (n.unread) markAsRead(n.id);
-                  }}
-                />
-              ))}
+              {items.map((row) => {
+                const rowKey = row.kind === 'single' ? row.notification.id : row.bundle.id;
+                return (
+                  <RowDispatcher
+                    key={rowKey}
+                    row={row}
+                    selectedId={selectedId}
+                    expandedIds={expandedIds}
+                    onSelect={setSelectedId}
+                    onOpen={(url, id) => {
+                      void openUrl(url).catch((err) => console.error('open url failed:', err));
+                      const target = allNotifications.find((n) => n.id === id);
+                      if (target?.unread) markAsRead(id);
+                    }}
+                    onToggleExpand={toggleExpanded}
+                    onMarkBundleRead={row.kind === 'cross_bundle' ? markCrossBundleRead : undefined}
+                  />
+                );
+              })}
             </section>
           );
         })}

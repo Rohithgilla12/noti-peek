@@ -1,9 +1,66 @@
 import { create } from 'zustand';
 import { invoke } from '@tauri-apps/api/core';
-import type { Notification, Connection, Provider, DetailResponse } from '../lib/types';
+import { load as loadTauriStore } from '@tauri-apps/plugin-store';
+import type { Notification, Connection, Provider, DetailResponse, NotificationRow, SuggestedLink } from '../lib/types';
 import { api } from '../lib/api';
 import * as db from '../lib/db';
 import { notifyNew } from '../lib/notify';
+import {
+  trackSuggestedLinkConfirmed,
+  trackSuggestedLinkDismissed,
+  trackCrossBundleMarkAllRead,
+} from '../lib/telemetry-events';
+
+function markRowsReadOne(rows: NotificationRow[], id: string): NotificationRow[] {
+  return rows.map((r) => {
+    if (r.kind === 'single') {
+      return r.notification.id === id
+        ? { ...r, notification: { ...r.notification, unread: false } }
+        : r;
+    }
+    const childIdx = r.bundle.children.findIndex((c) => c.id === id);
+    if (childIdx < 0) return r;
+    const children = r.bundle.children.map((c) =>
+      c.id === id ? { ...c, unread: false } : c,
+    );
+    const unread_count = children.filter((c) => c.unread).length;
+    if (r.kind === 'bundle') {
+      return { ...r, bundle: { ...r.bundle, children, unread_count } };
+    }
+    return { ...r, bundle: { ...r.bundle, children, unread_count } };
+  });
+}
+
+function markRowsReadAll(rows: NotificationRow[]): NotificationRow[] {
+  return rows.map((r) => {
+    if (r.kind === 'single') {
+      return r.notification.unread
+        ? { ...r, notification: { ...r.notification, unread: false } }
+        : r;
+    }
+    const children = r.bundle.children.map((c) =>
+      c.unread ? { ...c, unread: false } : c,
+    );
+    if (r.kind === 'bundle') {
+      return { ...r, bundle: { ...r.bundle, children, unread_count: 0 } };
+    }
+    return { ...r, bundle: { ...r.bundle, children, unread_count: 0 } };
+  });
+}
+
+async function readBundlingPrefs(): Promise<{ crossEnabled: boolean; suggestEnabled: boolean }> {
+  try {
+    const s = await loadTauriStore('config.json');
+    const cpb = await s.get<boolean>('crossProviderBundling');
+    const snl = await s.get<boolean>('suggestNewLinks');
+    return {
+      crossEnabled: cpb !== false,
+      suggestEnabled: snl !== false,
+    };
+  } catch {
+    return { crossEnabled: true, suggestEnabled: true };
+  }
+}
 
 const updateBadgeCount = async (count: number) => {
   try {
@@ -36,8 +93,22 @@ interface AppState {
 
   refreshInterval: number;
 
-  activeTab: 'inbox' | 'pulse';
-  setActiveTab: (tab: 'inbox' | 'pulse') => void;
+  activeTab: 'inbox' | 'pulse' | 'links';
+  setActiveTab: (tab: 'inbox' | 'pulse' | 'links') => void;
+
+  rows: NotificationRow[];
+  bundlingVersion: number;
+  suggestedLinks: SuggestedLink[];
+
+  expandedBundleIds: Set<string>;
+  toggleExpanded: (id: string) => void;
+  collapseAll: () => void;
+
+  confirmLink: (link: SuggestedLink) => Promise<void>;
+  dismissSuggestion: (link: SuggestedLink) => Promise<void>;
+  clearDismissedSuggestions: () => Promise<void>;
+
+  markCrossBundleRead: (bundleId: string) => Promise<void>;
 
   setAuth: (deviceToken: string, userId: string) => void;
   clearAuth: () => void;
@@ -96,8 +167,64 @@ export const useAppStore = create<AppState>((set, get) => ({
   detailsCache: {},
   inFlightDetails: new Map<string, Promise<DetailResponse>>(),
 
+  rows: [],
+  bundlingVersion: 1,
+  suggestedLinks: [],
+  expandedBundleIds: new Set<string>(),
+
   activeTab: 'inbox',
   setActiveTab: (activeTab) => set({ activeTab }),
+
+  toggleExpanded: (id) => set((s) => {
+    const next = new Set(s.expandedBundleIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    return { expandedBundleIds: next };
+  }),
+
+  collapseAll: () => set({ expandedBundleIds: new Set<string>() }),
+
+  confirmLink: async (link) => {
+    await api.confirmSuggestedLink({
+      pair: link.pair,
+      primary_key: link.primary.key,
+      linked_ref: link.linked.ref,
+    });
+    trackSuggestedLinkConfirmed(link.pair);
+    set((s) => ({ suggestedLinks: s.suggestedLinks.filter((x) => x.id !== link.id) }));
+    await get().fetchNotifications();
+  },
+
+  dismissSuggestion: async (link) => {
+    await api.dismissSuggestedLink({
+      pair: link.pair,
+      primary_key: link.primary.key,
+      linked_ref: link.linked.ref,
+    });
+    trackSuggestedLinkDismissed(link.pair);
+    set((s) => ({ suggestedLinks: s.suggestedLinks.filter((x) => x.id !== link.id) }));
+  },
+
+  clearDismissedSuggestions: async () => {
+    await api.clearDismissedSuggestions();
+    await get().fetchNotifications();
+  },
+
+  markCrossBundleRead: async (bundleId) => {
+    const rows = get().rows;
+    const bundle = rows
+      .filter((r): r is Extract<NotificationRow, { kind: 'cross_bundle' }> => r.kind === 'cross_bundle')
+      .map((r) => r.bundle)
+      .find((b) => b.id === bundleId);
+    if (!bundle) return;
+    const markPromises = bundle.children
+      .filter((c) => c.unread)
+      .map((c) => get().markAsRead(c.id).catch((err) => {
+        console.error('markCrossBundleRead: child failed', c.id, err);
+      }));
+    await Promise.all(markPromises);
+    trackCrossBundleMarkAllRead(bundle.pair, bundle.children.length);
+  },
 
   setAuth: (deviceToken, userId) => {
     api.setDeviceToken(deviceToken);
@@ -161,7 +288,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
 
     try {
-      const { notifications: incoming, errors } = await api.getNotifications();
+      const response = await api.getNotifications();
+      const { notifications: incoming, errors } = response;
 
       // Preserve local "read" intent across syncs. Providers like GitHub are
       // eventually consistent — right after mark-all-as-read, GET still
@@ -185,7 +313,24 @@ export const useAppStore = create<AppState>((set, get) => ({
         ? notifications.filter((n) => n.unread && !existingById.has(n.id))
         : [];
 
-      set({ notifications, lastSyncTime: new Date() });
+      const prefs = await readBundlingPrefs();
+      const incomingRows = response.rows ?? [];
+      const rows: NotificationRow[] = prefs.crossEnabled
+        ? incomingRows
+        : incomingRows.flatMap((r) =>
+            r.kind === 'cross_bundle'
+              ? r.bundle.children.map((n) => ({ kind: 'single' as const, notification: n }))
+              : [r]
+          );
+      const suggestedLinks = prefs.suggestEnabled ? (response.suggested_links ?? []) : [];
+
+      set({
+        notifications,
+        lastSyncTime: new Date(),
+        rows,
+        bundlingVersion: response.bundling_version ?? 1,
+        suggestedLinks,
+      });
 
       const unreadCount = notifications.filter((n) => n.unread).length;
       await updateBadgeCount(unreadCount);
@@ -232,7 +377,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       );
       const unreadCount = notifications.filter(n => n.unread).length;
       updateBadgeCount(unreadCount);
-      return { notifications };
+      return { notifications, rows: markRowsReadOne(state.rows, id) };
     });
 
     await db.updateNotificationReadStatus(id, false);
@@ -256,7 +401,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       );
       const unreadCount = notifications.filter(n => n.unread).length;
       updateBadgeCount(unreadCount);
-      return { notifications };
+      return { notifications, rows: markRowsReadAll(state.rows) };
     });
 
     await db.markAllNotificationsRead(source);

@@ -10,6 +10,8 @@ export function TopNav({ onOpenSettings }: Props) {
   const unread = useUnreadCount();
   const activeTab = useAppStore((s) => s.activeTab);
   const setActiveTab = useAppStore((s) => s.setActiveTab);
+  const suggestedLinks = useAppStore((s) => s.suggestedLinks);
+  const suggestedLinkCount = suggestedLinks.length;
 
   return (
     <header className="topnav" data-tauri-drag-region>
@@ -35,6 +37,20 @@ export function TopNav({ onOpenSettings }: Props) {
           title="Pulse (2)"
         >
           pulse
+        </button>
+        <button
+          aria-current={activeTab === 'links'}
+          role="tab"
+          type="button"
+          onClick={() => setActiveTab('links')}
+          aria-label={
+            suggestedLinkCount > 0
+              ? `Links, ${suggestedLinkCount} suggested link${suggestedLinkCount === 1 ? '' : 's'} available, shortcut 3`
+              : 'Links, shortcut 3'
+          }
+        >
+          links
+          {suggestedLinkCount > 0 && <span className="topnav-tab-badge" aria-hidden="true" />}
         </button>
       </nav>
       <div className="topnav-actions" data-tauri-drag-region>

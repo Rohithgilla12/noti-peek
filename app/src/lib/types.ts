@@ -122,3 +122,15 @@ export interface DetailResponse {
   fetchedAt: string;
 }
 
+export type {
+  NotificationRow,
+  BundleResponse,
+  CrossBundleResponse,
+  CrossBundleLinkedSide,
+  SuggestedLink,
+  SuggestedLinkRationale,
+  WorkLinkPair,
+  WorkLinkSignal,
+  StrictSource,
+} from './rows';
+

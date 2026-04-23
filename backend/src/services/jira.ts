@@ -1,5 +1,25 @@
-import type { NotificationResponse, Connection, NotificationFetchResult, Env } from '../types';
+import type { NotificationResponse, Connection, NotificationFetchResult, Env, LinkHint } from '../types';
 import { TokenExpiredError } from '../types';
+import { fetchJiraDevPanel } from './jira-dev-panel';
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  worker: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let next = 0;
+  async function run() {
+    while (true) {
+      const i = next++;
+      if (i >= items.length) return;
+      results[i] = await worker(items[i], i);
+    }
+  }
+  const runners = Array.from({ length: Math.min(limit, items.length) }, () => run());
+  await Promise.all(runners);
+  return results;
+}
 
 interface JiraNotification {
   id: string;
@@ -140,6 +160,20 @@ export async function fetchJiraNotifications(
 
   const cloudId = resources[0].id;
   const jiraBaseUrl = resources[0].url; // e.g., https://mycompany.atlassian.net
+  const cloudBaseUrl = jiraBaseUrl;
+
+  const devPanelCache = new Map<string, Promise<Array<Extract<LinkHint, { kind: 'bitbucket-pr' }>>>>();
+  const getDevPanelHints = (issueId: string | undefined) => {
+    if (!issueId) return Promise.resolve([] as Array<Extract<LinkHint, { kind: 'bitbucket-pr' }>>);
+    let p = devPanelCache.get(issueId);
+    if (!p) {
+      p = fetchJiraDevPanel({
+        connection, cloudBaseUrl, issueId, timeoutMs: 2000,
+      });
+      devPanelCache.set(issueId, p);
+    }
+    return p;
+  };
 
   const allNotifications: JiraNotification[] = [];
   // The old GET /rest/api/3/search endpoint was removed (410 Gone). We now use
@@ -232,22 +266,26 @@ export async function fetchJiraNotifications(
     pagesFetched++;
   }
 
-  const notifications = allNotifications.map((n): NotificationResponse => ({
-    id: `jira:${n.id}`,
-    source: 'jira',
-    type: mapNotificationType(n.category),
-    title: n.title,
-    body: n.content.slice(0, 200) || `${n.metadata?.projectKey} - ${n.category}`,
-    url: `${n.metadata?.jiraBaseUrl}/browse/${n.metadata?.issueKey}`,
-    project: n.metadata?.projectKey,
-    author: {
-      name: n.user?.displayName || 'Jira',
-      avatar: n.user?.avatarUrl,
-    },
-    unread: n.readState === 'unread',
-    createdAt: n.created,
-    updatedAt: n.updated || n.created,
-  }));
+  const notifications = await mapWithConcurrency(allNotifications, 5, async (n): Promise<NotificationResponse> => {
+    const linkHints = await getDevPanelHints(n.metadata?.issueId);
+    return {
+      id: `jira:${n.id}`,
+      source: 'jira',
+      type: mapNotificationType(n.category),
+      title: n.title,
+      body: n.content.slice(0, 200) || `${n.metadata?.projectKey} - ${n.category}`,
+      url: `${n.metadata?.jiraBaseUrl}/browse/${n.metadata?.issueKey}`,
+      project: n.metadata?.projectKey,
+      author: {
+        name: n.user?.displayName || 'Jira',
+        avatar: n.user?.avatarUrl,
+      },
+      unread: n.readState === 'unread',
+      createdAt: n.created,
+      updatedAt: n.updated || n.created,
+      ...(linkHints.length > 0 ? { linkHints } : {}),
+    };
+  });
 
   return {
     notifications,

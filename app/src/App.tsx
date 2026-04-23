@@ -12,6 +12,7 @@ import { DetailPane } from './components/DetailPane';
 import { Footer } from './components/Footer';
 import { Settings } from './components/Settings';
 import { Pulse } from './components/Pulse/Pulse';
+import { SuggestedLinks } from './components/SuggestedLinks';
 import { useUpdater } from './hooks/useUpdater';
 
 const STORE_KEY = 'auth';
@@ -68,8 +69,8 @@ function App() {
 
       const store = await load('config.json');
 
-      const savedTab = await store.get<'inbox' | 'pulse'>('activeTab');
-      if (savedTab === 'inbox' || savedTab === 'pulse') {
+      const savedTab = await store.get<'inbox' | 'pulse' | 'links'>('activeTab');
+      if (savedTab === 'inbox' || savedTab === 'pulse' || savedTab === 'links') {
         useAppStore.getState().setActiveTab(savedTab);
       }
 
@@ -162,13 +163,34 @@ function App() {
       if (e.key === '2' && !e.metaKey && !e.ctrlKey) {
         setActiveTab('pulse');
       }
+      if (e.key === '3' && !e.metaKey && !e.ctrlKey) {
+        setActiveTab('links');
+      }
       if (e.key === 'Enter' && selected) {
         void openUrl(selected.url).catch((err) => console.error('open url failed:', err));
         if (selected.unread) markAsRead(selected.id);
       }
+      if (e.key === 'Enter' && !selected) {
+        const rows = useAppStore.getState().rows;
+        const firstBundle = rows.find((r) => r.kind !== 'single');
+        if (firstBundle) {
+          useAppStore.getState().toggleExpanded(firstBundle.bundle.id);
+        }
+      }
       if (e.key === 'c' && !e.metaKey && !e.ctrlKey && !e.shiftKey) {
         e.preventDefault();
         document.getElementById('comment-textarea')?.focus();
+      }
+      if (e.key === 'm' && !e.metaKey && !e.ctrlKey && !e.shiftKey && selected) {
+        const rows = useAppStore.getState().rows;
+        const containing = rows.find((r) =>
+          r.kind === 'cross_bundle' && r.bundle.children.some((c) => c.id === selected.id)
+        );
+        if (containing && containing.kind === 'cross_bundle') {
+          e.preventDefault();
+          void useAppStore.getState().markCrossBundleRead(containing.bundle.id);
+          return;
+        }
       }
       if (e.key === 'm' && !e.metaKey && !e.ctrlKey && !e.shiftKey) {
         e.preventDefault();
@@ -241,9 +263,13 @@ function App() {
               <DetailPane notification={selected} />
             </section>
           </>
-        ) : (
+        ) : activeTab === 'pulse' ? (
           <section className="pulse-col">
             <Pulse />
+          </section>
+        ) : (
+          <section className="links-col">
+            <SuggestedLinks />
           </section>
         )}
       </main>

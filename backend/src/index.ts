@@ -4,6 +4,7 @@ import { logger } from 'hono/logger';
 import type { Env, Variables } from './types';
 import auth from './routes/auth';
 import connections from './routes/connections';
+import links from './routes/links';
 import notifications from './routes/notifications';
 import users from './routes/users';
 
@@ -30,6 +31,7 @@ app.get('/health', (c) => {
 
 app.route('/auth', auth);
 app.route('/connections', connections);
+app.route('/notifications/links', links);
 app.route('/notifications', notifications);
 app.route('/users', users);
 

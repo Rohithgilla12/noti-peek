@@ -1,5 +1,6 @@
 import type { NotificationResponse, Connection, NotificationFetchResult, Env } from '../types';
 import { TokenExpiredError } from '../types';
+import { linkHintsFromAttachments } from './linear-attachments';
 
 interface LinearNotification {
   id: string;
@@ -16,6 +17,7 @@ interface LinearNotification {
       name: string;
       key: string;
     };
+    attachments?: { nodes: Array<{ url: string }> };
   };
   comment?: {
     id: string;
@@ -70,6 +72,11 @@ const NOTIFICATIONS_QUERY = `
             team {
               name
               key
+            }
+            attachments(first: 10) {
+              nodes {
+                url
+              }
             }
           }
           comment {
@@ -216,22 +223,26 @@ export async function fetchLinearNotifications(
 
   const notifications = allNotifications
     .filter((n) => n.issue)
-    .map((n): NotificationResponse => ({
-      id: `linear:${n.id}`,
-      source: 'linear',
-      type: mapNotificationType(n.type),
-      title: n.issue!.title,
-      body: n.comment?.body?.slice(0, 200) || `${n.issue!.identifier} - ${n.issue!.team.name}`,
-      url: n.issue!.url,
-      project: n.issue!.team.name,
-      author: {
-        name: n.actor?.name || 'Linear',
-        avatar: n.actor?.avatarUrl || undefined,
-      },
-      unread: n.readAt === null,
-      createdAt: n.createdAt,
-      updatedAt: n.updatedAt,
-    }));
+    .map((n): NotificationResponse => {
+      const linkHints = linkHintsFromAttachments(n.issue?.attachments?.nodes);
+      return {
+        id: `linear:${n.id}`,
+        source: 'linear',
+        type: mapNotificationType(n.type),
+        title: n.issue!.title,
+        body: n.comment?.body?.slice(0, 200) || `${n.issue!.identifier} - ${n.issue!.team.name}`,
+        url: n.issue!.url,
+        project: n.issue!.team.name,
+        author: {
+          name: n.actor?.name || 'Linear',
+          avatar: n.actor?.avatarUrl || undefined,
+        },
+        unread: n.readAt === null,
+        createdAt: n.createdAt,
+        updatedAt: n.updatedAt,
+        ...(linkHints.length > 0 ? { linkHints } : {}),
+      };
+    });
 
   return {
     notifications,

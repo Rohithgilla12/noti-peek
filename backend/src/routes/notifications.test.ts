@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Connection, Env } from '../types';
+import type { Connection, Env, NotificationResponse } from '../types';
 import { InsufficientScopeError, TokenExpiredError } from '../types';
 
 const {
@@ -13,6 +13,8 @@ const {
   postJiraCommentMock,
   transitionJiraIssueMock,
   assignJiraSelfMock,
+  fetchGitHubNotificationsMock,
+  fetchLinearNotificationsMock,
 } = vi.hoisted(() => ({
   fetchPRDetailsMock: vi.fn(),
   fetchIssueDetailsMock: vi.fn(),
@@ -24,6 +26,8 @@ const {
   postJiraCommentMock: vi.fn(),
   transitionJiraIssueMock: vi.fn(),
   assignJiraSelfMock: vi.fn(),
+  fetchGitHubNotificationsMock: vi.fn(),
+  fetchLinearNotificationsMock: vi.fn(),
 }));
 
 vi.mock('../services/github-detail', () => ({
@@ -34,6 +38,22 @@ vi.mock('../services/github-detail', () => ({
   submitPRReview: submitPRReviewMock,
   mergePR: mergePRMock,
 }));
+
+vi.mock('../services/github', async () => {
+  const actual = await vi.importActual<typeof import('../services/github')>('../services/github');
+  return {
+    ...actual,
+    fetchGitHubNotifications: fetchGitHubNotificationsMock,
+  };
+});
+
+vi.mock('../services/linear', async () => {
+  const actual = await vi.importActual<typeof import('../services/linear')>('../services/linear');
+  return {
+    ...actual,
+    fetchLinearNotifications: fetchLinearNotificationsMock,
+  };
+});
 
 vi.mock('../services/jira-detail', async () => {
   const actual = await vi.importActual<typeof import('../services/jira-detail')>('../services/jira-detail');
@@ -70,6 +90,8 @@ function createMockDb() {
 
           return null;
         }),
+        all: vi.fn(async () => ({ results: [] })),
+        run: vi.fn(async () => ({ success: true })),
       }),
     })),
   } as unknown as D1Database;
@@ -81,10 +103,17 @@ function createMockDb() {
   };
 }
 
+function createMockExecutionCtx(): ExecutionContext {
+  return {
+    waitUntil: vi.fn((_promise: Promise<unknown>) => undefined),
+    passThroughOnException: vi.fn(),
+  } as unknown as ExecutionContext;
+}
+
 function seedConnection(
   mockDb: ReturnType<typeof createMockDb>,
   userId: string,
-  provider: 'github' | 'jira',
+  provider: 'github' | 'jira' | 'linear' | 'bitbucket',
 ): Connection {
   const conn: Connection = {
     id: `conn-${provider}`,
@@ -173,7 +202,8 @@ describe('Notifications route provider gating', () => {
         method: 'GET',
         headers: { Authorization: 'Bearer device-token-1' },
       },
-      env
+      env,
+      createMockExecutionCtx(),
     );
 
     expect(response.status).toBe(200);
@@ -184,7 +214,7 @@ describe('Notifications route provider gating', () => {
     }>();
     expect(Array.isArray(body.notifications)).toBe(true);
     expect(Array.isArray(body.rows)).toBe(true);
-    expect(body.bundling_version).toBe(1);
+    expect(body.bundling_version).toBe(2);
   });
 
   it('omits bundling fields when ?bundle=false is passed', async () => {
@@ -198,7 +228,8 @@ describe('Notifications route provider gating', () => {
         method: 'GET',
         headers: { Authorization: 'Bearer device-token-1' },
       },
-      env
+      env,
+      createMockExecutionCtx(),
     );
 
     expect(response.status).toBe(200);
@@ -624,5 +655,119 @@ describe('Notifications actions route', () => {
       reconnectUrl: '/auth/github/start',
       reconnectProvider: 'github',
     });
+  });
+});
+
+describe('GET /notifications — v2 envelope with cross-provider bundling', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('emits bundling_version: 2 and a cross_bundle row when title-prefix matches', async () => {
+    const mockDb = createMockDb();
+    mockDb.usersByToken.set('device-token-1', { id: 'user-1', device_token: 'device-token-1' });
+    seedConnection(mockDb, 'user-1', 'linear');
+    seedConnection(mockDb, 'user-1', 'github');
+    const env = createEnv(mockDb.db);
+
+    const linearNotif: NotificationResponse = {
+      id: 'linear:LIN-142',
+      source: 'linear',
+      type: 'issue',
+      title: 'Add rate limits',
+      url: 'https://linear.app/t/issue/LIN-142/add-rate-limits',
+      author: { name: 'alice' },
+      unread: true,
+      createdAt: '2026-04-20T10:00:00.000Z',
+      updatedAt: '2026-04-20T10:00:00.000Z',
+    };
+
+    const githubNotif: NotificationResponse = {
+      id: 'github:423',
+      source: 'github',
+      type: 'pr',
+      title: '[LIN-142] Add rate limits',
+      url: 'https://github.com/o/r/pull/423',
+      author: { name: 'alice' },
+      unread: true,
+      createdAt: '2026-04-20T11:00:00.000Z',
+      updatedAt: '2026-04-20T11:00:00.000Z',
+    };
+
+    fetchLinearNotificationsMock.mockResolvedValueOnce({ notifications: [linearNotif] });
+    fetchGitHubNotificationsMock.mockResolvedValueOnce({ notifications: [githubNotif], rateLimitInfo: undefined });
+
+    const response = await notifications.request(
+      '/',
+      { method: 'GET', headers: { Authorization: 'Bearer device-token-1' } },
+      env,
+      createMockExecutionCtx(),
+    );
+
+    expect(response.status).toBe(200);
+    const body = await response.json<{
+      notifications: NotificationResponse[];
+      rows: Array<{ kind: string }> | undefined;
+      bundling_version: number | undefined;
+      suggested_links: unknown[] | undefined;
+    }>();
+
+    expect(body.bundling_version).toBe(2);
+    expect(Array.isArray(body.rows)).toBe(true);
+    const crossBundleRows = body.rows!.filter((r) => r.kind === 'cross_bundle');
+    expect(crossBundleRows.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('emits no cross_bundle rows when CROSS_PROVIDER_BUNDLING env is "false"', async () => {
+    const mockDb = createMockDb();
+    mockDb.usersByToken.set('device-token-1', { id: 'user-1', device_token: 'device-token-1' });
+    seedConnection(mockDb, 'user-1', 'linear');
+    seedConnection(mockDb, 'user-1', 'github');
+    const env = { ...createEnv(mockDb.db), CROSS_PROVIDER_BUNDLING: 'false' };
+
+    const linearNotif: NotificationResponse = {
+      id: 'linear:LIN-142',
+      source: 'linear',
+      type: 'issue',
+      title: 'Add rate limits',
+      url: 'https://linear.app/t/issue/LIN-142/add-rate-limits',
+      author: { name: 'alice' },
+      unread: true,
+      createdAt: '2026-04-20T10:00:00.000Z',
+      updatedAt: '2026-04-20T10:00:00.000Z',
+    };
+
+    const githubNotif: NotificationResponse = {
+      id: 'github:423',
+      source: 'github',
+      type: 'pr',
+      title: '[LIN-142] Add rate limits',
+      url: 'https://github.com/o/r/pull/423',
+      author: { name: 'alice' },
+      unread: true,
+      createdAt: '2026-04-20T11:00:00.000Z',
+      updatedAt: '2026-04-20T11:00:00.000Z',
+    };
+
+    fetchLinearNotificationsMock.mockResolvedValueOnce({ notifications: [linearNotif] });
+    fetchGitHubNotificationsMock.mockResolvedValueOnce({ notifications: [githubNotif], rateLimitInfo: undefined });
+
+    const response = await notifications.request(
+      '/',
+      { method: 'GET', headers: { Authorization: 'Bearer device-token-1' } },
+      env,
+      createMockExecutionCtx(),
+    );
+
+    expect(response.status).toBe(200);
+    const body = await response.json<{
+      rows: Array<{ kind: string }> | undefined;
+      bundling_version: number | undefined;
+    }>();
+
+    expect(body.bundling_version).toBe(1);
+    expect(Array.isArray(body.rows)).toBe(true);
+    const crossBundleRows = body.rows!.filter((r) => r.kind === 'cross_bundle');
+    expect(crossBundleRows).toHaveLength(0);
   });
 });

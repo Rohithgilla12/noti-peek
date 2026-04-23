@@ -4,6 +4,15 @@ All notable changes to this project are documented here. The format is loosely b
 
 ## [Unreleased]
 
+## v0.7.0 — cross-provider bundling
+
+- New: cross-provider work-unit bundling. Linked Linear↔GitHub and Jira↔Bitbucket items now render as a single row.
+- New: Suggested Links view (kbd `3`) for fuzzy candidates you can confirm or dismiss.
+- New: Settings toggles for cross-provider bundling and suggestions.
+- New: keyboard `M` on a cross-bundle marks all children across both providers as read.
+- New: native Linear attachments and Jira dev-panel metadata drive strict auto-linking with no extra user setup.
+- Changed: `/notifications` response now emits `bundling_version: 2` and `rows[]` alongside the legacy flat `notifications[]`. Older clients keep working.
+
 ## [0.5.0] — 2026-04-22
 
 ### Added

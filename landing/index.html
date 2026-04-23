@@ -226,6 +226,26 @@
       }
       .sub-note .sep { margin: 0 10px; color: var(--line); }
 
+      /* ── Hero demo placeholder ───────────────────────── */
+      .hero-demo { margin-top: var(--space-8); }
+      .hero-demo-img {
+        display: block;
+        max-width: 100%;
+        height: auto;
+        border-radius: 12px;
+      }
+      .hero-demo-placeholder {
+        display: none;
+        place-items: center;
+        border: 2px dashed rgba(255,255,255,0.2);
+        border-radius: 12px;
+        padding: 60px;
+        color: rgba(255,255,255,0.5);
+        font-size: 14px;
+        background: rgba(255,255,255,0.02);
+        min-height: 280px;
+      }
+
       /* ── Mock panel ──────────────────────────────────── */
       .mock-wrap {
         margin-top: var(--space-8);
@@ -562,12 +582,12 @@
 
       <section class="hero">
         <h1>
-          One menubar. Every dev <em>notification.</em>
+          One row per unit of work. Not one row per <em>provider.</em>
         </h1>
         <p class="lede">
-          A fast macOS menubar app that unifies GitHub, Linear, Jira and
-          Bitbucket notifications — then bundles the noise so you only see
-          what actually changed.
+          Noti Peek links your Linear ticket to its GitHub PR (and Jira to its
+          Bitbucket PR) automatically. See every comment, review, and status
+          change in a single row.
         </p>
 
         <div class="cta-row">
@@ -583,6 +603,18 @@
         <p class="sub-note">
           macOS 11+<span class="sep">·</span>Apple-signed<span class="sep">·</span>Apple Silicon<span class="sep">·</span>Open source (MIT)<span class="sep">·</span>Auto-updates
         </p>
+
+        <div class="hero-demo" id="hero-demo">
+          <img
+            src="/assets/cross-provider-demo.gif"
+            alt="Noti Peek cross-provider bundling demo"
+            class="hero-demo-img"
+            onerror="this.style.display='none';var p=document.getElementById('hero-demo-placeholder');if(p)p.style.display='grid';"
+          />
+          <div id="hero-demo-placeholder" class="hero-demo-placeholder" style="display:none" aria-hidden="true">
+            <span>Demo coming soon</span>
+          </div>
+        </div>
 
         <div class="mock-wrap" aria-hidden="true">
           <div class="mock">
