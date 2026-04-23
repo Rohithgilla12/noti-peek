@@ -1527,7 +1527,11 @@ kbd {
 .topnav-search  { grid-area: search; }
 .topnav-actions { grid-area: actions; display: flex; align-items: center; gap: 6px; }
 
-.topnav-brand-dot  { width: 10px; height: 10px; border-radius: 2px; background: var(--ink-1); }
+.topnav-brand-dot {
+  width: 14px; height: 14px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--ink-1);
+}
 .topnav-brand-name {
   font-size: 11.5px;
   color: var(--ink-1);

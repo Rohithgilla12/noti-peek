@@ -3,6 +3,7 @@ import { countForQuickFilter, countForScope, countForSource } from '../../lib/vi
 import type { Provider } from '../../lib/types';
 import { SidebarSection } from './SidebarSection';
 import { SidebarItem } from './SidebarItem';
+import { BrandMark } from '../shared/BrandMark';
 import styles from './Sidebar.module.css';
 
 interface Props { onOpenSettings: () => void }
@@ -31,7 +32,7 @@ export function Sidebar({ onOpenSettings }: Props) {
   return (
     <aside className={styles.sidebar} data-rail={rail || undefined} aria-label="Navigation">
       <div className={styles.brand} data-tauri-drag-region>
-        <span className={styles.brandLogo} />
+        <span className={styles.brandLogo}><BrandMark size={14} /></span>
         <span>noti-peek</span>
       </div>
 

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAppStore, useUnreadCount } from '../store';
+import { BrandMark } from './shared/BrandMark';
 
 interface Props {
   onOpenSettings: () => void;
@@ -16,7 +17,7 @@ export function TopNav({ onOpenSettings }: Props) {
     <header className="topnav" data-tauri-drag-region>
       <div className="topnav-gutter" aria-hidden data-tauri-drag-region />
       <div className="topnav-brand" aria-hidden data-tauri-drag-region>
-        <span className="topnav-brand-dot" />
+        <span className="topnav-brand-dot"><BrandMark size={14} /></span>
         <span className="topnav-brand-name">noti-peek</span>
       </div>
       <nav className="topnav-tabs" role="tablist" data-tauri-drag-region>
