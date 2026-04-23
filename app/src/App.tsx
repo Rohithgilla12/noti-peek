@@ -13,6 +13,7 @@ import { Footer } from './components/Footer';
 import { Settings } from './components/Settings';
 import { Pulse } from './components/Pulse/Pulse';
 import { SuggestedLinks } from './components/SuggestedLinks';
+import { Sidebar } from './components/Sidebar';
 import { useUpdater } from './hooks/useUpdater';
 
 const STORE_KEY = 'auth';
@@ -33,8 +34,6 @@ function App() {
   const markAsRead = useAppStore((s) => s.markAsRead);
   const markAllAsRead = useAppStore((s) => s.markAllAsRead);
   const view = useAppStore((s) => s.view);
-  const activeTab = view.tab;
-  const setActiveTab = useAppStore((s) => s.setActiveTab);
 
   const selected = notifications.find((n) => n.id === selectedId) ?? null;
 
@@ -162,11 +161,36 @@ function App() {
   }, [isAuthenticated, fetchConnections, fetchNotifications, refreshInterval]);
 
   useEffect(() => {
+    let gPressedAt = 0; // sequence detector for `g i`, `g m`, etc.
+
     const onKey = (e: KeyboardEvent) => {
       const typing = (e.target as HTMLElement)?.closest('input, textarea, [contenteditable]');
       if (typing) return;
 
-      // ⌘R → refresh. Plain `r` also works when not typing.
+      const now = Date.now();
+      const gSequence = now - gPressedAt < 800;
+
+      if (e.key === 'g' && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+        gPressedAt = now;
+        return;
+      }
+
+      if (gSequence && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+        const { setScope } = useAppStore.getState();
+        const keyToScope: Record<string, Parameters<typeof setScope>[0]> = {
+          i: 'inbox', m: 'mentions', b: 'bookmarks', l: 'links', e: 'archive',
+        };
+        const scope = keyToScope[e.key];
+        if (scope) {
+          e.preventDefault();
+          setScope(scope);
+          useAppStore.getState().setTab('inbox');
+          gPressedAt = 0;
+          return;
+        }
+      }
+
+      // ⌘R / r → refresh
       if (e.key === 'r' && !e.altKey && !e.shiftKey) {
         e.preventDefault();
         fetchNotifications();
@@ -176,7 +200,7 @@ function App() {
         e.preventDefault();
         setShowSettings(true);
       }
-      // ⌘W → hide window (stay running in tray)
+      // ⌘W → hide window
       if (e.key === 'w' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         void getCurrentWindow().hide();
@@ -185,14 +209,16 @@ function App() {
         if (showSettings) setShowSettings(false);
         else if (selectedId) setSelectedId(null);
       }
+      // `1` / `2` — top-level tab switch (Inbox / Pulse). `3` dropped in Phase 1.
       if (e.key === '1' && !e.metaKey && !e.ctrlKey) {
-        setActiveTab('inbox');
+        useAppStore.getState().setTab('inbox');
       }
       if (e.key === '2' && !e.metaKey && !e.ctrlKey) {
-        setActiveTab('pulse');
+        useAppStore.getState().setTab('pulse');
       }
-      if (e.key === '3' && !e.metaKey && !e.ctrlKey) {
-        setActiveTab('links');
+      if (e.key === 'u' && !e.metaKey && !e.ctrlKey && !e.shiftKey) {
+        e.preventDefault();
+        useAppStore.getState().toggleQuickFilter('unread');
       }
       if (e.key === 'Enter' && selected) {
         void openUrl(selected.url).catch((err) => console.error('open url failed:', err));
@@ -212,7 +238,7 @@ function App() {
       if (e.key === 'm' && !e.metaKey && !e.ctrlKey && !e.shiftKey && selected) {
         const rows = useAppStore.getState().rows;
         const containing = rows.find((r) =>
-          r.kind === 'cross_bundle' && r.bundle.children.some((c) => c.id === selected.id)
+          r.kind === 'cross_bundle' && r.bundle.children.some((c) => c.id === selected.id),
         );
         if (containing && containing.kind === 'cross_bundle') {
           e.preventDefault();
@@ -235,7 +261,7 @@ function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [fetchNotifications, showSettings, selectedId, selected, setSelectedId, markAsRead, markAllAsRead, setActiveTab]);
+  }, [fetchNotifications, showSettings, selectedId, selected, setSelectedId, markAsRead, markAllAsRead]);
 
   const setFilter = useAppStore((s) => s.setFilter);
   const filter = useAppStore((s) => s.filter);
@@ -274,15 +300,26 @@ function App() {
   }
 
   return (
-    <div className="app-shell">
+    <div className="app-shell" data-tab={view.tab}>
       <TopNav onOpenSettings={() => setShowSettings(true)} />
       <UpdateBanner
         status={updaterStatus}
         manualFeedback={manualCheckActive}
         onInstall={() => void installNow()}
       />
-      <main className="app-main">
-        {activeTab === 'inbox' ? (
+      <div className="sidebar-col">
+        <Sidebar onOpenSettings={() => setShowSettings(true)} />
+      </div>
+      <main className="app-main" data-single-column={view.tab === 'pulse' || undefined}>
+        {view.tab === 'pulse' ? (
+          <section className="pulse-col">
+            <Pulse />
+          </section>
+        ) : view.scope === 'links' ? (
+          <section className="links-col">
+            <SuggestedLinks />
+          </section>
+        ) : (
           <>
             <section className="stream-col">
               <DayStream />
@@ -291,14 +328,6 @@ function App() {
               <DetailPane notification={selected} />
             </section>
           </>
-        ) : activeTab === 'pulse' ? (
-          <section className="pulse-col">
-            <Pulse />
-          </section>
-        ) : (
-          <section className="links-col">
-            <SuggestedLinks />
-          </section>
         )}
       </main>
       <Footer />
