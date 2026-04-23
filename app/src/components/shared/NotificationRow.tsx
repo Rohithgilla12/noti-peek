@@ -26,7 +26,10 @@ export function NotificationRow({ n, selected, onSelect, onOpen }: Props) {
         <span>{n.title}</span>
         {n.author?.name && <span className="note">· {n.author.name}</span>}
       </span>
-      <span className="time">{timeLabel(n.updatedAt)}</span>
+      <span className="time">
+        {n.bookmarked && <span className="bookmark-flag" aria-label="bookmarked" title="bookmarked">★</span>}
+        {timeLabel(n.updatedAt)}
+      </span>
     </button>
   );
 }

@@ -224,6 +224,13 @@ function App() {
         e.preventDefault();
         useAppStore.getState().toggleQuickFilter('unread');
       }
+      // `b` — toggle bookmark on the selected row. The `g b` branch above
+      // already consumed the event when navigating to Bookmarks, so the
+      // bare-`b` path only fires as a row action.
+      if (e.key === 'b' && !e.metaKey && !e.ctrlKey && !e.shiftKey && selected) {
+        e.preventDefault();
+        void useAppStore.getState().toggleBookmark(selected.id);
+      }
       if (e.key === 'Enter' && selected) {
         void openUrl(selected.url).catch((err) => console.error('open url failed:', err));
         if (selected.unread) markAsRead(selected.id);
