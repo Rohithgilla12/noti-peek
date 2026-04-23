@@ -4,6 +4,7 @@ import { load as loadTauriStore } from '@tauri-apps/plugin-store';
 import type { Notification, Connection, Provider, DetailResponse, NotificationRow, SuggestedLink } from '../lib/types';
 import { api } from '../lib/api';
 import * as db from '../lib/db';
+import { type ViewState, type Scope, type QuickFilter, DEFAULT_VIEW, matchesView } from '../lib/view';
 import { notifyNew } from '../lib/notify';
 import { buildExistingById, preserveMany, preserveRows } from '../lib/preserve-read';
 import {
@@ -84,18 +85,29 @@ interface AppState {
   notifications: Notification[];
   connections: Connection[];
 
-  filter: {
-    source: Provider | 'all';
-    unreadOnly: boolean;
-    type: string | 'all';
-  };
+  view: ViewState;
+
+  // New granular actions
+  setTab: (tab: 'inbox' | 'pulse') => void;
+  setScope: (scope: Scope) => void;
+  toggleQuickFilter: (f: QuickFilter) => void;
+  toggleSource: (p: Provider) => void;
+  clearSources: () => void;
+
+  // Bookmark / archive mutations
+  toggleBookmark: (id: string) => Promise<void>;
+  archiveNotification: (id: string) => Promise<void>;
+  unarchiveNotification: (id: string) => Promise<void>;
+
+  // Back-compat shim — remove in Task 10
+  setActiveTab: (tab: 'inbox' | 'pulse' | 'links') => void;
+  setFilter: (filter: { source?: Provider | 'all'; unreadOnly?: boolean; type?: string | 'all' }) => void;
+  activeTab: 'inbox' | 'pulse' | 'links';
+  filter: { source: Provider | 'all'; unreadOnly: boolean; type: string | 'all' };
 
   selectedNotificationId: string | null;
 
   refreshInterval: number;
-
-  activeTab: 'inbox' | 'pulse' | 'links';
-  setActiveTab: (tab: 'inbox' | 'pulse' | 'links') => void;
 
   rows: NotificationRow[];
   bundlingVersion: number;
@@ -117,7 +129,6 @@ interface AppState {
   setNotifications: (notifications: Notification[]) => void;
   setConnections: (connections: Connection[]) => void;
 
-  setFilter: (filter: Partial<AppState['filter']>) => void;
   setRefreshInterval: (interval: number) => void;
   setSelectedNotification: (id: string | null) => void;
 
@@ -155,11 +166,91 @@ export const useAppStore = create<AppState>((set, get) => ({
   notifications: [],
   connections: [],
 
-  filter: {
-    source: 'all',
-    unreadOnly: false,
-    type: 'all',
+  view: DEFAULT_VIEW,
+
+  setTab: (tab) => set((s) => ({
+    view: { ...s.view, tab },
+    activeTab: tab, // shim mirror, removed in Task 10
+  })),
+
+  setScope: (scope) => set((s) => ({
+    view: { ...s.view, scope },
+    activeTab: scope === 'bookmarks' || scope === 'archive' || scope === 'mentions' || scope === 'links'
+      ? s.view.tab
+      : s.view.tab,
+  })),
+
+  toggleQuickFilter: (f) => set((s) => {
+    const filters = new Set(s.view.filters);
+    if (filters.has(f)) filters.delete(f); else filters.add(f);
+    return { view: { ...s.view, filters } };
+  }),
+
+  toggleSource: (p) => set((s) => {
+    const sources = new Set(s.view.sources);
+    if (sources.has(p)) sources.delete(p); else sources.add(p);
+    return { view: { ...s.view, sources } };
+  }),
+
+  clearSources: () => set((s) => ({ view: { ...s.view, sources: new Set<Provider>() } })),
+
+  toggleBookmark: async (id) => {
+    set((state) => {
+      const notifications = state.notifications.map((n) =>
+        n.id === id ? { ...n, bookmarked: !n.bookmarked } : n,
+      );
+      return { notifications };
+    });
+    const updated = get().notifications.find((n) => n.id === id);
+    if (updated) await db.setNotificationBookmarked(id, !!updated.bookmarked);
   },
+
+  archiveNotification: async (id) => {
+    set((state) => ({
+      notifications: state.notifications.map((n) =>
+        n.id === id ? { ...n, archived: true } : n,
+      ),
+    }));
+    await db.setNotificationArchived(id, true);
+  },
+
+  unarchiveNotification: async (id) => {
+    set((state) => ({
+      notifications: state.notifications.map((n) =>
+        n.id === id ? { ...n, archived: false } : n,
+      ),
+    }));
+    await db.setNotificationArchived(id, false);
+  },
+
+  // ---- back-compat shim (removed in Task 10) ----
+  activeTab: 'inbox',
+  filter: { source: 'all', unreadOnly: false, type: 'all' },
+  setActiveTab: (tab) => set((s) => {
+    const topLevel: 'inbox' | 'pulse' = tab === 'pulse' ? 'pulse' : 'inbox';
+    const scope: Scope = tab === 'links' ? 'links' : 'inbox';
+    return {
+      activeTab: tab,
+      view: { ...s.view, tab: topLevel, scope: tab === 'pulse' ? s.view.scope : scope },
+    };
+  }),
+  setFilter: (f) => set((s) => {
+    const next = { ...s.view };
+    if (f.source !== undefined) {
+      const sources = new Set<Provider>();
+      if (f.source !== 'all') sources.add(f.source);
+      next.sources = sources;
+    }
+    if (f.unreadOnly !== undefined) {
+      const filters = new Set(next.filters);
+      if (f.unreadOnly) filters.add('unread'); else filters.delete('unread');
+      next.filters = filters;
+    }
+    return {
+      view: next,
+      filter: { ...s.filter, ...f },
+    };
+  }),
 
   selectedNotificationId: null,
 
@@ -172,9 +263,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   bundlingVersion: 1,
   suggestedLinks: [],
   expandedBundleIds: new Set<string>(),
-
-  activeTab: 'inbox',
-  setActiveTab: (activeTab) => set({ activeTab }),
 
   toggleExpanded: (id) => set((s) => {
     const next = new Set(s.expandedBundleIds);
@@ -239,10 +327,6 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setNotifications: (notifications) => set({ notifications }),
   setConnections: (connections) => set({ connections }),
-
-  setFilter: (filter) => set((state) => ({
-    filter: { ...state.filter, ...filter },
-  })),
 
   setRefreshInterval: (refreshInterval) => set({ refreshInterval }),
   setSelectedNotification: (selectedNotificationId) => set({ selectedNotificationId }),
@@ -386,24 +470,24 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   markAllAsRead: async () => {
-    const { filter } = get();
-    const source = filter.source === 'all' ? undefined : filter.source;
+    const { view } = get();
+    const sourceFilter: Provider | undefined =
+      view.sources.size === 1 ? [...view.sources][0] : undefined;
 
     set((state) => {
-      const notifications = state.notifications.map((n) =>
-        filter.source === 'all' || n.source === filter.source
-          ? { ...n, unread: false }
-          : n
-      );
-      const unreadCount = notifications.filter(n => n.unread).length;
+      const notifications = state.notifications.map((n) => {
+        const inScope = !sourceFilter || n.source === sourceFilter;
+        return inScope ? { ...n, unread: false } : n;
+      });
+      const unreadCount = notifications.filter((n) => n.unread).length;
       updateBadgeCount(unreadCount);
       return { notifications, rows: markRowsReadAll(state.rows) };
     });
 
-    await db.markAllNotificationsRead(source);
+    await db.markAllNotificationsRead(sourceFilter);
 
     try {
-      await api.markAllAsRead(source);
+      await api.markAllAsRead(sourceFilter);
     } catch (err) {
       console.error('Failed to sync mark all as read:', err);
     }
@@ -476,14 +560,8 @@ export const useAppStore = create<AppState>((set, get) => ({
 
 export const useFilteredNotifications = () => {
   const notifications = useAppStore((state) => state.notifications);
-  const filter = useAppStore((state) => state.filter);
-
-  return notifications.filter((n) => {
-    if (filter.source !== 'all' && n.source !== filter.source) return false;
-    if (filter.unreadOnly && !n.unread) return false;
-    if (filter.type !== 'all' && n.type !== filter.type) return false;
-    return true;
-  });
+  const view = useAppStore((state) => state.view);
+  return notifications.filter((n) => matchesView(n, view));
 };
 
 export const useNotificationTypes = () => {
@@ -495,4 +573,17 @@ export const useNotificationTypes = () => {
 export const useUnreadCount = () => {
   const notifications = useAppStore((state) => state.notifications);
   return notifications.filter((n) => n.unread).length;
+};
+
+export const useErroringProviders = () => {
+  const error = useAppStore((state) => state.error);
+  if (!error) return [] as Provider[];
+  const providers: Provider[] = [];
+  for (const chunk of error.split(',')) {
+    const [p] = chunk.trim().split(':');
+    if (p === 'github' || p === 'linear' || p === 'jira' || p === 'bitbucket') {
+      providers.push(p);
+    }
+  }
+  return providers;
 };
