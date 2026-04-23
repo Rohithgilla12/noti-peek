@@ -252,15 +252,28 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     try {
       const response = await api.getNotifications();
-      const { notifications, errors } = response;
+      const { notifications: incoming, errors } = response;
+
+      // Preserve local "read" intent across syncs. Providers like GitHub are
+      // eventually consistent — right after mark-all-as-read, GET still
+      // returns unread:true for the same threads, which would otherwise
+      // clobber the local state. We only trust the provider's unread flag
+      // when updatedAt has advanced (i.e. there's genuine new activity).
+      const existingById = new Map(existingNotifications.map((n) => [n.id, n]));
+      const notifications = incoming.map((n) => {
+        const prev = existingById.get(n.id);
+        if (prev && !prev.unread && new Date(n.updatedAt).getTime() <= new Date(prev.updatedAt).getTime()) {
+          return { ...n, unread: false };
+        }
+        return n;
+      });
 
       // Diff against the previous fetch to find notifications we haven't
       // told the OS about yet. Only fire system notifications once we
       // have a prior sync on record — otherwise first launch after a
       // long weekend would spam a wall of banners.
-      const previousIds = new Set(existingNotifications.map((n) => n.id));
       const newlyArrived = lastSyncTime
-        ? notifications.filter((n) => n.unread && !previousIds.has(n.id))
+        ? notifications.filter((n) => n.unread && !existingById.has(n.id))
         : [];
 
       const prefs = await readBundlingPrefs();
