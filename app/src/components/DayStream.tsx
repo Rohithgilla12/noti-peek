@@ -42,9 +42,11 @@ const rowLatestMs = (r: NotificationRow): number => {
 };
 
 export function DayStream() {
-  const filter = useAppStore((s) => s.filter);
-  const setFilter = useAppStore((s) => s.setFilter);
-  const scope = useAppStore((s) => s.view.scope);
+  const view = useAppStore((s) => s.view);
+  const toggleQuickFilter = useAppStore((s) => s.toggleQuickFilter);
+  const toggleSource = useAppStore((s) => s.toggleSource);
+  const clearSources = useAppStore((s) => s.clearSources);
+  const scope = view.scope;
   const isLoading = useAppStore((s) => s.isLoading);
   const error = useAppStore((s) => s.error);
   const selectedId = useAppStore((s) => s.selectedNotificationId);
@@ -62,6 +64,24 @@ export function DayStream() {
   const notifications = useFilteredNotifications();
   const unread = useUnreadCount();
 
+  // The chips are radio-like: a single active source or "all". Derive from
+  // the multi-select `view.sources` set — if exactly one is picked treat it
+  // as the active chip, otherwise "all".
+  const activeSource: FilterSource =
+    view.sources.size === 1 ? ([...view.sources][0] as Provider) : 'all';
+  const unreadOnly = view.filters.has('unread');
+
+  const pickSource = (value: FilterSource) => {
+    // Emulate radio-toggle on top of the multi-select source set.
+    if (value === 'all') {
+      clearSources();
+      return;
+    }
+    if (view.sources.size === 1 && view.sources.has(value)) return;
+    clearSources();
+    toggleSource(value);
+  };
+
   const effectiveRows: NotificationRow[] = useMemo(() => {
     if (rows.length > 0) return rows;
     return notifications.map((n) => ({ kind: 'single' as const, notification: n }));
@@ -69,22 +89,21 @@ export function DayStream() {
 
   const filteredRows: NotificationRow[] = useMemo(() => {
     const matches = (n: Notification) =>
-      (filter.source === 'all' || n.source === filter.source) &&
-      (filter.type === 'all' || n.type === filter.type);
+      activeSource === 'all' || n.source === activeSource;
 
     return effectiveRows.filter((r) => {
       if (r.kind === 'single') return matches(r.notification);
       return r.bundle.children.some((c: Notification) => matches(c));
     });
-  }, [effectiveRows, filter.source, filter.type]);
+  }, [effectiveRows, activeSource]);
 
   const visibleRows: NotificationRow[] = useMemo(() => {
-    if (!filter.unreadOnly) return filteredRows;
+    if (!unreadOnly) return filteredRows;
     return filteredRows.filter((r) => {
       if (r.kind === 'single') return r.notification.unread;
       return r.bundle.unread_count > 0;
     });
-  }, [filteredRows, filter.unreadOnly]);
+  }, [filteredRows, unreadOnly]);
 
   const grouped = useMemo(() => {
     const m = new Map<number, NotificationRow[]>();
@@ -146,8 +165,8 @@ export function DayStream() {
               <button
                 key={s.value}
                 role="tab"
-                aria-current={filter.source === s.value}
-                onClick={() => setFilter({ source: s.value })}
+                aria-current={activeSource === s.value}
+                onClick={() => pickSource(s.value)}
                 type="button"
               >
                 {s.label}
@@ -165,8 +184,8 @@ export function DayStream() {
           </button>
           <button
             className="unread-toggle"
-            aria-pressed={filter.unreadOnly}
-            onClick={() => setFilter({ unreadOnly: !filter.unreadOnly })}
+            aria-pressed={unreadOnly}
+            onClick={() => toggleQuickFilter('unread')}
             type="button"
           >
             unread only

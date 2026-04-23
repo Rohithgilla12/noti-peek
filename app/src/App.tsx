@@ -70,8 +70,12 @@ function App() {
       const store = await load('config.json');
 
       const savedTab = await store.get<'inbox' | 'pulse' | 'links'>('activeTab');
-      if (savedTab === 'inbox' || savedTab === 'pulse' || savedTab === 'links') {
-        useAppStore.getState().setActiveTab(savedTab);
+      if (savedTab === 'inbox' || savedTab === 'pulse') {
+        useAppStore.getState().setTab(savedTab);
+      } else if (savedTab === 'links') {
+        // Legacy top-level 'links' tab is now a scope under the inbox tab.
+        useAppStore.getState().setTab('inbox');
+        useAppStore.getState().setScope('links');
       }
 
       const savedView = await store.get<{
@@ -263,9 +267,6 @@ function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, [fetchNotifications, showSettings, selectedId, selected, setSelectedId, markAsRead, markAllAsRead]);
 
-  const setFilter = useAppStore((s) => s.setFilter);
-  const filter = useAppStore((s) => s.filter);
-
   // Native app menu + tray right-click menu both dispatch these events
   // from Rust so the frontend doesn't have to know where they came from.
   useEffect(() => {
@@ -273,14 +274,14 @@ function App() {
       listen('open-preferences', () => setShowSettings(true)),
       listen('menu-refresh', () => fetchNotifications()),
       listen('menu-toggle-unread', () =>
-        setFilter({ unreadOnly: !filter.unreadOnly }),
+        useAppStore.getState().toggleQuickFilter('unread'),
       ),
       listen('menu-check-updates', () => handleManualCheck()),
     ];
     return () => {
       for (const p of unlisteners) void p.then((fn) => fn());
     };
-  }, [fetchNotifications, setFilter, filter.unreadOnly, handleManualCheck]);
+  }, [fetchNotifications, handleManualCheck]);
 
   if (isInitializing) {
     return (

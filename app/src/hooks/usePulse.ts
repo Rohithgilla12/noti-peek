@@ -20,7 +20,7 @@ export interface UsePulseResult {
 
 export function usePulse(filter: PulseFilter): UsePulseResult {
   const lastSyncTime = useAppStore((s) => s.lastSyncTime);
-  const activeTab = useAppStore((s) => s.activeTab);
+  const activeTab = useAppStore((s) => s.view.tab);
 
   const [metrics, setMetrics] = useState<PulseMetrics | null>(null);
   const [archive, setArchive] = useState<ArchivePage | null>(null);
