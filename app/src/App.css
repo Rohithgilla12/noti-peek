@@ -554,11 +554,18 @@ kbd {
 .empty-state {
   display: grid;
   place-items: center;
-  height: 60%;
+  text-align: center;
+  padding: 64px 24px;
   color: var(--ink-3);
-  font-family: var(--font-serif);
-  font-style: italic;
-  font-size: 16px;
+  gap: 6px;
+  height: 100%;
+}
+.empty-state-title {
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.empty-state-body {
+  font-size: 12px;
 }
 
 .error-banner {

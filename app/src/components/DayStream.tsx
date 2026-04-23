@@ -6,6 +6,23 @@ import { startOfDay, dayLabel } from '../lib/days';
 import { RowDispatcher } from './shared/RowDispatcher';
 import { trackCrossBundleRendered } from '../lib/telemetry-events';
 
+const EMPTY_COPY: Record<string, { title: string; body: string }> = {
+  inbox:     { title: "You're all caught up.", body: 'New updates land here.' },
+  mentions:  { title: 'No mentions.',           body: "You'll see @mentions and review requests here." },
+  bookmarks: { title: 'No bookmarks yet.',      body: 'Press `b` on any row to save it for later.' },
+  archive:   { title: 'Nothing archived.',      body: 'Archived notifications live here.' },
+};
+
+function EmptyState({ scope }: { scope: keyof typeof EMPTY_COPY }) {
+  const copy = EMPTY_COPY[scope] ?? EMPTY_COPY.inbox;
+  return (
+    <div className="empty-state">
+      <div className="empty-state-title">{copy.title}</div>
+      <div className="empty-state-body">{copy.body}</div>
+    </div>
+  );
+}
+
 type FilterSource = Provider | 'all';
 
 const SOURCES: Array<{ value: FilterSource; label: string; experimental?: boolean }> = [
@@ -27,6 +44,7 @@ const rowLatestMs = (r: NotificationRow): number => {
 export function DayStream() {
   const filter = useAppStore((s) => s.filter);
   const setFilter = useAppStore((s) => s.setFilter);
+  const scope = useAppStore((s) => s.view.scope);
   const isLoading = useAppStore((s) => s.isLoading);
   const error = useAppStore((s) => s.error);
   const selectedId = useAppStore((s) => s.selectedNotificationId);
@@ -179,9 +197,7 @@ export function DayStream() {
         )}
 
         {!isLoading && visibleRows.length === 0 && !error && (
-          <div className="empty-state">
-            you're all caught up
-          </div>
+          <EmptyState scope={scope as keyof typeof EMPTY_COPY} />
         )}
 
         {grouped.map(([day, items]) => {
