@@ -4,6 +4,10 @@ All notable changes to this project are documented here. The format is loosely b
 
 ## [Unreleased]
 
+## v0.7.1 — read-state preservation on rows
+
+- Fix: resync no longer flips just-marked-read notifications back to unread in the inbox. v0.7.0's `rows[]` envelope wasn't running through the local-state preservation merge that the flat list got in v0.6.x, so provider eventual-consistency could repopulate the UI with stale `unread: true`. Extracted to `lib/preserve-read.ts` with 10 unit tests; applied to singletons, bundles, and cross-bundles.
+
 ## v0.7.0 — cross-provider bundling
 
 - New: cross-provider work-unit bundling. Linked Linear↔GitHub and Jira↔Bitbucket items now render as a single row.
