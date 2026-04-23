@@ -226,162 +226,73 @@
       }
       .sub-note .sep { margin: 0 10px; color: var(--line); }
 
-      /* ── Hero demo animation ─────────────────────────── */
+      /* ── Hero demo (three-pane) ─────────────────────────── */
       .hero-demo {
-        margin-top: var(--space-8);
-        width: 100%;
-        max-width: 680px;
-        aspect-ratio: 16 / 10;
-        background: var(--bg);
-        background-image: radial-gradient(var(--line-soft) 1px, transparent 1px);
-        background-size: 20px 20px;
-        border: 1px solid var(--line-soft);
-        border-radius: 12px;
+        margin-top: 48px;
+        border-radius: 14px;
         overflow: hidden;
-        position: relative;
-        box-shadow: 0 24px 60px -28px oklch(0% 0 0 / 0.6);
-        user-select: none;
+        background: #0c0c10;
+        box-shadow: 0 40px 120px rgba(0,0,0,0.45);
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
       }
-      .demo-menubar {
-        height: 28px;
-        background: oklch(17% 0.008 80 / 0.8);
-        backdrop-filter: blur(12px);
-        border-bottom: 1px solid var(--line-soft);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0 16px;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        font-size: 13px;
-        color: var(--ink-1);
-        font-weight: 500;
-        letter-spacing: 0.02em;
+      .demo-window { display: flex; flex-direction: column; }
+      .demo-window-chrome {
+        display: flex; align-items: center; gap: 6px;
+        padding: 8px 12px; background: #111114; border-bottom: 1px solid #1f1f25;
       }
-      .demo-menu-left, .demo-menu-right {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-      }
-      .demo-tray-icon {
-        color: var(--ink-2);
-        display: flex;
-        align-items: center;
-        border-radius: 4px;
-        padding: 2px 6px;
-        margin: 0 -6px;
-        animation: tray-active 8s infinite;
-      }
-      .demo-app-panel {
-        position: absolute;
-        top: 34px;
-        right: 16px;
-        width: 480px;
-        background: var(--bg-elev);
-        border: 1px solid var(--line-soft);
-        border-radius: 12px;
-        padding: 4px;
-        box-shadow:
-          0 1px 0 oklch(100% 0 0 / 0.04) inset,
-          0 24px 60px -28px oklch(0% 0 0 / 0.8);
-        opacity: 0;
-        transform: scale(0.96) translateY(-6px);
-        transform-origin: top right;
-        filter: blur(4px);
-        animation: panel-enter 8s infinite cubic-bezier(0.16, 1, 0.3, 1);
-        z-index: 5;
-      }
-      
-      .demo-bundle-items {
+      .demo-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+      .demo-dot-red    { background: #ff5f57; }
+      .demo-dot-yellow { background: #febc2e; }
+      .demo-dot-green  { background: #28c840; }
+      .demo-window-title { margin-left: auto; font-size: 11px; color: #6b6b75; }
+      .demo-window-body {
         display: grid;
-        grid-template-rows: 0fr;
-        animation: bundle-expand 8s infinite cubic-bezier(0.25, 1, 0.5, 1);
+        grid-template-columns: 180px 220px 1fr;
+        min-height: 360px;
+        position: relative;
       }
-      .demo-bundle-inner {
-        overflow: hidden;
+      .demo-sidebar { padding: 12px 8px; border-right: 1px solid #1f1f25; color: #b6b6bd; font-size: 11px; }
+      .demo-sidebar-brand { display: flex; align-items: center; gap: 6px; padding: 0 6px 12px; color: #e4e4e7; font-size: 12px; }
+      .demo-sidebar-dot { width: 10px; height: 10px; border-radius: 3px; background: #e4e4e7; }
+      .demo-sidebar-section { margin-bottom: 12px; }
+      .demo-sidebar-label { font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: #57575e; padding: 0 6px; margin-bottom: 4px; }
+      .demo-sidebar-item { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 4px; color: #9a9aa2; }
+      .demo-sidebar-item-active { background: #1b1b22; color: #f3f3f5; }
+      .demo-sidebar-icon { width: 12px; text-align: center; color: #6b6b75; }
+      .demo-sidebar-count { margin-left: auto; font-size: 10px; color: #6b6b75; background: #1b1b22; padding: 0 6px; border-radius: 999px; }
+      .demo-sidebar-item-active .demo-sidebar-count { color: #e4e4e7; background: #2a2a31; }
+      .demo-stream { padding: 8px; border-right: 1px solid #1f1f25; display: flex; flex-direction: column; gap: 4px; }
+      .demo-stream-row { padding: 8px; border-radius: 6px; background: #141418; }
+      .demo-stream-row:first-child { background: #1b1b22; outline: 1px solid #262630; }
+      .demo-stream-title { color: #f3f3f5; font-size: 12px; margin-bottom: 2px; }
+      .demo-stream-sub { color: #6b6b75; font-size: 10px; }
+      .demo-detail { padding: 20px; display: flex; flex-direction: column; gap: 8px; }
+      .demo-detail-crumb { color: #6b6b75; font-size: 10px; }
+      .demo-detail-title { color: #f3f3f5; margin: 0; font-size: 18px; font-weight: 500; }
+      .demo-detail-body  { color: #9a9aa2; font-size: 12px; }
+      .demo-detail-action { margin-top: auto; align-self: flex-start; background: #f3f3f5; color: #0c0c10; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; cursor: pointer; }
+
+      /* Animations — same budget as the old demo (one pulse + a cursor loop). */
+      .demo-pulse-count { animation: demo-pulse 2.8s ease-in-out infinite; }
+      @keyframes demo-pulse {
+        0%, 80%, 100% { transform: scale(1); opacity: 1; }
+        40%            { transform: scale(1.12); opacity: 0.85; }
       }
-      .demo-sub-item {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 10px 0 0;
-        margin-top: 10px;
-        border-top: 1px dashed var(--line-soft);
-        font-size: 13px;
-        color: var(--ink-2);
-      }
-      .demo-sub-item .avatar { width: 20px; height: 20px; font-size: 9px; }
-      
-      .demo-row-1 {
-        animation: row-fade 8s infinite cubic-bezier(0.16, 1, 0.3, 1);
-      }
-      .demo-mark-read {
-        cursor: pointer;
-        opacity: 0;
-        transform: translateY(2px);
-        animation: button-appear 8s infinite cubic-bezier(0.16, 1, 0.3, 1);
-        color: var(--ink-1);
-        background: var(--bg-elev-2);
-        border: 1px solid var(--ink-3);
-        border-radius: 6px;
-        padding: 5px 10px;
-        font-family: var(--font-body);
-        font-size: 12px;
-        font-weight: 500;
-        text-transform: none;
-        letter-spacing: normal;
-        margin-top: 6px;
-      }
-      
       .demo-cursor {
         position: absolute;
-        width: 24px;
-        height: 24px;
-        top: 0;
-        left: 0;
-        z-index: 10;
+        width: 14px; height: 18px;
+        background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 18'%3E%3Cpath d='M1 1 L1 15 L4 12 L7 17 L9 16 L6 11 L11 11 Z' fill='%23f3f3f5' stroke='%230c0c10' stroke-width='1'/%3E%3C/svg%3E") no-repeat center / contain;
+        animation: demo-cursor 6s cubic-bezier(0.65, 0.05, 0.36, 1) infinite;
         pointer-events: none;
-        filter: drop-shadow(0 3px 6px rgba(0,0,0,0.5));
-        animation: cursor-move 8s infinite cubic-bezier(0.4, 0, 0.2, 1);
       }
-      
-      @keyframes cursor-move {
-        0%, 10% { transform: translate(250px, 250px); }
-        15%, 22% { transform: translate(calc(100% - 94px), 14px); }
-        18% { transform: translate(calc(100% - 94px), 14px) scale(0.9); }
-        32%, 46% { transform: translate(calc(100% - 200px), 114px); }
-        36% { transform: translate(calc(100% - 200px), 114px) scale(0.9); }
-        56%, 66% { transform: translate(calc(100% - 70px), 80px); }
-        61% { transform: translate(calc(100% - 70px), 80px) scale(0.9); }
-        76%, 100% { transform: translate(250px, 250px); }
-      }
-      @keyframes panel-enter {
-        0%, 16% { opacity: 0; transform: scale(0.96) translateY(-8px); filter: blur(4px); }
-        19%, 71% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
-        75%, 100% { opacity: 0; transform: scale(0.96) translateY(-8px); filter: blur(4px); }
-      }
-      @keyframes bundle-expand {
-        0%, 36% { grid-template-rows: 0fr; }
-        42%, 62% { grid-template-rows: 1fr; }
-        67%, 100% { grid-template-rows: 0fr; }
-      }
-      @keyframes button-appear {
-        0%, 54% { opacity: 0; transform: translateY(2px) scale(0.95); }
-        57%, 62% { opacity: 1; transform: translateY(0) scale(1); }
-        65%, 100% { opacity: 0; transform: translateY(2px) scale(0.95); }
-      }
-      @keyframes fade-out-button {
-        0%, 54% { opacity: 1; }
-        55%, 64% { opacity: 0; }
-        65%, 100% { opacity: 1; }
-      }
-      @keyframes row-fade {
-        0%, 61% { opacity: 1; filter: blur(0); transform: scale(1); border-bottom-color: var(--line-soft); }
-        66%, 100% { opacity: 0; filter: blur(4px); transform: scale(0.98); border-bottom-color: transparent; }
-      }
-      @keyframes tray-active {
-        0%, 16% { background: transparent; color: var(--ink-2); }
-        18%, 71% { background: oklch(100% 0 0 / 0.1); color: var(--ink-1); }
-        73%, 100% { background: transparent; color: var(--ink-2); }
+      @keyframes demo-cursor {
+        0%   { left: 210px; top: 90px; opacity: 0; }
+        8%   { opacity: 1; }
+        40%  { left: 210px; top: 90px; }
+        55%  { left: 510px; top: 300px; }
+        75%  { left: 510px; top: 300px; }
+        85%  { opacity: 0; }
+        100% { left: 510px; top: 300px; opacity: 0; }
       }
 
       /* ── Mock panel ──────────────────────────────────── */
@@ -743,66 +654,44 @@
         </p>
 
         <div class="hero-demo" id="hero-demo" aria-hidden="true">
-          <div class="demo-menubar">
-            <div class="demo-menu-left">
-              <svg width="16" height="18" viewBox="0 0 14 16" fill="var(--ink-1)"><path d="M7 0C3.13 0 0 3.13 0 7c0 3.87 3.13 7 7 7s7-3.13 7-7c0-3.87-3.13-7-7-7zm0 12.5c-3.03 0-5.5-2.47-5.5-5.5S3.97 1.5 7 1.5 12.5 3.97 12.5 7 9.03 12.5 7 12.5z"/></svg>
-              <span>File</span><span>Edit</span><span>View</span>
+          <div class="demo-window">
+            <div class="demo-window-chrome">
+              <span class="demo-dot demo-dot-red"></span>
+              <span class="demo-dot demo-dot-yellow"></span>
+              <span class="demo-dot demo-dot-green"></span>
+              <div class="demo-window-title">noti-peek</div>
             </div>
-            <div class="demo-menu-right">
-              <span class="demo-tray-icon">
-                <svg width="14" height="14" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4">
-                  <rect width="64" height="64" rx="14" fill="transparent" stroke="none" />
-                  <circle cx="32" cy="32" r="18" />
-                  <circle cx="42" cy="26" r="4.5" fill="currentColor" stroke="none" />
-                </svg>
-              </span>
-              <span>10:42 PM</span>
-            </div>
-          </div>
-          
-          <div class="demo-app-panel">
-            <div class="mock-head">
-              <span class="tray" aria-hidden="true"></span>
-              <span>noti-peek</span>
-              <span class="count">2 unread</span>
-            </div>
-            
-            <div class="mock-row demo-row-1">
-              <div class="avatar stack" style="align-self: start; margin-top: 2px;">
-                <span>RG</span><span>JP</span><span>MK</span>
-              </div>
-              <div>
-                <div class="title"><span class="dot"></span>rohithgilla/noti-peek#42 — smart bundling PR</div>
-                <div class="meta">3 reviews · 2 comments · bundle of 5 · 12m</div>
-                
-                <div class="demo-bundle-items">
-                  <div class="demo-bundle-inner">
-                    <div class="demo-sub-item"><span class="avatar">JP</span> Approved these changes</div>
-                    <div class="demo-sub-item"><span class="avatar">RG</span> Pushed new commit: smart layout</div>
-                    <div class="demo-sub-item"><span class="avatar">MK</span> Left a review comment</div>
+            <div class="demo-window-body">
+              <aside class="demo-sidebar">
+                <div class="demo-sidebar-brand"><span class="demo-sidebar-dot"></span>noti-peek</div>
+                <div class="demo-sidebar-section">
+                  <div class="demo-sidebar-label">Views</div>
+                  <div class="demo-sidebar-item demo-sidebar-item-active">
+                    <span class="demo-sidebar-icon">#</span>Inbox<span class="demo-sidebar-count demo-pulse-count">12</span>
                   </div>
+                  <div class="demo-sidebar-item"><span class="demo-sidebar-icon">@</span>Mentions<span class="demo-sidebar-count">3</span></div>
+                  <div class="demo-sidebar-item"><span class="demo-sidebar-icon">★</span>Bookmarks<span class="demo-sidebar-count">4</span></div>
+                  <div class="demo-sidebar-item"><span class="demo-sidebar-icon">▣</span>Archive</div>
                 </div>
-              </div>
-              <div style="align-self: start; display: grid;">
-                <span class="tag bundle" style="grid-area: 1/1; justify-self: end; animation: fade-out-button 8s infinite cubic-bezier(0.16, 1, 0.3, 1); margin-top: 6px;">bundle</span>
-                <span class="demo-mark-read" style="grid-area: 1/1;">Mark read</span>
-              </div>
+                <div class="demo-sidebar-section">
+                  <div class="demo-sidebar-label">Integrations</div>
+                  <div class="demo-sidebar-item"><span class="demo-sidebar-icon">G</span>GitHub<span class="demo-sidebar-count">8</span></div>
+                  <div class="demo-sidebar-item"><span class="demo-sidebar-icon">L</span>Linear<span class="demo-sidebar-count">2</span></div>
+                </div>
+              </aside>
+              <section class="demo-stream">
+                <div class="demo-stream-row"><div class="demo-stream-title">fix: harden error paths</div><div class="demo-stream-sub">GitHub · PR · 14:32</div></div>
+                <div class="demo-stream-row"><div class="demo-stream-title">Push notification silently drops</div><div class="demo-stream-sub">Linear · ENG-219 · 11:20</div></div>
+                <div class="demo-stream-row"><div class="demo-stream-title">re: detail pane keyboard shortcuts</div><div class="demo-stream-sub">Jira · PEEK-44 · 09:06</div></div>
+              </section>
+              <section class="demo-detail">
+                <div class="demo-detail-crumb">GitHub · Pull Request · Merged</div>
+                <h3 class="demo-detail-title">fix: harden error paths</h3>
+                <div class="demo-detail-body">token refresh, in-flight dedup, sanitize guards</div>
+                <button class="demo-detail-action">Mark read</button>
+              </section>
+              <div class="demo-cursor"></div>
             </div>
-
-            <div class="mock-row demo-row-2">
-              <div class="avatar">DS</div>
-              <div>
-                <div class="title"><span class="dot"></span>ENG-214 — release blocker: D1 write contention</div>
-                <div class="meta">linear · assigned to you · 41m</div>
-              </div>
-              <span class="tag">linear</span>
-            </div>
-          </div>
-
-          <div class="demo-cursor">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M5.5 2L11.5 20.5L14.5 13.5L21.5 10.5L5.5 2Z" fill="var(--ink-1)" stroke="var(--bg)" stroke-width="1.5" stroke-linejoin="round"/>
-            </svg>
           </div>
         </div>
 
