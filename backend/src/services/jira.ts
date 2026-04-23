@@ -2,6 +2,25 @@ import type { NotificationResponse, Connection, NotificationFetchResult, Env, Li
 import { TokenExpiredError } from '../types';
 import { fetchJiraDevPanel } from './jira-dev-panel';
 
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  worker: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let next = 0;
+  async function run() {
+    while (true) {
+      const i = next++;
+      if (i >= items.length) return;
+      results[i] = await worker(items[i], i);
+    }
+  }
+  const runners = Array.from({ length: Math.min(limit, items.length) }, () => run());
+  await Promise.all(runners);
+  return results;
+}
+
 interface JiraNotification {
   id: string;
   title: string;
@@ -247,7 +266,7 @@ export async function fetchJiraNotifications(
     pagesFetched++;
   }
 
-  const notifications = await Promise.all(allNotifications.map(async (n): Promise<NotificationResponse> => {
+  const notifications = await mapWithConcurrency(allNotifications, 5, async (n): Promise<NotificationResponse> => {
     const linkHints = await getDevPanelHints(n.metadata?.issueId);
     return {
       id: `jira:${n.id}`,
@@ -266,7 +285,7 @@ export async function fetchJiraNotifications(
       updatedAt: n.updated || n.created,
       ...(linkHints.length > 0 ? { linkHints } : {}),
     };
-  }));
+  });
 
   return {
     notifications,

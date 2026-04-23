@@ -2,9 +2,10 @@ import { Hono } from 'hono';
 import type { Env, Variables, WorkLinkPair } from '../types';
 import { authMiddleware } from '../middleware/auth';
 import {
-  upsertWorkLink,
   upsertSuggestionDecision,
   clearDismissedSuggestions,
+  prepareUpsertWorkLink,
+  prepareUpsertSuggestionDecision,
 } from '../services/work-links-repo';
 
 const links = new Hono<{ Bindings: Env; Variables: Variables }>();
@@ -38,24 +39,26 @@ links.post('/confirm', async (c) => {
   if (!parsed) return c.json({ error: 'invalid payload' }, 400);
 
   const nowIso = new Date().toISOString();
-  await upsertWorkLink(c.env.DB, {
-    user_id: user.id,
-    pair: parsed.pair,
-    primary_key: parsed.primary_key,
-    linked_ref: parsed.linked_ref,
-    signal: 'confirmed-fuzzy',
-    strict_source: null,
-    confirmed_at: nowIso,
-    last_seen_at: nowIso,
-  });
-  await upsertSuggestionDecision(c.env.DB, {
-    user_id: user.id,
-    pair: parsed.pair,
-    primary_key: parsed.primary_key,
-    linked_ref: parsed.linked_ref,
-    decision: 'confirmed',
-    decided_at: nowIso,
-  });
+  await c.env.DB.batch([
+    prepareUpsertWorkLink(c.env.DB, {
+      user_id: user.id,
+      pair: parsed.pair,
+      primary_key: parsed.primary_key,
+      linked_ref: parsed.linked_ref,
+      signal: 'confirmed-fuzzy',
+      strict_source: null,
+      confirmed_at: nowIso,
+      last_seen_at: nowIso,
+    }),
+    prepareUpsertSuggestionDecision(c.env.DB, {
+      user_id: user.id,
+      pair: parsed.pair,
+      primary_key: parsed.primary_key,
+      linked_ref: parsed.linked_ref,
+      decision: 'confirmed',
+      decided_at: nowIso,
+    }),
+  ]);
   return c.json({ success: true });
 });
 

@@ -517,4 +517,35 @@ describe('buildCrossBundles orchestrator', () => {
     expect(result.fuzzyCandidates).toHaveLength(1);
     expect(result.fuzzyCandidates[0].confidence).toBeGreaterThanOrEqual(FUZZY_THRESHOLD);
   });
+
+  it('emits only one cross-bundle when a PR body references two tickets', () => {
+    const notifs = [
+      notif({
+        id: 'g', source: 'github',
+        url: 'https://github.com/o/r/pull/9', title: 'multi-ticket PR',
+        body: 'Closes LIN-1. Fixes LIN-2.',
+        updatedAt: '2026-04-22T10:00:00.000Z',
+      }),
+      notif({
+        id: 'l1', source: 'linear',
+        url: 'https://linear.app/t/issue/LIN-1/x', title: 'x',
+        updatedAt: '2026-04-22T09:00:00.000Z',
+      }),
+      notif({
+        id: 'l2', source: 'linear',
+        url: 'https://linear.app/t/issue/LIN-2/y', title: 'y',
+        updatedAt: '2026-04-22T08:00:00.000Z',
+      }),
+    ];
+    const result = buildCrossBundles({
+      notifications: notifs, pair: 'linear-github',
+      workLinks: [], decisions: [],
+      userId: 'u', now: NOW,
+    });
+    expect(result.crossBundles).toHaveLength(1);
+    const prOccurrences = result.crossBundles
+      .flatMap((b) => b.children)
+      .filter((c) => c.id === 'g').length;
+    expect(prOccurrences).toBe(1);
+  });
 });

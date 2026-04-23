@@ -52,6 +52,13 @@ function rowLatestMs(row: AnyRow): number {
   return Date.parse(row.bundle.latest_at);
 }
 
+/** Remove internal bundling hints before sending a notification to the client. */
+function stripLinkHints<T extends { linkHints?: unknown }>(n: T): T {
+  if (!n.linkHints) return n;
+  const { linkHints: _omit, ...rest } = n;
+  return rest as T;
+}
+
 notifications.get('/', async (c) => {
   const user = c.get('user');
   const enableExperimental = experimentalProvidersEnabled(c.env);
@@ -203,11 +210,30 @@ notifications.get('/', async (c) => {
     })());
   }
 
+  // Strip internal `linkHints` before serializing — they're bundling-engine
+  // scaffolding, not part of the public API.
+  const publicNotifications = allNotifications.map(stripLinkHints);
+  const publicRows = rows?.map((r) => {
+    if (r.kind === 'single') {
+      return { kind: 'single' as const, notification: stripLinkHints(r.notification) };
+    }
+    if (r.kind === 'bundle') {
+      return {
+        kind: 'bundle' as const,
+        bundle: { ...r.bundle, children: r.bundle.children.map(stripLinkHints) },
+      };
+    }
+    return {
+      kind: 'cross_bundle' as const,
+      bundle: { ...r.bundle, children: r.bundle.children.map(stripLinkHints) },
+    };
+  });
+
   return c.json({
     // Flat list retained for back-compat with older app builds. New app builds
     // should prefer `rows` (NotificationRow[]) when present.
-    notifications: allNotifications,
-    rows,
+    notifications: publicNotifications,
+    rows: publicRows,
     bundling_version: bundlingVersionOut,
     suggested_links,
     errors: errors.length > 0 ? errors : undefined,

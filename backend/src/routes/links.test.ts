@@ -14,33 +14,41 @@ const MOCK_USER = {
 function createMockDb() {
   const workLinks: unknown[][] = [];
   const suggestions: unknown[][] = [];
+
+  function makeStmt(sql: string) {
+    let bound: unknown[] = [];
+    const stmt = {
+      bind(...args: unknown[]) { bound = args; return stmt; },
+      async first() {
+        if (/SELECT \* FROM users WHERE device_token = \?/i.test(sql)) {
+          return bound[0] === MOCK_TOKEN ? MOCK_USER : null;
+        }
+        return null;
+      },
+      async run() {
+        if (/INSERT INTO work_links/i.test(sql)) workLinks.push(bound);
+        if (/INSERT INTO suggestion_decisions/i.test(sql)) suggestions.push(bound);
+        if (/DELETE FROM suggestion_decisions/i.test(sql)) {
+          for (let i = suggestions.length - 1; i >= 0; i--) {
+            const row = suggestions[i] as unknown[];
+            if (row[0] === bound[0] && row[4] === 'dismissed') suggestions.splice(i, 1);
+          }
+        }
+        return { success: true };
+      },
+      async all() { return { results: [] }; },
+    };
+    return stmt;
+  }
+
   return {
     _workLinks: workLinks,
     _suggestions: suggestions,
-    prepare(sql: string) {
-      let bound: unknown[] = [];
-      return {
-        bind(...args: unknown[]) { bound = args; return this; },
-        async first() {
-          if (/SELECT \* FROM users WHERE device_token = \?/i.test(sql)) {
-            return bound[0] === MOCK_TOKEN ? MOCK_USER : null;
-          }
-          return null;
-        },
-        async run() {
-          if (/INSERT INTO work_links/i.test(sql)) workLinks.push(bound);
-          if (/INSERT INTO suggestion_decisions/i.test(sql)) suggestions.push(bound);
-          if (/DELETE FROM suggestion_decisions/i.test(sql)) {
-            // bound is [userId, 'dismissed']
-            for (let i = suggestions.length - 1; i >= 0; i--) {
-              const row = suggestions[i] as unknown[];
-              if (row[0] === bound[0] && row[4] === 'dismissed') suggestions.splice(i, 1);
-            }
-          }
-          return { success: true };
-        },
-        async all() { return { results: [] }; },
-      } as unknown;
+    prepare(sql: string) { return makeStmt(sql); },
+    async batch(stmts: Array<{ run: () => Promise<unknown> }>) {
+      const results = [];
+      for (const s of stmts) results.push(await s.run());
+      return results;
     },
   } as unknown as D1Database;
 }

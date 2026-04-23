@@ -170,6 +170,11 @@ export function collectStrictLinks(
   return out;
 }
 
+function repoPart(ref: string): string {
+  const hashIdx = ref.indexOf('#');
+  return (hashIdx >= 0 ? ref.slice(0, hashIdx) : ref).toLowerCase();
+}
+
 export const FUZZY_THRESHOLD = 0.7;
 
 const STOPWORDS = new Set([
@@ -288,7 +293,9 @@ export function scoreFuzzyCandidates(
       }
 
       const confirmedAffinity = workLinks.some((w) =>
-        w.pair === pair && w.primary_key.split('-')[0] === key.split('-')[0]);
+        w.pair === pair &&
+        w.primary_key.split('-')[0] === key.split('-')[0] &&
+        repoPart(w.linked_ref) === repoPart(ref));
       if (confirmedAffinity) {
         score += 0.10;
         rationale.push('repo-affinity');
@@ -459,6 +466,18 @@ export function buildCrossBundles(input: BuildCrossBundlesInput): BuildCrossBund
     signal: 'strict' | 'confirmed-fuzzy';
     strict_source?: StrictSource;
   };
+
+  const STRICT_RANK: Record<string, number> = {
+    'title-prefix': 0,
+    'body-trailer': 1,
+    'linear-attachment': 2,
+    'jira-dev-panel': 3,
+  };
+  function rankOf(a: Active): number {
+    if (a.signal === 'strict' && a.strict_source) return STRICT_RANK[a.strict_source] ?? 99;
+    return 100;
+  }
+
   const activeByKeyRef = new Map<string, Active>();
   const strictLinksInferred: WorkLink[] = [];
   const nowIso = new Date(now).toISOString();
@@ -493,8 +512,18 @@ export function buildCrossBundles(input: BuildCrossBundlesInput): BuildCrossBund
     });
   }
 
-  const groupsByKey = new Map<string, Active[]>();
+  // Deduplicate: if the same PR (linked_ref) appears with multiple primary_keys,
+  // keep only the one with the strictest signal.
+  const byRef = new Map<string, Active>();
   for (const a of activeByKeyRef.values()) {
+    const existing = byRef.get(a.linked_ref);
+    if (!existing || rankOf(a) < rankOf(existing)) {
+      byRef.set(a.linked_ref, a);
+    }
+  }
+
+  const groupsByKey = new Map<string, Active[]>();
+  for (const a of byRef.values()) {
     const arr = groupsByKey.get(a.primary_key) ?? [];
     arr.push(a);
     groupsByKey.set(a.primary_key, arr);

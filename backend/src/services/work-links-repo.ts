@@ -4,6 +4,33 @@ import type {
   WorkLinkPair,
 } from '../types';
 
+export function prepareUpsertWorkLink(db: D1Database, link: WorkLink): D1PreparedStatement {
+  return db.prepare(
+    `INSERT INTO work_links (user_id, pair, primary_key, linked_ref, signal, strict_source, confirmed_at, last_seen_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(user_id, pair, primary_key, linked_ref)
+     DO UPDATE SET signal = excluded.signal,
+                   strict_source = excluded.strict_source,
+                   last_seen_at = excluded.last_seen_at`
+  ).bind(
+    link.user_id, link.pair, link.primary_key, link.linked_ref,
+    link.signal, link.strict_source, link.confirmed_at, link.last_seen_at,
+  );
+}
+
+export function prepareUpsertSuggestionDecision(db: D1Database, decision: SuggestionDecision): D1PreparedStatement {
+  return db.prepare(
+    `INSERT INTO suggestion_decisions (user_id, pair, primary_key, linked_ref, decision, decided_at)
+     VALUES (?, ?, ?, ?, ?, ?)
+     ON CONFLICT(user_id, pair, primary_key, linked_ref)
+     DO UPDATE SET decision = excluded.decision,
+                   decided_at = excluded.decided_at`
+  ).bind(
+    decision.user_id, decision.pair, decision.primary_key, decision.linked_ref,
+    decision.decision, decision.decided_at,
+  );
+}
+
 export interface UserLinkState {
   workLinks: WorkLink[];
   decisions: SuggestionDecision[];

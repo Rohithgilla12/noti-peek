@@ -13,9 +13,12 @@ export function parseBitbucketPrsFromDevPanel(
   if (!payload || typeof payload !== 'object') return [];
   const p = payload as DevPanelPayload;
   const out: Array<Extract<LinkHint, { kind: 'bitbucket-pr' }>> = [];
-  for (const d of p.detail ?? []) {
-    for (const pr of d.pullRequests ?? []) {
-      if (!pr.url) continue;
+  const details = Array.isArray(p.detail) ? p.detail : [];
+  for (const d of details) {
+    if (!d || typeof d !== 'object') continue;
+    const pullRequests = Array.isArray((d as DevPanelDetail).pullRequests) ? (d as DevPanelDetail).pullRequests! : [];
+    for (const pr of pullRequests) {
+      if (!pr || typeof pr.url !== 'string') continue;
       const m = pr.url.match(BITBUCKET_PR_URL);
       if (m) out.push({ kind: 'bitbucket-pr', workspace: m[1], repo: m[2], id: m[3] });
     }
