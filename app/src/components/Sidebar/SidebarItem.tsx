@@ -6,18 +6,22 @@ interface Props {
   label: string;
   count?: number;
   active?: boolean;
+  disabled?: boolean;
   onClick: () => void;
   title?: string;
 }
 
-export function SidebarItem({ icon, label, count, active = false, onClick, title }: Props) {
+export function SidebarItem({ icon, label, count, active = false, disabled = false, onClick, title }: Props) {
   return (
     <button
       type="button"
       className={styles.item}
       data-active={active || undefined}
+      data-disabled={disabled || undefined}
       aria-current={active ? 'page' : undefined}
-      onClick={onClick}
+      aria-disabled={disabled || undefined}
+      disabled={disabled}
+      onClick={disabled ? undefined : onClick}
       title={title}
     >
       <span className={styles.itemIcon} aria-hidden>{icon}</span>

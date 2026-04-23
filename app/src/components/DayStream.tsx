@@ -157,22 +157,24 @@ export function DayStream() {
   return (
     <>
       <div className="stream-head">
-        <div className="filter-chips" role="tablist">
-          {SOURCES
-            .filter((s) => !s.experimental || enableExperimentalProviders)
-            .filter((s) => s.value === 'all' || connections.some(c => c.provider === s.value))
-            .map((s) => (
-              <button
-                key={s.value}
-                role="tab"
-                aria-current={activeSource === s.value}
-                onClick={() => pickSource(s.value)}
-                type="button"
-              >
-                {s.label}
-              </button>
-            ))}
-        </div>
+        {view.sources.size <= 1 && (
+          <div className="filter-chips" role="tablist">
+            {SOURCES
+              .filter((s) => !s.experimental || enableExperimentalProviders)
+              .filter((s) => s.value === 'all' || connections.some(c => c.provider === s.value))
+              .map((s) => (
+                <button
+                  key={s.value}
+                  role="tab"
+                  aria-current={activeSource === s.value}
+                  onClick={() => pickSource(s.value)}
+                  type="button"
+                >
+                  {s.label}
+                </button>
+              ))}
+          </div>
+        )}
         <div className="stream-actions">
           <button
             className="mark-all-read"

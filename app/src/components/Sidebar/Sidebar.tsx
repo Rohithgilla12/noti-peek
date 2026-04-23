@@ -39,12 +39,20 @@ export function Sidebar({ onOpenSettings }: Props) {
         <SidebarItem icon={<Icon ch="@" />} label="Mentions"  count={countForScope(notifications, 'mentions')}  active={!rail && view.scope === 'mentions'}  onClick={() => setScope('mentions')}  title="Mentions (g m)" />
         <SidebarItem icon={<Icon ch="★" />} label="Bookmarks" count={countForScope(notifications, 'bookmarks')} active={!rail && view.scope === 'bookmarks'} onClick={() => setScope('bookmarks')} title="Bookmarks (g b)" />
         <SidebarItem icon={<Icon ch="↗" />} label="Links"     active={!rail && view.scope === 'links'}     onClick={() => setScope('links')}     title="Suggested links (g l)" />
-        <SidebarItem icon={<Icon ch="▣" />} label="Archive"   count={countForScope(notifications, 'archive')}   active={!rail && view.scope === 'archive'}   onClick={() => setScope('archive')}   title="Archive (g e)" />
+        <SidebarItem icon={<Icon ch="▣" />} label="Archive"   count={countForScope(notifications, 'archive')}   active={!rail && view.scope === 'archive'}   onClick={() => setScope('archive')}   title="Archive (g a)" />
       </SidebarSection>
 
       <SidebarSection label="Filters">
         <SidebarItem icon={<Icon ch="●" />} label="Unread"  count={countForQuickFilter(notifications, 'unread')} active={!rail && view.filters.has('unread')} onClick={() => toggleQuickFilter('unread')} title="Toggle unread-only (u)" />
-        <SidebarItem icon={<Icon ch="!" />} label="Errors"  count={erroringProviders.length}                     active={!rail && view.filters.has('errors')} onClick={() => toggleQuickFilter('errors')} />
+        <SidebarItem
+          icon={<Icon ch="!" />}
+          label="Errors"
+          count={erroringProviders.length}
+          active={false}
+          disabled
+          onClick={() => { /* no-op while disabled */ }}
+          title="Errors surface will land in 1.1"
+        />
         <SidebarItem icon={<Icon ch="⇄" />} label="PRs"     count={countForQuickFilter(notifications, 'prs')}    active={!rail && view.filters.has('prs')}    onClick={() => toggleQuickFilter('prs')} />
       </SidebarSection>
 

@@ -76,6 +76,9 @@
 
 .item:hover { background: var(--bg-1); color: var(--ink-1); }
 
+.item[data-disabled] { opacity: 0.55; cursor: not-allowed; }
+.item[data-disabled]:hover { background: transparent; color: var(--ink-2); }
+
 .item[data-active] {
   background: var(--bg-2);
   color: var(--ink-1);
