@@ -32,7 +32,8 @@ function App() {
   const notifications = useAppStore((s) => s.notifications);
   const markAsRead = useAppStore((s) => s.markAsRead);
   const markAllAsRead = useAppStore((s) => s.markAllAsRead);
-  const activeTab = useAppStore((s) => s.activeTab);
+  const view = useAppStore((s) => s.view);
+  const activeTab = view.tab;
   const setActiveTab = useAppStore((s) => s.setActiveTab);
 
   const selected = notifications.find((n) => n.id === selectedId) ?? null;
@@ -72,6 +73,27 @@ function App() {
       const savedTab = await store.get<'inbox' | 'pulse' | 'links'>('activeTab');
       if (savedTab === 'inbox' || savedTab === 'pulse' || savedTab === 'links') {
         useAppStore.getState().setActiveTab(savedTab);
+      }
+
+      const savedView = await store.get<{
+        scope: string;
+        filters: string[];
+        sources: string[];
+      }>('view');
+      if (savedView) {
+        const { setScope, toggleQuickFilter, toggleSource } = useAppStore.getState();
+        const validScopes = new Set(['inbox', 'mentions', 'bookmarks', 'links', 'archive']);
+        if (validScopes.has(savedView.scope)) {
+          setScope(savedView.scope as Parameters<typeof setScope>[0]);
+        }
+        for (const f of savedView.filters) {
+          if (f === 'unread' || f === 'errors' || f === 'prs') toggleQuickFilter(f);
+        }
+        for (const s of savedView.sources) {
+          if (s === 'github' || s === 'linear' || s === 'jira' || s === 'bitbucket') {
+            toggleSource(s);
+          }
+        }
       }
 
       api.setOnUnauthorized(async () => {
@@ -120,10 +142,16 @@ function App() {
   }, [initialize]);
 
   useEffect(() => {
-    void load('config.json').then((s) => {
-      void s.set('activeTab', activeTab).then(() => s.save());
+    void load('config.json').then(async (s) => {
+      await s.set('activeTab', view.tab);
+      await s.set('view', {
+        scope: view.scope,
+        filters: [...view.filters],
+        sources: [...view.sources],
+      });
+      await s.save();
     });
-  }, [activeTab]);
+  }, [view]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
