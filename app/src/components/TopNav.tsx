@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { useAppStore, useUnreadCount } from '../store';
 
 interface Props {
@@ -5,92 +6,132 @@ interface Props {
 }
 
 export function TopNav({ onOpenSettings }: Props) {
-  const fetchNotifications = useAppStore((s) => s.fetchNotifications);
-  const isSyncing = useAppStore((s) => s.isLoading || s.isSyncing);
+  const tab = useAppStore((s) => s.view.tab);
+  const setTab = useAppStore((s) => s.setTab);
+  const toggleQuickFilter = useAppStore((s) => s.toggleQuickFilter);
+  const unreadActive = useAppStore((s) => s.view.filters.has('unread'));
   const unread = useUnreadCount();
-  const activeTab = useAppStore((s) => s.activeTab);
-  const setActiveTab = useAppStore((s) => s.setActiveTab);
-  const suggestedLinks = useAppStore((s) => s.suggestedLinks);
-  const suggestedLinkCount = suggestedLinks.length;
 
   return (
     <header className="topnav" data-tauri-drag-region>
-      <div className="topnav-gutter" aria-hidden="true" data-tauri-drag-region />
+      <div className="topnav-gutter" aria-hidden data-tauri-drag-region />
+      <div className="topnav-brand" aria-hidden data-tauri-drag-region>
+        <span className="topnav-brand-dot" />
+        <span className="topnav-brand-name">noti-peek</span>
+      </div>
       <nav className="topnav-tabs" role="tablist" data-tauri-drag-region>
         <button
-          aria-current={activeTab === 'inbox'}
           role="tab"
-          type="button"
-          onClick={() => setActiveTab('inbox')}
+          aria-current={tab === 'inbox'}
+          onClick={() => setTab('inbox')}
           title="Inbox (1)"
+          type="button"
         >
           inbox
-          {unread > 0 && (
-            <span className="topnav-tab-badge">{String(unread).padStart(2, '0')}</span>
-          )}
         </button>
         <button
-          aria-current={activeTab === 'pulse'}
           role="tab"
-          type="button"
-          onClick={() => setActiveTab('pulse')}
+          aria-current={tab === 'pulse'}
+          onClick={() => setTab('pulse')}
           title="Pulse (2)"
+          type="button"
         >
           pulse
         </button>
-        <button
-          aria-current={activeTab === 'links'}
-          role="tab"
-          type="button"
-          onClick={() => setActiveTab('links')}
-          aria-label={
-            suggestedLinkCount > 0
-              ? `Links, ${suggestedLinkCount} suggested link${suggestedLinkCount === 1 ? '' : 's'} available, shortcut 3`
-              : 'Links, shortcut 3'
-          }
-        >
-          links
-          {suggestedLinkCount > 0 && <span className="topnav-tab-badge" aria-hidden="true" />}
-        </button>
       </nav>
+      <div className="topnav-search" data-tauri-drag-region>
+        <SearchPlaceholder />
+      </div>
       <div className="topnav-actions" data-tauri-drag-region>
-        <button
-          onClick={() => fetchNotifications()}
-          disabled={isSyncing}
-          title="Refresh (R)"
-          aria-label="Refresh"
-          type="button"
-        >
-          <svg
-            className={isSyncing ? 'spinner' : undefined}
-            width="13"
-            height="13"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+        {unread > 0 && (
+          <button
+            className="topnav-unread-chip"
+            aria-pressed={unreadActive}
+            onClick={() => toggleQuickFilter('unread')}
+            title="Toggle unread filter (u)"
+            type="button"
           >
-            <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-        </button>
-        <button onClick={onOpenSettings} title="Settings (⌘,)" aria-label="Settings" type="button">
-          <svg
-            width="13"
-            height="13"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="12" cy="12" r="3" />
-            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z" />
-          </svg>
-        </button>
+            {unread} unread
+          </button>
+        )}
+        <AvatarMenu onOpenSettings={onOpenSettings} />
       </div>
     </header>
+  );
+}
+
+function SearchPlaceholder() {
+  return (
+    <div
+      className="topnav-search-box"
+      role="search"
+      aria-disabled="true"
+      title="Search coming soon"
+    >
+      <span className="topnav-search-icon" aria-hidden>⌕</span>
+      <span className="topnav-search-label">Search…</span>
+      <kbd className="topnav-search-kbd">⌘K</kbd>
+    </div>
+  );
+}
+
+function AvatarMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  return (
+    <div className="topnav-avatar-wrap" ref={ref}>
+      <button
+        className="topnav-avatar"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        title="Account menu"
+        type="button"
+      >
+        R
+      </button>
+      {open && (
+        <div className="topnav-avatar-menu" role="menu">
+          <button
+            role="menuitem"
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              onOpenSettings();
+            }}
+          >
+            Settings… <kbd>⌘,</kbd>
+          </button>
+          <button
+            role="menuitem"
+            type="button"
+            onClick={async () => {
+              setOpen(false);
+              const { emit } = await import('@tauri-apps/api/event');
+              await emit('menu-check-updates');
+            }}
+          >
+            Check for updates
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
