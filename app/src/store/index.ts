@@ -50,6 +50,44 @@ function markRowsReadAll(rows: NotificationRow[]): NotificationRow[] {
   });
 }
 
+function setRowsBookmarked(rows: NotificationRow[], id: string, bookmarked: boolean): NotificationRow[] {
+  return rows.map((r) => {
+    if (r.kind === 'single') {
+      return r.notification.id === id
+        ? { ...r, notification: { ...r.notification, bookmarked } }
+        : r;
+    }
+    const childIdx = r.bundle.children.findIndex((c) => c.id === id);
+    if (childIdx < 0) return r;
+    const children = r.bundle.children.map((c) =>
+      c.id === id ? { ...c, bookmarked } : c,
+    );
+    if (r.kind === 'bundle') {
+      return { ...r, bundle: { ...r.bundle, children } };
+    }
+    return { ...r, bundle: { ...r.bundle, children } };
+  });
+}
+
+function setRowsArchived(rows: NotificationRow[], id: string, archived: boolean): NotificationRow[] {
+  return rows.map((r) => {
+    if (r.kind === 'single') {
+      return r.notification.id === id
+        ? { ...r, notification: { ...r.notification, archived } }
+        : r;
+    }
+    const childIdx = r.bundle.children.findIndex((c) => c.id === id);
+    if (childIdx < 0) return r;
+    const children = r.bundle.children.map((c) =>
+      c.id === id ? { ...c, archived } : c,
+    );
+    if (r.kind === 'bundle') {
+      return { ...r, bundle: { ...r.bundle, children } };
+    }
+    return { ...r, bundle: { ...r.bundle, children } };
+  });
+}
+
 async function readBundlingPrefs(): Promise<{ crossEnabled: boolean; suggestEnabled: boolean }> {
   try {
     const s = await loadTauriStore('config.json');
@@ -195,14 +233,16 @@ export const useAppStore = create<AppState>((set, get) => ({
   clearSources: () => set((s) => ({ view: { ...s.view, sources: new Set<Provider>() } })),
 
   toggleBookmark: async (id) => {
-    set((state) => {
-      const notifications = state.notifications.map((n) =>
-        n.id === id ? { ...n, bookmarked: !n.bookmarked } : n,
-      );
-      return { notifications };
-    });
-    const updated = get().notifications.find((n) => n.id === id);
-    if (updated) await db.setNotificationBookmarked(id, !!updated.bookmarked);
+    const current = get().notifications.find((n) => n.id === id);
+    if (!current) return;
+    const nextValue = !current.bookmarked;
+    set((state) => ({
+      notifications: state.notifications.map((n) =>
+        n.id === id ? { ...n, bookmarked: nextValue } : n,
+      ),
+      rows: setRowsBookmarked(state.rows, id, nextValue),
+    }));
+    await db.setNotificationBookmarked(id, nextValue);
   },
 
   archiveNotification: async (id) => {
@@ -210,6 +250,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       notifications: state.notifications.map((n) =>
         n.id === id ? { ...n, archived: true } : n,
       ),
+      rows: setRowsArchived(state.rows, id, true),
     }));
     await db.setNotificationArchived(id, true);
   },
@@ -219,6 +260,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       notifications: state.notifications.map((n) =>
         n.id === id ? { ...n, archived: false } : n,
       ),
+      rows: setRowsArchived(state.rows, id, false),
     }));
     await db.setNotificationArchived(id, false);
   },
