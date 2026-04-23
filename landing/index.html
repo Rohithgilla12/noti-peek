@@ -275,61 +275,22 @@
         position: absolute;
         top: 34px;
         right: 16px;
-        width: 360px;
+        width: 480px;
         background: var(--bg-elev);
-        border: 1px solid var(--line);
-        border-radius: 10px;
-        box-shadow: 0 16px 40px -12px oklch(0% 0 0 / 0.8), 0 0 0 1px oklch(100% 0 0 / 0.05) inset;
+        border: 1px solid var(--line-soft);
+        border-radius: 12px;
+        padding: 4px;
+        box-shadow:
+          0 1px 0 oklch(100% 0 0 / 0.04) inset,
+          0 24px 60px -28px oklch(0% 0 0 / 0.8);
         opacity: 0;
         transform: scale(0.96) translateY(-6px);
         transform-origin: top right;
         filter: blur(4px);
         animation: panel-enter 8s infinite cubic-bezier(0.16, 1, 0.3, 1);
+        z-index: 5;
       }
-      .demo-head {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 10px 14px 12px;
-        border-bottom: 1px solid var(--line-soft);
-        font-family: var(--font-mono);
-        font-size: 11px;
-        color: var(--ink-3);
-        letter-spacing: 0.04em;
-      }
-      .demo-head .count { margin-left: auto; color: var(--ink-4); }
-      .demo-row {
-        padding: 14px;
-        display: flex;
-        gap: 14px;
-        position: relative;
-        border-bottom: 1px solid var(--line-soft);
-        animation: row-fade 8s infinite cubic-bezier(0.16, 1, 0.3, 1);
-      }
-      .demo-row:last-child { border-bottom: none; }
-      .demo-row-content { flex: 1; min-width: 0; }
-      .demo-title {
-        font-size: 14px;
-        color: var(--ink-1);
-        display: flex;
-        align-items: flex-start;
-        gap: 8px;
-        margin-bottom: 4px;
-        line-height: 1.35;
-      }
-      .demo-dot {
-        width: 6px; height: 6px;
-        background: var(--accent);
-        border-radius: 50%;
-        flex: 0 0 auto;
-        margin-top: 7px;
-      }
-      .demo-meta {
-        font-family: var(--font-mono);
-        font-size: 11px;
-        color: var(--ink-3);
-        letter-spacing: 0.01em;
-      }
+      
       .demo-bundle-items {
         display: grid;
         grid-template-rows: 0fr;
@@ -349,22 +310,28 @@
         color: var(--ink-2);
       }
       .demo-sub-item .avatar { width: 20px; height: 20px; font-size: 9px; }
+      
+      .demo-row-1 {
+        animation: row-fade 8s infinite cubic-bezier(0.16, 1, 0.3, 1);
+      }
       .demo-mark-read {
-        position: absolute;
-        right: 14px;
-        top: 12px;
+        cursor: pointer;
+        opacity: 0;
+        transform: translateY(2px);
+        animation: button-appear 8s infinite cubic-bezier(0.16, 1, 0.3, 1);
+        color: var(--ink-1);
         background: var(--bg-elev-2);
-        border: 1px solid var(--line);
+        border: 1px solid var(--ink-3);
         border-radius: 6px;
         padding: 5px 10px;
         font-family: var(--font-body);
         font-size: 12px;
         font-weight: 500;
-        color: var(--ink-1);
-        opacity: 0;
-        transform: translateY(2px);
-        animation: button-appear 8s infinite cubic-bezier(0.16, 1, 0.3, 1);
+        text-transform: none;
+        letter-spacing: normal;
+        margin-top: 6px;
       }
+      
       .demo-cursor {
         position: absolute;
         width: 24px;
@@ -378,38 +345,43 @@
       }
       
       @keyframes cursor-move {
-        0%, 10% { transform: translate(300px, 200px); }
-        18%, 25% { transform: translate(calc(100% - 94px), 14px); }
-        21% { transform: translate(calc(100% - 94px), 14px) scale(0.9); }
-        33%, 45% { transform: translate(calc(100% - 200px), 94px); }
-        38% { transform: translate(calc(100% - 200px), 94px) scale(0.9); }
-        53%, 65% { transform: translate(calc(100% - 50px), 64px); }
-        58% { transform: translate(calc(100% - 50px), 64px) scale(0.9); }
-        75%, 100% { transform: translate(300px, 200px); }
+        0%, 10% { transform: translate(250px, 250px); }
+        15%, 22% { transform: translate(calc(100% - 94px), 14px); }
+        18% { transform: translate(calc(100% - 94px), 14px) scale(0.9); }
+        32%, 46% { transform: translate(calc(100% - 200px), 114px); }
+        36% { transform: translate(calc(100% - 200px), 114px) scale(0.9); }
+        56%, 66% { transform: translate(calc(100% - 70px), 80px); }
+        61% { transform: translate(calc(100% - 70px), 80px) scale(0.9); }
+        76%, 100% { transform: translate(250px, 250px); }
       }
       @keyframes panel-enter {
-        0%, 19% { opacity: 0; transform: scale(0.96) translateY(-8px); filter: blur(4px); }
-        22%, 70% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
-        74%, 100% { opacity: 0; transform: scale(0.96) translateY(-8px); filter: blur(4px); }
+        0%, 16% { opacity: 0; transform: scale(0.96) translateY(-8px); filter: blur(4px); }
+        19%, 71% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
+        75%, 100% { opacity: 0; transform: scale(0.96) translateY(-8px); filter: blur(4px); }
       }
       @keyframes bundle-expand {
         0%, 36% { grid-template-rows: 0fr; }
         42%, 62% { grid-template-rows: 1fr; }
-        66%, 100% { grid-template-rows: 0fr; }
+        67%, 100% { grid-template-rows: 0fr; }
       }
       @keyframes button-appear {
-        0%, 51% { opacity: 0; transform: translateY(2px) scale(0.95); }
-        55%, 62% { opacity: 1; transform: translateY(0) scale(1); }
-        64%, 100% { opacity: 0; transform: translateY(2px) scale(0.95); }
+        0%, 54% { opacity: 0; transform: translateY(2px) scale(0.95); }
+        57%, 62% { opacity: 1; transform: translateY(0) scale(1); }
+        65%, 100% { opacity: 0; transform: translateY(2px) scale(0.95); }
+      }
+      @keyframes fade-out-button {
+        0%, 54% { opacity: 1; }
+        55%, 64% { opacity: 0; }
+        65%, 100% { opacity: 1; }
       }
       @keyframes row-fade {
-        0%, 59% { opacity: 1; filter: blur(0); transform: scale(1); }
-        63%, 100% { opacity: 0; filter: blur(4px); transform: scale(0.98); }
+        0%, 61% { opacity: 1; filter: blur(0); transform: scale(1); border-bottom-color: var(--line-soft); }
+        66%, 100% { opacity: 0; filter: blur(4px); transform: scale(0.98); border-bottom-color: transparent; }
       }
       @keyframes tray-active {
-        0%, 20% { background: transparent; color: var(--ink-2); }
-        22%, 70% { background: oklch(100% 0 0 / 0.1); color: var(--ink-1); }
-        72%, 100% { background: transparent; color: var(--ink-2); }
+        0%, 16% { background: transparent; color: var(--ink-2); }
+        18%, 71% { background: oklch(100% 0 0 / 0.1); color: var(--ink-1); }
+        73%, 100% { background: transparent; color: var(--ink-2); }
       }
 
       /* ── Mock panel ──────────────────────────────────── */
@@ -789,19 +761,19 @@
           </div>
           
           <div class="demo-app-panel">
-            <div class="demo-head">
-              <span class="tray" style="width:12px;height:12px;border:1.25px solid var(--ink-2);border-radius:50%;position:relative"><span style="position:absolute;width:3.5px;height:3.5px;border-radius:50%;background:var(--ink-2);top:1px;right:0.5px"></span></span>
+            <div class="mock-head">
+              <span class="tray" aria-hidden="true"></span>
               <span>noti-peek</span>
               <span class="count">2 unread</span>
             </div>
             
-            <div class="demo-row">
-              <div class="avatar stack">
+            <div class="mock-row demo-row-1">
+              <div class="avatar stack" style="align-self: start; margin-top: 2px;">
                 <span>RG</span><span>JP</span><span>MK</span>
               </div>
-              <div class="demo-row-content">
-                <div class="demo-title"><span class="demo-dot"></span>rohithgilla/noti-peek#42</div>
-                <div class="demo-meta">3 reviews · 2 comments · bundle of 5</div>
+              <div>
+                <div class="title"><span class="dot"></span>rohithgilla/noti-peek#42 — smart bundling PR</div>
+                <div class="meta">3 reviews · 2 comments · bundle of 5 · 12m</div>
                 
                 <div class="demo-bundle-items">
                   <div class="demo-bundle-inner">
@@ -811,13 +783,25 @@
                   </div>
                 </div>
               </div>
-              <div class="demo-mark-read">Mark read</div>
+              <div style="align-self: start; display: grid;">
+                <span class="tag bundle" style="grid-area: 1/1; justify-self: end; animation: fade-out-button 8s infinite cubic-bezier(0.16, 1, 0.3, 1); margin-top: 6px;">bundle</span>
+                <span class="demo-mark-read" style="grid-area: 1/1;">Mark read</span>
+              </div>
+            </div>
+
+            <div class="mock-row demo-row-2">
+              <div class="avatar">DS</div>
+              <div>
+                <div class="title"><span class="dot"></span>ENG-214 — release blocker: D1 write contention</div>
+                <div class="meta">linear · assigned to you · 41m</div>
+              </div>
+              <span class="tag">linear</span>
             </div>
           </div>
 
           <div class="demo-cursor">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M5.5 2L11.5 20.5L14.5 13.5L21.5 10.5L5.5 2Z" fill="black" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
+              <path d="M5.5 2L11.5 20.5L14.5 13.5L21.5 10.5L5.5 2Z" fill="var(--ink-1)" stroke="var(--bg)" stroke-width="1.5" stroke-linejoin="round"/>
             </svg>
           </div>
         </div>
