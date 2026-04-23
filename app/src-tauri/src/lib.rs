@@ -76,6 +76,17 @@ fn get_migrations() -> Vec<Migration> {
             "#,
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 5,
+            description: "add_bookmarked_archived_to_notifications",
+            sql: r#"
+                ALTER TABLE notifications ADD COLUMN bookmarked INTEGER NOT NULL DEFAULT 0;
+                ALTER TABLE notifications ADD COLUMN archived   INTEGER NOT NULL DEFAULT 0;
+                CREATE INDEX IF NOT EXISTS idx_notifications_bookmarked ON notifications(bookmarked);
+                CREATE INDEX IF NOT EXISTS idx_notifications_archived   ON notifications(archived);
+            "#,
+            kind: MigrationKind::Up,
+        },
     ]
 }
 

@@ -19,6 +19,8 @@ export interface Notification {
   createdAt: string;
   updatedAt: string;
   firstSeenAt?: string;
+  bookmarked?: boolean;
+  archived?: boolean;
 }
 
 export interface Connection {
