@@ -4,6 +4,19 @@ All notable changes to this project are documented here. The format is loosely b
 
 ## [Unreleased]
 
+## v0.8.0 — three-pane shell
+
+- New: three-column layout (sidebar + stream + detail) replaces the old two-column shell. The sidebar holds **Views** (Inbox, Mentions, Bookmarks, Links, Archive), **Filters** (Unread, PRs; Errors landing in 0.8.1), and **Integrations** (per-provider filter + live counts).
+- New: **Bookmarks** and **Archive** scopes, backed by new device-local `bookmarked` and `archived` columns (migration v5). Toggle a bookmark from the detail pane's star or with bare `b` on the selected row — bookmarked rows show a `★` in the time column. Archive/Unarchive live in the detail pane's overflow menu.
+- New: keyboard navigation — `g i / g m / g b / g l / g a` jump between views, `u` toggles the Unread quick filter, `1` / `2` switch the Inbox/Pulse top-level tab.
+- New: top nav restructure — logo + wordmark, Inbox/Pulse tabs (underlined), `⌘K` search placeholder (real search lands in 0.9), click-through `{n} unread` chip, avatar menu with Settings + Check-for-updates.
+- New: view state (scope + filters + sources) is persisted to `config.json` and restored on boot.
+- Changed: the top-level `Links` tab is retired; Suggested Links lives under the Links sidebar view. The refresh button and notification bell are dropped (shortcut `r` and the tray icon cover them).
+- Changed: typography recraft toward the "terminal · calm · unshowy" signature — EB Garamond retired; Martian Mono carries every level via weight / tracking / colour. Empty states rewritten in a terminal idiom.
+- Changed: the real brand mark (ring + amber peek-dot) now renders inline in the sidebar and top nav; the placeholder square is gone.
+- Internal: new pure `lib/view.ts` predicate engine (`matchesView`, `countForScope`, `countForQuickFilter`, `countForSource`) with 14 unit tests; `setFilter` / `activeTab` compatibility shim removed.
+- Landing: hero demo replaced with a scaled three-pane mockup that mirrors the new shell.
+
 ## v0.7.1 — read-state preservation on rows
 
 - Fix: resync no longer flips just-marked-read notifications back to unread in the inbox. v0.7.0's `rows[]` envelope wasn't running through the local-state preservation merge that the flat list got in v0.6.x, so provider eventual-consistency could repopulate the UI with stale `unread: true`. Extracted to `lib/preserve-read.ts` with 10 unit tests; applied to singletons, bundles, and cross-bundles.
