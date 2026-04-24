@@ -1,6 +1,6 @@
 [package]
 name = "noti-peek"
-version = "0.8.2"
+version = "0.8.3"
 description = "A unified notification hub for developers"
 authors = ["Rohith Gilla <gillarohith1@gmail.com>"]
 license = "MIT"

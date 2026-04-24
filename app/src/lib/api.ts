@@ -36,6 +36,18 @@ class ApiClient {
     this.deviceToken = token;
   }
 
+  getDeviceToken(): string | null {
+    return this.deviceToken;
+  }
+
+  /** URL for the backend Jira-attachment proxy. The device token rides
+   *  as a query param because `<img>` can't set an Authorization header;
+   *  the backend accepts either header- or query-param auth on this route. */
+  jiraAttachmentUrl(attachmentId: string): string | null {
+    if (!this.deviceToken) return null;
+    return `${API_URL}/attachments/jira/${encodeURIComponent(attachmentId)}?t=${encodeURIComponent(this.deviceToken)}`;
+  }
+
   setOnUnauthorized(handler: ReauthHandler | null) {
     this.onUnauthorized = handler;
   }

@@ -29,14 +29,14 @@ function isTokenExpired(connection: Connection): boolean {
   return expiresAt - bufferMs <= Date.now();
 }
 
-async function getAccessToken(connection: Connection, env: Env, db: D1Database): Promise<string> {
+export async function getAccessToken(connection: Connection, env: Env, db: D1Database): Promise<string> {
   if (isTokenExpired(connection)) {
     return refreshJiraToken(connection, env, db);
   }
   return connection.access_token;
 }
 
-async function getCloudId(token: string): Promise<{ cloudId: string; baseUrl: string }> {
+export async function getCloudId(token: string): Promise<{ cloudId: string; baseUrl: string }> {
   const res = await fetch('https://api.atlassian.com/oauth/token/accessible-resources', {
     headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
   });

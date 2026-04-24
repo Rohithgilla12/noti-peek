@@ -4,6 +4,10 @@ All notable changes to this project are documented here. The format is loosely b
 
 ## [Unreleased]
 
+## v0.8.3 — inline images render in Jira issue descriptions
+
+- Fix: embedded images in Jira issue descriptions now render in the detail pane. Jira's rendered HTML contains `<img src="…atlassian.net/rest/api/3/attachment/content/{id}">` URLs that require a Bearer auth header the webview can't supply on a plain `<img>`, so they failed silently as broken-image placeholders. Added a backend attachment proxy (`GET /attachments/jira/:id`) that authenticates the device, fetches with the user's Jira token via the OAuth gateway, follows the 303 redirect to the media CDN, and streams bytes back; the sanitizer rewrites each attachment URL to point at that proxy on the way out. Device-token query-param auth (`?t=…`) is accepted on attachment routes only, since `<img>` tags can't set a custom header.
+
 ## v0.8.2 — consistent hyphenated release asset names
 
 - Chore: release assets now use `-` as the separator between product, version, and arch segments on every platform (`noti-peek-0.8.2-aarch64.dmg`, `noti-peek-0.8.2-amd64.AppImage`, `noti-peek-0.8.2-x64-setup.exe`, …) instead of the mix of `_` and `-` Tauri's bundler emits. The RPM's `x86_64` arch string is preserved (it's a real arch identifier, not a separator). The updater manifest (`latest.json`) picks up the new names automatically.

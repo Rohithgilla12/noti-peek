@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import type { Env, Variables } from './types';
+import attachments from './routes/attachments';
 import auth from './routes/auth';
 import connections from './routes/connections';
 import links from './routes/links';
@@ -29,6 +30,7 @@ app.get('/health', (c) => {
   return c.json({ status: 'healthy' });
 });
 
+app.route('/attachments', attachments);
 app.route('/auth', auth);
 app.route('/connections', connections);
 app.route('/notifications/links', links);
