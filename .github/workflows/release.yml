@@ -148,19 +148,36 @@ jobs:
           BUNDLE_DIR="app/src-tauri/target/${{ matrix.rust_target }}/release/bundle"
           echo "Scanning $BUNDLE_DIR"
 
-          find "$BUNDLE_DIR" -type f \( \
-               -name "*.dmg" \
-            -o -name "*.app.tar.gz" \
-            -o -name "*.app.tar.gz.sig" \
-            -o -name "*.msi" \
-            -o -name "*.msi.sig" \
-            -o -name "*-setup.exe" \
-            -o -name "*-setup.exe.sig" \
-            -o -name "*.AppImage" \
-            -o -name "*.AppImage.sig" \
-            -o -name "*.deb" \
-            -o -name "*.rpm" \
-          \) -print -exec cp {} staged/ \;
+          # Tauri's bundler emits filenames with `_` as the separator between
+          # product / version / arch segments on most targets
+          # (noti-peek_0.8.1_aarch64.dmg). Normalise to `-` so the whole set
+          # matches the RPM / setup.exe hyphenated style and reads cleanly to
+          # humans. `x86_64` is preserved — that underscore is a real part of
+          # the arch string, not a separator.
+          normalise() {
+            # shellcheck disable=SC2001
+            echo "$1" | sed 's/x86_64/X86ARCH/g; s/_/-/g; s/X86ARCH/x86_64/g'
+          }
+
+          while IFS= read -r -d '' src; do
+            dst="staged/$(normalise "$(basename "$src")")"
+            cp "$src" "$dst"
+            echo "$(basename "$src") → $(basename "$dst")"
+          done < <(
+            find "$BUNDLE_DIR" -type f \( \
+                 -name "*.dmg" \
+              -o -name "*.app.tar.gz" \
+              -o -name "*.app.tar.gz.sig" \
+              -o -name "*.msi" \
+              -o -name "*.msi.sig" \
+              -o -name "*-setup.exe" \
+              -o -name "*-setup.exe.sig" \
+              -o -name "*.AppImage" \
+              -o -name "*.AppImage.sig" \
+              -o -name "*.deb" \
+              -o -name "*.rpm" \
+            \) -print0
+          )
 
           echo "---"
           ls -la staged/

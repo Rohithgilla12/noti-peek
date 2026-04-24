@@ -4,6 +4,10 @@ All notable changes to this project are documented here. The format is loosely b
 
 ## [Unreleased]
 
+## v0.8.2 — consistent hyphenated release asset names
+
+- Chore: release assets now use `-` as the separator between product, version, and arch segments on every platform (`noti-peek-0.8.2-aarch64.dmg`, `noti-peek-0.8.2-amd64.AppImage`, `noti-peek-0.8.2-x64-setup.exe`, …) instead of the mix of `_` and `-` Tauri's bundler emits. The RPM's `x86_64` arch string is preserved (it's a real arch identifier, not a separator). The updater manifest (`latest.json`) picks up the new names automatically.
+
 ## v0.8.1 — rename product to `noti-peek` (breaks auto-update once)
 
 > **Existing users: auto-update from v0.8.0 will fail one time.** Please download the v0.8.1 `.dmg` from the [releases page](https://github.com/Rohithgilla12/noti-peek-releases/releases/latest) and drag-install it over the old `Noti Peek.app` in `/Applications`. After that, auto-updates work on every subsequent release.
