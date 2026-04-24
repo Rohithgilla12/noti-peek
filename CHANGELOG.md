@@ -4,6 +4,13 @@ All notable changes to this project are documented here. The format is loosely b
 
 ## [Unreleased]
 
+## v0.8.1 — rename product to `noti-peek` (breaks auto-update once)
+
+> **Existing users: auto-update from v0.8.0 will fail one time.** Please download the v0.8.1 `.dmg` from the [releases page](https://github.com/Rohithgilla12/noti-peek-releases/releases/latest) and drag-install it over the old `Noti Peek.app` in `/Applications`. After that, auto-updates work on every subsequent release.
+
+- Fix: auto-update on macOS was downloading the new bundle but failing to relaunch the app. The previous `productName` was `Noti Peek` (with a space), which produced a bundle path `/Applications/Noti Peek.app` whose executable inside was `noti-peek`. The space in the bundle path combined with Tauri v2's restart-after-update flow was the suspected cause. Renaming the product to `noti-peek` aligns the bundle filename, the binary filename, and the Cargo crate name so the updater's relaunch path has no space-in-path surface.
+- Chore: removed the hardcoded `bundle.macOS.signingIdentity: "-"` override in `tauri.conf.json`. It was functionally masked by the CI `APPLE_SIGNING_IDENTITY` env var but confusing; release builds continue to Developer-ID-sign and notarize.
+
 ## v0.8.0 — three-pane shell
 
 - New: three-column layout (sidebar + stream + detail) replaces the old two-column shell. The sidebar holds **Views** (Inbox, Mentions, Bookmarks, Links, Archive), **Filters** (Unread, PRs; Errors landing in 0.8.1), and **Integrations** (per-provider filter + live counts).
