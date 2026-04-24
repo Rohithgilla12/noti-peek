@@ -567,6 +567,113 @@
         color: var(--ink-1);
       }
 
+      /* ── Changelog ───────────────────────────────────── */
+      section.changelog { padding: var(--space-16) 0 var(--space-12); }
+      section.changelog h2 {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 500;
+        font-size: 2rem;
+        letter-spacing: -0.005em;
+        margin: 0 0 var(--space-8);
+        color: var(--ink-1);
+      }
+      .changelog-list {
+        display: flex;
+        flex-direction: column;
+      }
+      .changelog-item {
+        border-top: 1px solid var(--line-soft);
+        padding: var(--space-4) 0;
+      }
+      .changelog-item:last-child { border-bottom: 1px solid var(--line-soft); }
+      .changelog-item summary {
+        cursor: pointer;
+        list-style: none;
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: var(--space-4);
+        color: var(--ink-1);
+      }
+      .changelog-item summary::-webkit-details-marker { display: none; }
+      .changelog-ver {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--ink-1);
+        padding: 2px 8px;
+        border: 1px solid var(--line-soft);
+        border-radius: 3px;
+        margin-right: var(--space-3);
+        white-space: nowrap;
+      }
+      .changelog-title { flex: 1; min-width: 0; font-weight: 500; }
+      .changelog-date {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--ink-3);
+        letter-spacing: 0.04em;
+        white-space: nowrap;
+      }
+      .changelog-item summary .chev {
+        font-family: var(--font-mono);
+        color: var(--ink-3);
+        font-size: 16px;
+        line-height: 1;
+        transition: transform 180ms ease, color 180ms ease;
+        transform-origin: center;
+        display: inline-block;
+        margin-left: var(--space-3);
+      }
+      .changelog-item summary:hover .chev { color: var(--ink-1); }
+      .changelog-item[open] summary .chev { transform: rotate(90deg); color: var(--accent); }
+      .changelog-body {
+        margin: var(--space-3) 0 0;
+        color: var(--ink-2);
+        font-size: 0.9375rem;
+        line-height: 1.6;
+        max-width: var(--measure);
+      }
+      .changelog-body ul { padding-left: 1.2em; margin: var(--space-2) 0; }
+      .changelog-body li { margin: 2px 0; }
+      .changelog-body a { color: var(--ink-1); border-bottom: 1px solid var(--line); }
+      .changelog-body a:hover { border-color: var(--accent); text-decoration: none; }
+      .changelog-body code {
+        font-family: var(--font-mono);
+        font-size: 0.8125rem;
+        padding: 1px 5px;
+        border-radius: 3px;
+        background: var(--bg-elev);
+        border: 1px solid var(--line-soft);
+        color: var(--ink-1);
+      }
+      .changelog-body blockquote {
+        margin: var(--space-3) 0;
+        padding: var(--space-2) var(--space-4);
+        border-left: 1px solid var(--accent);
+        color: var(--ink-2);
+        font-style: italic;
+      }
+      .changelog-all {
+        display: inline-block;
+        margin-top: var(--space-6);
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--ink-3);
+        letter-spacing: 0.04em;
+        text-transform: lowercase;
+      }
+      .changelog-all:hover { color: var(--ink-1); }
+      .changelog-loading {
+        color: var(--ink-3);
+        font-family: var(--font-mono);
+        font-size: 12px;
+        letter-spacing: 0.04em;
+        padding: var(--space-4) 0;
+      }
+
       /* ── Footer ──────────────────────────────────────── */
       footer {
         border-top: 1px solid var(--line-soft);
@@ -623,6 +730,7 @@
         </a>
         <nav class="links" aria-label="Top nav">
           <a href="#features" data-hide-sm>Features</a>
+          <a href="#changelog" data-hide-sm>Changelog</a>
           <a href="#faq" data-hide-sm>FAQ</a>
           <a href="https://github.com/Rohithgilla12/noti-peek" rel="noopener">GitHub</a>
           <a href="/privacy.html">Privacy</a>
@@ -879,6 +987,17 @@
           </p>
         </details>
       </section>
+
+      <section class="changelog" id="changelog">
+        <p class="kicker">Recent releases</p>
+        <h2>Changelog.</h2>
+        <div id="changelog-list" class="changelog-list" aria-live="polite">
+          <p class="changelog-loading">loading releases…</p>
+        </div>
+        <a class="changelog-all"
+           href="https://github.com/Rohithgilla12/noti-peek/blob/main/CHANGELOG.md"
+           rel="noopener">full changelog on github →</a>
+      </section>
     </div>
 
     <footer>
@@ -912,6 +1031,156 @@
           el.textContent = n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n);
           el.classList.add('loaded');
         } catch {}
+      })();
+    </script>
+
+    <!-- Changelog: fetches CHANGELOG.md from main and renders the most recent
+         entries. Inline markdown parsing keeps the landing dep-free. Release
+         bodies already follow a consistent shape (`## vX.Y.Z — title`, bullets,
+         optional blockquote callouts) so a tiny parser covers everything. -->
+    <script>
+      (async () => {
+        const host = document.getElementById('changelog-list');
+        if (!host) return;
+
+        const MAX_ENTRIES = 4;
+        const CHANGELOG_URL =
+          'https://raw.githubusercontent.com/Rohithgilla12/noti-peek/main/CHANGELOG.md';
+        const RELEASES_API =
+          'https://api.github.com/repos/Rohithgilla12/noti-peek-releases/releases?per_page=10';
+
+        function escapeHtml(s) {
+          return s
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+        }
+
+        function renderInline(s) {
+          // Order matters: escape first, then rehydrate safe markup patterns.
+          let out = escapeHtml(s);
+          // links: [text](url)
+          out = out.replace(
+            /\[([^\]]+)\]\(([^)\s]+)\)/g,
+            (_, t, u) => `<a href="${u}" rel="noopener">${t}</a>`,
+          );
+          // inline code: `code`
+          out = out.replace(/`([^`]+)`/g, (_, c) => `<code>${c}</code>`);
+          // bold: **text**
+          out = out.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+          // em: *text* (after bold to avoid eating **bold**)
+          out = out.replace(/(^|[^*])\*([^*\s][^*]*)\*/g, '$1<em>$2</em>');
+          return out;
+        }
+
+        function renderBlock(lines) {
+          // Group sequential bullets into <ul>, blockquote lines into <blockquote>,
+          // and any other paragraph-ish text into <p>.
+          const out = [];
+          let i = 0;
+          while (i < lines.length) {
+            const line = lines[i];
+            if (!line.trim()) { i++; continue; }
+            if (line.startsWith('- ')) {
+              const items = [];
+              while (i < lines.length && lines[i].startsWith('- ')) {
+                items.push(`<li>${renderInline(lines[i].slice(2))}</li>`);
+                i++;
+              }
+              out.push(`<ul>${items.join('')}</ul>`);
+            } else if (line.startsWith('> ')) {
+              const parts = [];
+              while (i < lines.length && lines[i].startsWith('> ')) {
+                parts.push(renderInline(lines[i].slice(2)));
+                i++;
+              }
+              out.push(`<blockquote>${parts.join(' ')}</blockquote>`);
+            } else {
+              out.push(`<p>${renderInline(line)}</p>`);
+              i++;
+            }
+          }
+          return out.join('');
+        }
+
+        function parseChangelog(md) {
+          // Split on `## vX.Y.Z — title` boundaries. Keep only release blocks
+          // (skip the top-level `# Changelog` preamble and `## [Unreleased]`).
+          const blocks = [];
+          const re = /^##\s+(v\d[\w.-]*)\s*(?:—|--|-)?\s*(.*)$/;
+          const lines = md.split(/\r?\n/);
+          let current = null;
+          for (const line of lines) {
+            const m = line.match(re);
+            if (m) {
+              if (current) blocks.push(current);
+              current = { version: m[1], title: m[2].trim(), body: [] };
+            } else if (current) {
+              current.body.push(line);
+            }
+          }
+          if (current) blocks.push(current);
+          return blocks;
+        }
+
+        function fmtDate(iso) {
+          if (!iso) return '';
+          const d = new Date(iso);
+          if (Number.isNaN(d.getTime())) return '';
+          return d.toLocaleDateString('en-US', {
+            year: 'numeric', month: 'short', day: 'numeric',
+          });
+        }
+
+        async function fetchReleaseDates() {
+          // Best-effort: map version tag → release date. Fine if this 404s.
+          try {
+            const r = await fetch(RELEASES_API, {
+              headers: { Accept: 'application/vnd.github+json' },
+            });
+            if (!r.ok) return {};
+            const arr = await r.json();
+            const map = {};
+            for (const rel of arr) {
+              if (rel && rel.tag_name) map[rel.tag_name] = rel.published_at;
+            }
+            return map;
+          } catch { return {}; }
+        }
+
+        try {
+          const [md, dates] = await Promise.all([
+            fetch(CHANGELOG_URL).then((r) => (r.ok ? r.text() : '')),
+            fetchReleaseDates(),
+          ]);
+          if (!md) throw new Error('no changelog');
+
+          const blocks = parseChangelog(md).slice(0, MAX_ENTRIES);
+          if (blocks.length === 0) throw new Error('no entries');
+
+          host.innerHTML = blocks
+            .map((b, idx) => {
+              const date = fmtDate(dates[b.version]);
+              const open = idx === 0 ? ' open' : '';
+              return `
+<details class="changelog-item"${open}>
+  <summary>
+    <span class="changelog-ver">${escapeHtml(b.version)}</span>
+    <span class="changelog-title">${renderInline(b.title || '')}</span>
+    ${date ? `<span class="changelog-date">${date}</span>` : ''}
+    <span class="chev" aria-hidden="true">›</span>
+  </summary>
+  <div class="changelog-body">${renderBlock(b.body)}</div>
+</details>`;
+            })
+            .join('');
+        } catch {
+          // Hide the section gracefully — the "full changelog" link below the
+          // list still works for anyone who wants the detail.
+          host.innerHTML =
+            '<p class="changelog-loading">couldn\'t load releases — see the github link below.</p>';
+        }
       })();
     </script>
   </body>
