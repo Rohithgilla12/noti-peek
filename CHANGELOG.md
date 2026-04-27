@@ -4,6 +4,11 @@ All notable changes to this project are documented here. The format is loosely b
 
 ## [Unreleased]
 
+## v0.9.0 — Pulse becomes an analytics-only dashboard
+
+- New: Pulse is now a dedicated analytics view. The archive list is gone; in its place is a six-stat hero strip (today, this week with Δ% vs last, last-30d, peak hour, busiest day, current/longest streak), a 30-day stacked daily-volume area chart split by source, a GitHub-style calendar heatmap, a source donut, a 24-hour radial clock with morning/afternoon/evening/night segments, a weekday × hour matrix with day totals and an aggregate hour-of-day bar strip, a ranked type list with gradient bars, and top-actor / top-repo lists each carrying a 14-day mini sparkline. Every chart is clickable and drives the existing Pulse filter (source, type, hour, actor, repo); ESC clears.
+- Internal: Pulse reducers gained `dailyBuckets`, `dailyBySource`, `weekHourMatrix`, `actorSparklines`, `repoSparklines`, `streakStats`, `weeklyDelta`, and `peakBurst` (still pure functions, still unit-tested). The `usePulse` hook no longer fetches an archive page, and the pulse store dropped its archive-expand/select state. All charts are pure SVG/CSS — no new dependencies.
+
 ## v0.8.3 — inline images render in Jira issue descriptions
 
 - Fix: embedded images in Jira issue descriptions now render in the detail pane. Jira's rendered HTML contains `<img src="…atlassian.net/rest/api/3/attachment/content/{id}">` URLs that require a Bearer auth header the webview can't supply on a plain `<img>`, so they failed silently as broken-image placeholders. Added a backend attachment proxy (`GET /attachments/jira/:id`) that authenticates the device, fetches with the user's Jira token via the OAuth gateway, follows the 303 redirect to the media CDN, and streams bytes back; the sanitizer rewrites each attachment URL to point at that proxy on the way out. Device-token query-param auth (`?t=…`) is accepted on attachment routes only, since `<img>` tags can't set a custom header.
