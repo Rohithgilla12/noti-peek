@@ -1,4 +1,4 @@
-import { fetchArchiveWindow, countArchive, type ArchiveQuery } from '../db';
+import { fetchArchiveWindow, type ArchiveQuery } from '../db';
 import type { Notification } from '../types';
 import type { PulseFilter } from './reducers';
 
@@ -28,21 +28,4 @@ export async function fetch30DayWindow(filter: PulseFilter): Promise<RowsWindow>
       (r): r is Notification & { firstSeenAt: string } => typeof r.firstSeenAt === 'string',
     ),
   };
-}
-
-export async function fetchArchivePage(
-  filter: PulseFilter,
-  opts: { limit: number; offset: number },
-): Promise<{ rows: Notification[]; hasMore: boolean }> {
-  const q: ArchiveQuery = {
-    source: filter.source,
-    type: filter.type,
-    actor: filter.actor,
-    repo: filter.repo,
-    hour: filter.hour,
-    limit: opts.limit,
-    offset: opts.offset,
-  };
-  const [rows, total] = await Promise.all([fetchArchiveWindow(q), countArchive(q)]);
-  return { rows, hasMore: opts.offset + rows.length < total };
 }
