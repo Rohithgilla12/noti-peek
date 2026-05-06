@@ -34,6 +34,8 @@ export function Settings({ onClose }: SettingsProps) {
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const clearDismissed = useAppStore((s) => s.clearDismissedSuggestions);
   const fetchNotifications = useAppStore((s) => s.fetchNotifications);
+  const theme = useAppStore((s) => s.theme);
+  const setTheme = useAppStore((s) => s.setTheme);
 
   useEffect(() => {
     (async () => {
@@ -203,6 +205,25 @@ export function Settings({ onClose }: SettingsProps) {
         </div>
 
         <div className="p-4 space-y-6">
+          <section>
+            <h3 className="text-[length:var(--text-sm)] font-medium text-[var(--text-primary)] mb-3">
+              Appearance
+            </h3>
+            <label className="flex items-center justify-between gap-3 p-3 bg-[var(--bg-surface)] rounded-[var(--radius-md)] border border-[var(--border-muted)]">
+              <span className="text-[length:var(--text-sm)] font-medium text-[var(--text-primary)]">
+                Theme
+              </span>
+              <select
+                value={theme}
+                onChange={(e) => setTheme(e.target.value as 'dark' | 'light')}
+                className="p-2 bg-[var(--bg-base)] border border-[var(--border-default)] rounded-[var(--radius-sm)] text-[length:var(--text-sm)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)] cursor-pointer"
+              >
+                <option value="dark">Dark</option>
+                <option value="light">Light</option>
+              </select>
+            </label>
+          </section>
+
           <section>
             <h3 className="text-[length:var(--text-sm)] font-medium text-[var(--text-primary)] mb-3">
               Connected Accounts
