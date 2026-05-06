@@ -79,6 +79,8 @@ function SearchPlaceholder() {
 function AvatarMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const lastSync = useAppStore((s) => s.lastSyncTime);
+  const fresh = lastSync !== null && Date.now() - lastSync.getTime() < 5 * 60 * 1000;
 
   useEffect(() => {
     if (!open) return;
@@ -100,13 +102,15 @@ function AvatarMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
     <div className="topnav-avatar-wrap" ref={ref}>
       <button
         className="topnav-avatar"
+        data-fresh={fresh || undefined}
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
-        title="Account menu"
+        title={fresh ? 'Account menu — last sync recent' : 'Account menu'}
         type="button"
       >
         R
+        <span className="topnav-avatar-presence" aria-hidden />
       </button>
       {open && (
         <div className="topnav-avatar-menu" role="menu">
