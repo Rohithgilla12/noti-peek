@@ -8,6 +8,7 @@ import { StatusStrip } from './DetailPane/StatusStrip';
 import { CommentsSection } from './DetailPane/CommentsSection';
 import { ActionsBar } from './DetailPane/ActionsBar';
 import { MetadataGrid } from './DetailPane/MetadataGrid';
+import { InlineComposer } from './DetailPane/InlineComposer';
 
 interface Props {
   notification: Notification | null;
@@ -263,6 +264,16 @@ export function DetailPane({ notification }: Props) {
           comments={details.comments}
           totalCount={details.commentCount}
           fallbackUrl={n.url}
+        />
+      )}
+
+      {details && !scopeReconnectUrl && (
+        <InlineComposer
+          initials="R"
+          onFallback={(text) => {
+            void openExternalUrl(n.url);
+            console.info('inline comment composer not wired yet — opened in browser', { textLength: text.length });
+          }}
         />
       )}
 
