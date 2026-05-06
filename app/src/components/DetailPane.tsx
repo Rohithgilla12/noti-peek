@@ -183,21 +183,40 @@ export function DetailPane({ notification }: Props) {
     : '';
   return (
     <div className="detail" data-source={n.source}>
-      <div className="meta">
-        <span className="src">{n.source} · {humanizeType(n.type)}</span>
-        {ref && <span className="ref">{ref}</span>}
-        <span title={formatDateTime(n.updatedAt)}>{formatRelative(n.updatedAt)}</span>
-        <span className="spacer"></span>
+      <div className="detail-header">
         <button
+          className="detail-header-primary"
+          onClick={() => void handleOpen()}
           type="button"
-          className="detail-bookmark"
+          title="Open in browser (⏎)"
+        >
+          Open in browser
+        </button>
+        {n.unread && (
+          <button
+            className="detail-header-ghost"
+            onClick={() => markAsRead(n.id)}
+            type="button"
+            title="Mark read (e)"
+          >
+            Mark read
+          </button>
+        )}
+        <button
+          className="detail-header-icon"
           aria-pressed={!!n.bookmarked}
           onClick={() => void toggleBookmark(n.id)}
-          title={n.bookmarked ? 'Remove bookmark' : 'Bookmark (saves locally)'}
+          type="button"
+          title={n.bookmarked ? 'Remove bookmark (b)' : 'Bookmark (b)'}
         >
           {n.bookmarked ? '★' : '☆'}
         </button>
         <OverflowMenu notification={n} />
+      </div>
+      <div className="meta">
+        <span className="src">{n.source} · {humanizeType(n.type)}</span>
+        {ref && <span className="ref">{ref}</span>}
+        <span title={formatDateTime(n.updatedAt)}>{formatRelative(n.updatedAt)}</span>
       </div>
 
       <h2>{n.title}</h2>
@@ -238,9 +257,6 @@ export function DetailPane({ notification }: Props) {
       {details && !scopeReconnectUrl && <ActionsBar notification={n} details={details} />}
 
       <div className="actions">
-        <button className="primary" onClick={() => void handleOpen()} type="button">open</button>
-        {n.unread && <button onClick={() => markAsRead(n.id)} type="button">mark read</button>}
-        <span className="spacer"></span>
         <span className="keys">
           <kbd>⏎</kbd> open · <kbd>c</kbd> comment{isGitHub && details?.kind === 'github_pr' ? ' · ' : ''}
           {details?.kind === 'github_pr' && <><kbd>m</kbd> merge · </>}

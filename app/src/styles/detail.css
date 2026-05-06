@@ -417,6 +417,38 @@
 .detail-bookmark:hover { background: var(--bg-1); color: var(--ink-1); }
 .detail-bookmark[aria-pressed='true'] { color: var(--accent); }
 
+.detail-header {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  padding: 10px 14px 0;
+}
+.detail-header-primary,
+.detail-header-ghost,
+.detail-header-icon {
+  font-size: var(--text-sm);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+.detail-header-primary {
+  background: var(--ink-1);
+  color: var(--bg);
+  border-color: var(--ink-1);
+}
+.detail-header-primary:hover { filter: brightness(1.05); }
+.detail-header-ghost {
+  background: var(--bg-1);
+  color: var(--ink-1);
+}
+.detail-header-icon {
+  padding: 4px 8px;
+  background: var(--bg-1);
+  color: var(--ink-2);
+}
+.detail-header-icon[aria-pressed="true"] { color: var(--accent); }
+
 .detail-overflow { position: relative; }
 .detail-overflow > button {
   all: unset; cursor: pointer; padding: 4px 8px; border-radius: 6px; color: var(--ink-2);
