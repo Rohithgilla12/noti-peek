@@ -1,7 +1,6 @@
 import type { Provider } from '../../lib/types';
+import type { Scope } from '../../lib/view';
 import type { ReactElement } from 'react';
-
-type Scope = 'inbox' | 'mentions' | 'bookmarks' | 'links' | 'archive';
 
 interface IconProps {
   size?: number;
@@ -82,6 +81,7 @@ export function ScopeIcon({ scope, size = 14, className }: IconProps & { scope: 
       width={size}
       height={size}
       viewBox="0 0 16 16"
+      fill="currentColor"
       aria-label={scope}
       role="img"
       className={className}

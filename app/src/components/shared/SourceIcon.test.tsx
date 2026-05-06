@@ -30,3 +30,28 @@ describe('ScopeIcon', () => {
     },
   );
 });
+
+describe('SourceIcon a11y + props', () => {
+  it('applies className', () => {
+    const { container } = render(<SourceIcon provider="github" className="text-red-500" />);
+    expect(container.querySelector('svg')?.getAttribute('class')).toContain('text-red-500');
+  });
+
+  it('defaults to size 14', () => {
+    const { container } = render(<SourceIcon provider="github" />);
+    expect(container.querySelector('svg')?.getAttribute('width')).toBe('14');
+    expect(container.querySelector('svg')?.getAttribute('height')).toBe('14');
+  });
+
+  it('exposes role="img" for screen readers', () => {
+    const { container } = render(<SourceIcon provider="github" />);
+    expect(container.querySelector('svg')?.getAttribute('role')).toBe('img');
+  });
+});
+
+describe('ScopeIcon size prop', () => {
+  it('respects the size prop', () => {
+    const { container } = render(<ScopeIcon scope="inbox" size={20} />);
+    expect(container.querySelector('svg')?.getAttribute('width')).toBe('20');
+  });
+});
