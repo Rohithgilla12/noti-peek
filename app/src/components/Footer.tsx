@@ -15,8 +15,10 @@ export function Footer() {
   const lastSync = useAppStore((s) => s.lastSyncTime);
   const isSyncing = useAppStore((s) => s.isLoading || s.isSyncing);
   const isOffline = useAppStore((s) => s.isOffline);
-  const connections = useAppStore((s) => s.connections);
   const fetchNotifications = useAppStore((s) => s.fetchNotifications);
+  const refreshInterval = useAppStore((s) => s.refreshInterval);
+
+  const fresh = lastSync !== null && Date.now() - lastSync.getTime() < 5 * 60 * 1000;
 
   const [label, setLabel] = useState(formatLastSync(lastSync));
   useEffect(() => {
@@ -25,34 +27,20 @@ export function Footer() {
     return () => clearInterval(id);
   }, [lastSync]);
 
+  const refreshSeconds = Math.round(refreshInterval / 1000);
+
   return (
     <footer className="footer">
       <div className="left">
-        <span>
-          <span className="dot">●</span>{' '}
-          {connections.length} source{connections.length === 1 ? '' : 's'} connected
-        </span>
+        <span className="footer-presence" data-fresh={fresh || undefined} aria-hidden />
+        <span>Refreshed {label}</span>
         <span className="sep">·</span>
-        <span>
-          <kbd>J</kbd>/<kbd>K</kbd> move
-        </span>
-        <span className="sep">·</span>
-        <span>
-          <kbd>⏎</kbd> open
-        </span>
-        <span className="sep">·</span>
-        <span>
-          <kbd>E</kbd> mark read
-        </span>
-        <span className="sep">·</span>
-        <span>
-          <kbd>R</kbd> refresh
-        </span>
+        <span>Auto · Every {refreshSeconds}s</span>
       </div>
       <div className="right">
         {isOffline && <span style={{ color: 'var(--accent)' }}>offline</span>}
         <button onClick={() => fetchNotifications()} disabled={isSyncing} type="button">
-          {isSyncing ? 'syncing…' : `synced ${label}`}
+          {isSyncing ? 'syncing…' : 'refresh'}
         </button>
       </div>
     </footer>

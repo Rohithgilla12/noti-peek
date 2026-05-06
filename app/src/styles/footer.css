@@ -21,8 +21,17 @@
   gap: 14px;
   align-items: center;
 }
-.footer .dot { color: var(--accent); }
 .footer .sep { color: var(--ink-4); }
+.footer-presence {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ink-4);
+  display: inline-block;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.footer-presence[data-fresh] { background: #41a85f; }
 .footer button {
   font: inherit;
   font-size: 11px;
