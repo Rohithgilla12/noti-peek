@@ -4,6 +4,21 @@ All notable changes to this project are documented here. The format is loosely b
 
 ## [Unreleased]
 
+## v0.10.0 — visual refresh (sub-project 1)
+
+- New: per-region CSS files (split from the 1940-line `App.css`) plus a real `[data-theme="light"]` token map. Settings → Appearance gains a Theme toggle (Dark / Light); Dark stays the default.
+- New: Sidebar swaps keyboard-mnemonic glyphs for source/scope SVG icons, an accent-stripe selection treatment, and a fixed-width tabular count slot. Hotkeys move into row tooltips.
+- New: TopNav avatar gains a presence dot bound to `lastSyncTime` (green when last sync < 5 minutes, muted otherwise). The hardcoded developer initial in the avatar/composer is replaced with a neutral glyph until user-profile data is plumbed.
+- New: day-stream rows pick up a leading source icon, a `source · type · time` meta line, optional one-line body preview, repo + author chips, and a status dot pinned right. Same anatomy applies to bundles and cross-bundles.
+- New: DetailPane gains a top-right header row (Open in browser / Mark read / ★ / ⋯), a 4-cell metadata grid (Repository / Branch / Author / Updated for GitHub; Project / Status / Assignee / Updated for Jira), and an inline comment composer placeholder with `⌘+Enter` → open-in-browser fallback. Bottom action row collapses to a kbd-hint strip.
+- New: StatusStrip rebuilt around a `CheckRun[]` shape ready for sub-project 2's per-check timing data; ships with the existing aggregate badge as fallback.
+- New: Footer presence dot, "Refreshed Xm ago · Auto · Every Ns" label rendered from `refreshInterval`. Keyboard hints relocated to DetailPane where they live alongside their actions.
+- Changed: `humanizeType` consolidated to `lib/notification-labels` so standalone rows render the same labels as bundles (`pr` → "PR update", `mentioned` → "mention", etc.). `Settings.tsx` provider icons migrated to consume the shared `SourceIcon` component.
+- Changed: `Theme` type and `isTheme` guard exported from the store; persisted theme is validated on load (corrupted values log a warning instead of silently falling back). `view` and `theme` config-persist effects now log on rejection instead of swallowing the error.
+- Changed: `CheckRun` lives in `lib/types.ts` as a discriminated union (`pending` ⇒ `durationMs: null`); `checkRuns?: CheckRun[]` and `baseRef?: string` added to `GitHubPRDetails` so sub-project 2 can populate them without further refactor.
+- Internal: 24 new component tests across `SourceIcon`, `MetadataGrid`, `StatusStrip`, `InlineComposer`, `Footer`, plus a theme-slice round-trip test. CI suite now 64/64.
+- Known: light theme ships without an `--accent` redefine, so accent-dependent surfaces (sidebar stripe, unread dot, top-nav active tab, warn-tone badges, bookmark pressed-state) read weak in light. Sub-project 1.1 will define `--accent` and `--warning` for `[data-theme="light"]`.
+
 ## v0.9.0 — Pulse becomes an analytics-only dashboard
 
 - New: Pulse is now a dedicated analytics view. The archive list is gone; in its place is a six-stat hero strip (today, this week with Δ% vs last, last-30d, peak hour, busiest day, current/longest streak), a 30-day stacked daily-volume area chart split by source, a GitHub-style calendar heatmap, a source donut, a 24-hour radial clock with morning/afternoon/evening/night segments, a weekday × hour matrix with day totals and an aggregate hour-of-day bar strip, a ranked type list with gradient bars, and top-actor / top-repo lists each carrying a 14-day mini sparkline. Every chart is clickable and drives the existing Pulse filter (source, type, hour, actor, repo); ESC clears.
