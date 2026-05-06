@@ -57,6 +57,7 @@
 .item {
   all: unset;
   box-sizing: border-box;
+  position: relative;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -68,6 +69,17 @@
   min-width: 0;
   line-height: 1.5;
   transition: background 100ms ease-out, color 100ms ease-out;
+}
+
+.item[data-active]::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  background: var(--accent);
+  border-radius: 1px;
 }
 
 .item:hover { background: var(--bg-1); color: var(--ink-1); }
@@ -111,6 +123,8 @@
   color: var(--ink-3);
   background: transparent;
   padding: 0;
+  min-width: 24px;
+  text-align: right;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
 }
