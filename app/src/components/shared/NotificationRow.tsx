@@ -1,5 +1,6 @@
 import type { Notification } from '../../lib/types';
 import { timeLabel } from '../../lib/days';
+import { humanizeType } from '../../lib/notification-labels';
 import { SourceIcon } from './SourceIcon';
 
 interface Props {
@@ -7,10 +8,6 @@ interface Props {
   selected: boolean;
   onSelect: () => void;
   onOpen: () => void;
-}
-
-function humanizeType(type: string): string {
-  return type.replace(/_/g, ' ');
 }
 
 export function NotificationRow({ n, selected, onSelect, onOpen }: Props) {

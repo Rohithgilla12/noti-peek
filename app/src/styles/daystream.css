@@ -186,7 +186,7 @@
 }
 .day-row-chip {
   font-size: var(--text-xs);
-  background: var(--bg-2);
+  background: var(--bg-3);
   color: var(--ink-2);
   padding: 1px 6px;
   border-radius: 3px;
@@ -253,80 +253,9 @@
   background: var(--bg-1);
 }
 
-.bundle-header,
-.cross-bundle-header {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  padding: 12px;
-  width: 100%;
-  background: none;
-  border: none;
-  text-align: left;
-  cursor: pointer;
-  color: inherit;
-  font: inherit;
-}
-
-.bundle-header:hover,
-.cross-bundle-header:hover {
-  background: var(--bg-2);
-}
-
-.bundle-header-body,
-.cross-bundle-body {
-  flex: 1;
-  min-width: 0;
-}
-
-.bundle-title-line,
-.cross-bundle-title-line {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.bundle-title,
-.cross-bundle-title {
-  font-weight: 600;
-  color: var(--ink-1);
-}
-
-.bundle-summary,
-.cross-bundle-summary {
-  color: var(--ink-2);
-  font-size: 12.5px;
-  margin-top: 6px;
-}
-
-.bundle-actors,
-.cross-bundle-actors {
-  color: var(--ink-3);
-  font-size: 12px;
-  margin-top: 4px;
-}
-
-.bundle-time,
-.cross-bundle-time {
-  margin-left: auto;
-  color: var(--ink-3);
-  font-size: 12px;
-}
-
 .bundle-children,
 .cross-bundle-children {
   padding: 4px 12px 12px 32px;
-}
-
-.linked-pill {
-  font-size: 11px;
-  font-family: "Martian Mono Variable", ui-monospace, monospace;
-  background: color-mix(in oklch, var(--ink-2) 10%, transparent);
-  color: var(--ink-2);
-  border: 1px solid var(--line-soft);
-  padding: 1px 8px;
-  border-radius: 999px;
 }
 
 .cross-bundle-child-wrap {
