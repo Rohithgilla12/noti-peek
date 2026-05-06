@@ -141,6 +141,9 @@ interface AppState {
 
   refreshInterval: number;
 
+  theme: 'dark' | 'light';
+  setTheme: (theme: 'dark' | 'light') => void;
+
   rows: NotificationRow[];
   bundlingVersion: number;
   suggestedLinks: SuggestedLink[];
@@ -254,6 +257,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   selectedNotificationId: null,
 
   refreshInterval: 5 * 60 * 1000,
+
+  theme: 'dark',
+  setTheme: (theme) => set({ theme }),
 
   detailsCache: {},
   inFlightDetails: new Map<string, Promise<DetailResponse>>(),

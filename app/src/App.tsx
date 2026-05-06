@@ -34,6 +34,7 @@ function App() {
   const markAsRead = useAppStore((s) => s.markAsRead);
   const markAllAsRead = useAppStore((s) => s.markAllAsRead);
   const view = useAppStore((s) => s.view);
+  const theme = useAppStore((s) => s.theme);
 
   const selected = notifications.find((n) => n.id === selectedId) ?? null;
 
@@ -99,6 +100,11 @@ function App() {
         }
       }
 
+      const savedTheme = await store.get<'dark' | 'light'>('theme');
+      if (savedTheme === 'dark' || savedTheme === 'light') {
+        useAppStore.getState().setTheme(savedTheme);
+      }
+
       api.setOnUnauthorized(async () => {
         try {
           const { id, deviceToken } = await api.register();
@@ -155,6 +161,13 @@ function App() {
       await s.save();
     });
   }, [view]);
+
+  useEffect(() => {
+    void load('config.json').then(async (s) => {
+      await s.set('theme', useAppStore.getState().theme);
+      await s.save();
+    });
+  }, [theme]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -308,7 +321,7 @@ function App() {
   }
 
   return (
-    <div className="app-shell" data-tab={view.tab}>
+    <div className="app-shell" data-tab={view.tab} data-theme={theme}>
       <TopNav onOpenSettings={() => setShowSettings(true)} />
       <UpdateBanner
         status={updaterStatus}
