@@ -109,7 +109,7 @@ function AvatarMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
         title={fresh ? 'Account menu — last sync recent' : 'Account menu'}
         type="button"
       >
-        R
+        ·
         <span className="topnav-avatar-presence" aria-hidden />
       </button>
       {open && (

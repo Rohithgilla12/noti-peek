@@ -225,7 +225,7 @@ export function DetailPane({ notification }: Props) {
           details={details}
           repo={n.repo ?? undefined}
           project={n.project ?? undefined}
-          branch={'baseRef' in (details as object) ? (details as { baseRef?: string }).baseRef : undefined}
+          branch={details.kind === 'github_pr' ? details.baseRef : undefined}
           author={n.author?.name ?? undefined}
           updatedAt={n.updatedAt}
         />
@@ -266,10 +266,10 @@ export function DetailPane({ notification }: Props) {
 
       {details && !scopeReconnectUrl && (
         <InlineComposer
-          initials="R"
+          initials="·"
           onFallback={(text) => {
             void openExternalUrl(n.url);
-            console.info('inline comment composer not wired yet — opened in browser', { textLength: text.length });
+            console.info('Inline composer fallback: opened in browser', { textLength: text.length });
           }}
         />
       )}

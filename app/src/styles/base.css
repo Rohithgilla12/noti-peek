@@ -38,9 +38,7 @@ body {
   flex-direction: column;
 }
 
-/* -------------------------------------------------------- */
-/*  Form controls                                           */
-/* -------------------------------------------------------- */
+/* Form controls */
 select,
 input,
 textarea,
@@ -59,9 +57,7 @@ select option {
   color: var(--ink-1);
 }
 
-/* -------------------------------------------------------- */
-/*  Scrollbars — show a very thin, restrained rail.         */
-/* -------------------------------------------------------- */
+/* Scrollbars — show a very thin, restrained rail. */
 ::-webkit-scrollbar        { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track  { background: transparent; }
 ::-webkit-scrollbar-thumb  { background: var(--line-soft); border-radius: 3px; }
@@ -77,9 +73,7 @@ kbd {
   padding: 1px 5px;
 }
 
-/* -------------------------------------------------------- */
-/*  App shell layout                                        */
-/* -------------------------------------------------------- */
+/* App shell layout */
 .app-shell {
   display: grid;
   grid-template-rows: auto auto 1fr auto;

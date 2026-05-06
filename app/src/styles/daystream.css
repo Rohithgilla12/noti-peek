@@ -1,9 +1,6 @@
 /* Day stream — list of notifications grouped by day, plus bundle / cross-bundle
    rows, source badges, and error/empty states. */
 
-/* -------------------------------------------------------- */
-/*  Day stream                                              */
-/* -------------------------------------------------------- */
 .stream-head {
   display: grid;
   grid-template-columns: 1fr auto;

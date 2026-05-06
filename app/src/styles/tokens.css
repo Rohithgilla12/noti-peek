@@ -8,10 +8,7 @@
 @import "@fontsource-variable/martian-mono";
 
 :root {
-  /* -------------------------------------------------------- */
-  /*  Palette — one warm-neutral ink scale + one accent.      */
-  /*  No neon, no cyan-on-dark, no purple gradient.           */
-  /* -------------------------------------------------------- */
+  /* Palette — one warm-neutral ink scale + one accent. No neon, no cyan-on-dark, no purple gradient. */
   --bg:         oklch(13% 0.006 80);
   --bg-1:       oklch(17% 0.008 80);
   --bg-2:       oklch(21% 0.010 80);
@@ -36,12 +33,9 @@
   --bitbucket: oklch(72% 0.1 225);
   --error:     oklch(72% 0.16 30);
 
-  /* -------------------------------------------------------- */
-  /*  Legacy token aliases — many components still reference  */
-  /*  bg-base / text-primary / border-default / accent-muted  */
-  /*  etc. Map those to the new scale so the migration is     */
-  /*  incremental, not a big-bang rewrite.                    */
-  /* -------------------------------------------------------- */
+  /* Legacy token aliases — many components still reference bg-base / text-primary /
+     border-default / accent-muted etc. Map those to the new scale so the migration is
+     incremental, not a big-bang rewrite. */
   --bg-base:        var(--bg);
   --bg-surface:     var(--bg-1);
   --bg-overlay:     var(--bg-2);
@@ -62,9 +56,7 @@
   --warning:        var(--accent);
   --info:           var(--ink-2);
 
-  /* -------------------------------------------------------- */
-  /*  Typography                                              */
-  /* -------------------------------------------------------- */
+  /* Typography */
   --font-mono:   'Martian Mono Variable', ui-monospace, SFMono-Regular, Menlo, monospace;
   --font-sans:   var(--font-mono);
 

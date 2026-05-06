@@ -73,6 +73,10 @@ export interface GitHubIssueDetails {
   permissions: { canComment: boolean; canClose: boolean };
 }
 
+export type CheckRun =
+  | { name: string; state: 'success' | 'failure' | 'neutral'; durationMs: number | null }
+  | { name: string; state: 'pending'; durationMs: null };
+
 export interface GitHubPRDetails {
   kind: 'github_pr';
   number: number;
@@ -91,6 +95,8 @@ export interface GitHubPRDetails {
   mergeableState: string;
   reviewDecision: 'APPROVED' | 'CHANGES_REQUESTED' | 'REVIEW_REQUIRED' | null;
   checks: { passed: number; failed: number; pending: number };
+  checkRuns?: CheckRun[];
+  baseRef?: string;
   permissions: { canComment: boolean; canReview: boolean; canMerge: boolean; canClose: boolean };
 }
 

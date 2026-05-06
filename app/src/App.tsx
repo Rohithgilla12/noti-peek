@@ -4,7 +4,7 @@ import { openUrl } from '@tauri-apps/plugin-opener';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { listen } from '@tauri-apps/api/event';
 import './App.css';
-import { useAppStore } from './store';
+import { useAppStore, isTheme } from './store';
 import { api } from './lib/api';
 import { TopNav } from './components/TopNav';
 import { DayStream } from './components/DayStream';
@@ -100,9 +100,11 @@ function App() {
         }
       }
 
-      const savedTheme = await store.get<'dark' | 'light'>('theme');
-      if (savedTheme === 'dark' || savedTheme === 'light') {
+      const savedTheme = await store.get<unknown>('theme');
+      if (isTheme(savedTheme)) {
         useAppStore.getState().setTheme(savedTheme);
+      } else if (savedTheme !== undefined && savedTheme !== null) {
+        console.warn('Discarding unparseable persisted theme:', savedTheme);
       }
 
       api.setOnUnauthorized(async () => {
@@ -151,22 +153,30 @@ function App() {
   }, [initialize]);
 
   useEffect(() => {
-    void load('config.json').then(async (s) => {
-      await s.set('activeTab', view.tab);
-      await s.set('view', {
-        scope: view.scope,
-        filters: [...view.filters],
-        sources: [...view.sources],
+    void load('config.json')
+      .then(async (s) => {
+        await s.set('activeTab', view.tab);
+        await s.set('view', {
+          scope: view.scope,
+          filters: [...view.filters],
+          sources: [...view.sources],
+        });
+        await s.save();
+      })
+      .catch((err) => {
+        console.error('Failed to persist view to config.json:', err);
       });
-      await s.save();
-    });
   }, [view]);
 
   useEffect(() => {
-    void load('config.json').then(async (s) => {
-      await s.set('theme', useAppStore.getState().theme);
-      await s.save();
-    });
+    void load('config.json')
+      .then(async (s) => {
+        await s.set('theme', useAppStore.getState().theme);
+        await s.save();
+      })
+      .catch((err) => {
+        console.error('Failed to persist theme to config.json:', err);
+      });
   }, [theme]);
 
   useEffect(() => {

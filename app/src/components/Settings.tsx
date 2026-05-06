@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { load } from '@tauri-apps/plugin-store';
-import { useAppStore } from '../store';
+import { useAppStore, isTheme } from '../store';
 import { api } from '../lib/api';
 import { SourceIcon } from './shared/SourceIcon';
 
@@ -215,7 +215,10 @@ export function Settings({ onClose }: SettingsProps) {
               </span>
               <select
                 value={theme}
-                onChange={(e) => setTheme(e.target.value as 'dark' | 'light')}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (isTheme(v)) setTheme(v);
+                }}
                 className="p-2 bg-[var(--bg-base)] border border-[var(--border-default)] rounded-[var(--radius-sm)] text-[length:var(--text-sm)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)] cursor-pointer"
               >
                 <option value="dark">Dark</option>
@@ -343,7 +346,7 @@ export function Settings({ onClose }: SettingsProps) {
               {(enableExperimentalProviders || isJiraConnected) && (
                 <div className="flex items-center justify-between p-3 bg-[var(--bg-surface)] rounded-[var(--radius-md)] border border-[var(--border-muted)]">
                   <div className="flex items-center gap-3">
-                    <span style={{ color: '#0052CC' }}>
+                    <span style={{ color: 'var(--jira)' }}>
                       <SourceIcon provider="jira" size={20} />
                     </span>
                     <div>
@@ -379,7 +382,7 @@ export function Settings({ onClose }: SettingsProps) {
               {(enableExperimentalProviders || isBitbucketConnected) && (
                 <div className="flex items-center justify-between p-3 bg-[var(--bg-surface)] rounded-[var(--radius-md)] border border-[var(--border-muted)]">
                   <div className="flex items-center gap-3">
-                    <span style={{ color: '#0052CC' }}>
+                    <span style={{ color: 'var(--bitbucket)' }}>
                       <SourceIcon provider="bitbucket" size={20} />
                     </span>
                     <div>

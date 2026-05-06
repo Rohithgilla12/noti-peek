@@ -1,9 +1,6 @@
 /* Detail pane — selected notification view, status strip, comments,
    actions bar, body HTML, suggested links view. */
 
-/* -------------------------------------------------------- */
-/*  Detail pane                                             */
-/* -------------------------------------------------------- */
 .detail {
   height: 100%;
   display: flex;

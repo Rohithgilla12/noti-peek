@@ -13,6 +13,10 @@ import {
   trackCrossBundleMarkAllRead,
 } from '../lib/telemetry-events';
 
+export type Theme = 'dark' | 'light';
+export const isTheme = (v: unknown): v is Theme =>
+  v === 'dark' || v === 'light';
+
 function markRowsReadOne(rows: NotificationRow[], id: string): NotificationRow[] {
   return rows.map((r) => {
     if (r.kind === 'single') {
@@ -141,8 +145,8 @@ interface AppState {
 
   refreshInterval: number;
 
-  theme: 'dark' | 'light';
-  setTheme: (theme: 'dark' | 'light') => void;
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
 
   rows: NotificationRow[];
   bundlingVersion: number;

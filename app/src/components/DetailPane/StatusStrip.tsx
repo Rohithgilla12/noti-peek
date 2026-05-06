@@ -1,4 +1,4 @@
-import type { NotificationDetails } from '../../lib/types';
+import type { NotificationDetails, CheckRun } from '../../lib/types';
 
 interface Props {
   details: NotificationDetails;
@@ -15,12 +15,6 @@ function formatDuration(ms: number | null): string {
   const m = Math.floor(s / 60);
   const r = s % 60;
   return `${m}m ${r.toString().padStart(2, '0')}s`;
-}
-
-interface CheckRun {
-  name: string;
-  state: 'success' | 'failure' | 'pending' | 'neutral';
-  durationMs: number | null;
 }
 
 function CheckPill({ run }: { run: CheckRun }) {
@@ -56,7 +50,7 @@ export function StatusStrip({ details }: Props) {
   }
 
   if (details.kind === 'github_pr') {
-    const runs = (details as { checkRuns?: CheckRun[] }).checkRuns;
+    const runs = details.checkRuns;
     if (runs && runs.length > 0) {
       return (
         <div className="status-strip status-strip-checks">

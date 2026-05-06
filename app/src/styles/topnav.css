@@ -1,12 +1,7 @@
 /* Top navigation toolbar + update banner. */
 
-/* -------------------------------------------------------- */
-/*  Top toolbar                                             */
-/*                                                          */
-/*  macOS-style: hidden title bar with traffic lights       */
-/*  inset at {x: 18, y: 18}. The bar is 44px tall to give   */
-/*  them room. Whole bar is a drag region; buttons opt out. */
-/* -------------------------------------------------------- */
+/* macOS-style: hidden title bar with traffic lights inset at {x: 18, y: 18}. The bar
+   is 44px tall to give them room. Whole bar is a drag region; buttons opt out. */
 .topnav-gutter {
   /* Reserves space for the macOS traffic lights. The drag region
      extends underneath them so dragging from that corner still works. */
@@ -80,9 +75,7 @@
   border-bottom-color: var(--accent);
 }
 
-/* -------------------------------------------------------- */
-/*  Update banner                                           */
-/* -------------------------------------------------------- */
+/* Update banner */
 .update-banner {
   display: flex;
   align-items: center;
