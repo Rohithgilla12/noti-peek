@@ -3,6 +3,7 @@ import { openUrl } from '@tauri-apps/plugin-opener';
 import { useAppStore } from '../store';
 import { sanitizeHtml } from '../lib/sanitize';
 import { api, ReconnectRequiredError } from '../lib/api';
+import { humanizeType } from '../lib/notification-labels';
 import type { Notification, DetailResponse } from '../lib/types';
 import { StatusStrip } from './DetailPane/StatusStrip';
 import { CommentsSection } from './DetailPane/CommentsSection';
@@ -31,10 +32,6 @@ function formatRelative(iso: string): string {
   const days = Math.round(hrs / 24);
   if (days < 7) return `${days}d ago`;
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-}
-
-function humanizeType(type: string): string {
-  return type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 async function openExternalUrl(url: string) {
