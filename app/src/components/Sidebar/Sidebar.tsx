@@ -4,6 +4,7 @@ import type { Provider } from '../../lib/types';
 import { SidebarSection } from './SidebarSection';
 import { SidebarItem } from './SidebarItem';
 import { BrandMark } from '../shared/BrandMark';
+import { SourceIcon, ScopeIcon } from '../shared/SourceIcon';
 import styles from './Sidebar.module.css';
 
 interface Props { onOpenSettings: () => void }
@@ -14,10 +15,6 @@ const PROVIDERS: Array<{ id: Provider; label: string }> = [
   { id: 'jira',      label: 'Jira' },
   { id: 'bitbucket', label: 'Bitbucket' },
 ];
-
-// The left glyph is the keyboard mnemonic — load-bearing chrome that
-// teaches the shortcut, not a decorative icon.
-const Key = ({ ch }: { ch: string }) => <span aria-hidden>{ch}</span>;
 
 export function Sidebar({ onOpenSettings }: Props) {
   const view = useAppStore((s) => s.view);
@@ -37,15 +34,15 @@ export function Sidebar({ onOpenSettings }: Props) {
       </div>
 
       <SidebarSection label="Views">
-        <SidebarItem icon={<Key ch="i" />} label="Inbox"     count={countForScope(notifications, 'inbox')}     active={!rail && view.scope === 'inbox'}     onClick={() => setScope('inbox')}     title="Inbox (g i)" />
-        <SidebarItem icon={<Key ch="m" />} label="Mentions"  count={countForScope(notifications, 'mentions')}  active={!rail && view.scope === 'mentions'}  onClick={() => setScope('mentions')}  title="Mentions (g m)" />
-        <SidebarItem icon={<Key ch="b" />} label="Bookmarks" count={countForScope(notifications, 'bookmarks')} active={!rail && view.scope === 'bookmarks'} onClick={() => setScope('bookmarks')} title="Bookmarks (g b)" />
-        <SidebarItem icon={<Key ch="l" />} label="Links"     active={!rail && view.scope === 'links'}     onClick={() => setScope('links')}     title="Suggested links (g l)" />
-        <SidebarItem icon={<Key ch="a" />} label="Archive"   count={countForScope(notifications, 'archive')}   active={!rail && view.scope === 'archive'}   onClick={() => setScope('archive')}   title="Archive (g a)" />
+        <SidebarItem icon={<ScopeIcon scope="inbox" />}     label="Inbox"     count={countForScope(notifications, 'inbox')}     active={!rail && view.scope === 'inbox'}     onClick={() => setScope('inbox')}     title="Inbox (g i)" />
+        <SidebarItem icon={<ScopeIcon scope="mentions" />}  label="Mentions"  count={countForScope(notifications, 'mentions')}  active={!rail && view.scope === 'mentions'}  onClick={() => setScope('mentions')}  title="Mentions (g m)" />
+        <SidebarItem icon={<ScopeIcon scope="bookmarks" />} label="Bookmarks" count={countForScope(notifications, 'bookmarks')} active={!rail && view.scope === 'bookmarks'} onClick={() => setScope('bookmarks')} title="Bookmarks (g b)" />
+        <SidebarItem icon={<ScopeIcon scope="links" />}     label="Links"     active={!rail && view.scope === 'links'}     onClick={() => setScope('links')}     title="Suggested links (g l)" />
+        <SidebarItem icon={<ScopeIcon scope="archive" />}   label="Archive"   count={countForScope(notifications, 'archive')}   active={!rail && view.scope === 'archive'}   onClick={() => setScope('archive')}   title="Archive (g a)" />
       </SidebarSection>
 
       <SidebarSection label="Filters">
-        <SidebarItem icon={<Key ch="u" />} label="Unread" count={countForQuickFilter(notifications, 'unread')} active={!rail && view.filters.has('unread')} onClick={() => toggleQuickFilter('unread')} title="Toggle unread-only (u)" />
+        <SidebarItem label="Unread" count={countForQuickFilter(notifications, 'unread')} active={!rail && view.filters.has('unread')} onClick={() => toggleQuickFilter('unread')} title="Toggle unread-only (u)" />
         <SidebarItem
           label="Errors"
           count={erroringProviders.length}
@@ -61,7 +58,7 @@ export function Sidebar({ onOpenSettings }: Props) {
         {PROVIDERS.map((p) => (
           <SidebarItem
             key={p.id}
-            icon={<Key ch={p.label[0].toLowerCase()} />}
+            icon={<SourceIcon provider={p.id} />}
             label={p.label}
             count={countForSource(notifications, p.id)}
             active={!rail && view.sources.has(p.id)}

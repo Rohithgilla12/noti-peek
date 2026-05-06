@@ -1,5 +1,6 @@
 import type { CrossBundleResponse, Provider } from '../../lib/types';
 import { NotificationRow as SingleRow } from './NotificationRow';
+import { SourceIcon } from './SourceIcon';
 import { trackCrossBundleExpanded } from '../../lib/telemetry-events';
 import { humanizeType } from '../../lib/notification-labels';
 
@@ -30,43 +31,57 @@ function summaryLine(bundle: CrossBundleResponse): string {
 export function CrossBundleItem({
   bundle, expanded, selectedId, onToggleExpand, onSelect, onOpen, onMarkBundleRead,
 }: CrossBundleItemProps) {
-  const actorsLabel = [
-    ...bundle.actors.map((a) => `@${a.name}`),
-    ...(bundle.extra_actor_count > 0 ? [`+${bundle.extra_actor_count}`] : []),
-  ].join(' · ');
-
+  const unread = bundle.unread_count > 0;
   const linkedCount = bundle.linked.length;
-  const primaryTimeStr = new Date(bundle.latest_at).toLocaleTimeString([], {
+  const time = new Date(bundle.latest_at).toLocaleTimeString([], {
     hour: 'numeric', minute: '2-digit',
   });
+  const actorChip = bundle.actors[0]?.name
+    ? `@${bundle.actors[0].name}${bundle.extra_actor_count > 0 ? ` +${bundle.extra_actor_count}` : ''}`
+    : null;
 
   return (
-    <div className={`cross-bundle-row ${bundle.unread_count > 0 ? 'is-unread' : ''}`}>
+    <div className={`cross-bundle-row ${unread ? 'is-unread' : ''}`}>
       <button
         type="button"
-        className="cross-bundle-header"
+        className={`day-row ${unread ? 'unread' : 'read'}`}
+        data-source={bundle.primary.source}
         aria-expanded={expanded}
         onClick={() => {
           if (!expanded) trackCrossBundleExpanded(bundle.pair);
           onToggleExpand();
         }}
       >
-        <span className="unread-dot" aria-hidden="true" />
-        <div className="cross-bundle-body">
-          <div className="cross-bundle-title-line">
-            <span className={`source-badge source-${bundle.primary.source}`}>{bundle.primary.key}</span>
-            <span className="cross-bundle-title">{bundle.primary.title}</span>
-            <span
-              className="linked-pill"
-              title={bundle.linked.map((l) => l.ref).join(', ')}
-            >
-              +{linkedCount} linked
-            </span>
-            <time className="cross-bundle-time" dateTime={bundle.latest_at}>{primaryTimeStr}</time>
-          </div>
-          <div className="cross-bundle-summary">↳ {summaryLine(bundle)}</div>
-          <div className="cross-bundle-actors">{actorsLabel}</div>
-        </div>
+        <span className="day-row-leader">
+          <SourceIcon provider={bundle.primary.source} size={14} />
+        </span>
+
+        <span className="day-row-meta">
+          <span className="day-row-source">{bundle.primary.source}</span>
+          <span className="day-row-sep">·</span>
+          <span className="day-row-type">{bundle.primary.key}</span>
+          <span className="day-row-time">{time}</span>
+        </span>
+
+        <span className="day-row-title">{bundle.primary.title}</span>
+
+        <span className="day-row-preview">{summaryLine(bundle)}</span>
+
+        <span className="day-row-chips">
+          <span
+            className="day-row-chip"
+            title={bundle.linked.map((l) => l.ref).join(', ')}
+          >
+            +{linkedCount} linked
+          </span>
+          {actorChip && <span className="day-row-chip">{actorChip}</span>}
+        </span>
+
+        <span
+          className="day-row-status"
+          data-state={unread ? 'unread' : 'read'}
+          aria-hidden
+        />
       </button>
       {expanded && (
         <div className="cross-bundle-children">

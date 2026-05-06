@@ -13,6 +13,10 @@ import {
   trackCrossBundleMarkAllRead,
 } from '../lib/telemetry-events';
 
+export type Theme = 'dark' | 'light';
+export const isTheme = (v: unknown): v is Theme =>
+  v === 'dark' || v === 'light';
+
 function markRowsReadOne(rows: NotificationRow[], id: string): NotificationRow[] {
   return rows.map((r) => {
     if (r.kind === 'single') {
@@ -141,6 +145,9 @@ interface AppState {
 
   refreshInterval: number;
 
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
+
   rows: NotificationRow[];
   bundlingVersion: number;
   suggestedLinks: SuggestedLink[];
@@ -254,6 +261,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   selectedNotificationId: null,
 
   refreshInterval: 5 * 60 * 1000,
+
+  theme: 'dark',
+  setTheme: (theme) => set({ theme }),
 
   detailsCache: {},
   inFlightDetails: new Map<string, Promise<DetailResponse>>(),

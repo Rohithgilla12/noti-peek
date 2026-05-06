@@ -122,7 +122,6 @@ export function ActionsBar({ notification, details }: Props) {
 
       <div className="comment-row">
         <textarea
-          id="comment-textarea"
           value={comment}
           onChange={(e) => setComment(e.target.value)}
           placeholder="comment…"

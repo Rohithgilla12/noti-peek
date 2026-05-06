@@ -4,7 +4,7 @@ import { openUrl } from '@tauri-apps/plugin-opener';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { listen } from '@tauri-apps/api/event';
 import './App.css';
-import { useAppStore } from './store';
+import { useAppStore, isTheme } from './store';
 import { api } from './lib/api';
 import { TopNav } from './components/TopNav';
 import { DayStream } from './components/DayStream';
@@ -34,6 +34,7 @@ function App() {
   const markAsRead = useAppStore((s) => s.markAsRead);
   const markAllAsRead = useAppStore((s) => s.markAllAsRead);
   const view = useAppStore((s) => s.view);
+  const theme = useAppStore((s) => s.theme);
 
   const selected = notifications.find((n) => n.id === selectedId) ?? null;
 
@@ -99,6 +100,13 @@ function App() {
         }
       }
 
+      const savedTheme = await store.get<unknown>('theme');
+      if (isTheme(savedTheme)) {
+        useAppStore.getState().setTheme(savedTheme);
+      } else if (savedTheme !== undefined && savedTheme !== null) {
+        console.warn('Discarding unparseable persisted theme:', savedTheme);
+      }
+
       api.setOnUnauthorized(async () => {
         try {
           const { id, deviceToken } = await api.register();
@@ -145,16 +153,31 @@ function App() {
   }, [initialize]);
 
   useEffect(() => {
-    void load('config.json').then(async (s) => {
-      await s.set('activeTab', view.tab);
-      await s.set('view', {
-        scope: view.scope,
-        filters: [...view.filters],
-        sources: [...view.sources],
+    void load('config.json')
+      .then(async (s) => {
+        await s.set('activeTab', view.tab);
+        await s.set('view', {
+          scope: view.scope,
+          filters: [...view.filters],
+          sources: [...view.sources],
+        });
+        await s.save();
+      })
+      .catch((err) => {
+        console.error('Failed to persist view to config.json:', err);
       });
-      await s.save();
-    });
   }, [view]);
+
+  useEffect(() => {
+    void load('config.json')
+      .then(async (s) => {
+        await s.set('theme', useAppStore.getState().theme);
+        await s.save();
+      })
+      .catch((err) => {
+        console.error('Failed to persist theme to config.json:', err);
+      });
+  }, [theme]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -308,7 +331,7 @@ function App() {
   }
 
   return (
-    <div className="app-shell" data-tab={view.tab}>
+    <div className="app-shell" data-tab={view.tab} data-theme={theme}>
       <TopNav onOpenSettings={() => setShowSettings(true)} />
       <UpdateBanner
         status={updaterStatus}

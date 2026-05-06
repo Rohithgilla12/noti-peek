@@ -1,0 +1,45 @@
+/* Footer status bar. */
+
+.footer {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 18px;
+  align-items: center;
+  padding: 6px 18px;
+  border-top: 1px solid var(--line-soft);
+  font-size: 11px;
+  color: var(--ink-3);
+  background: var(--bg-1);
+}
+.footer .left {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+.footer .right {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+.footer .sep { color: var(--ink-4); }
+.footer-presence {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ink-4);
+  display: inline-block;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.footer-presence[data-fresh] { background: #41a85f; }
+.footer button {
+  font: inherit;
+  font-size: 11px;
+  background: transparent;
+  border: 0;
+  color: var(--ink-2);
+  cursor: pointer;
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+.footer button:hover { background: var(--bg-2); color: var(--ink-1); }

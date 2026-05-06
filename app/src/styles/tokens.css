@@ -1,0 +1,108 @@
+/* Design tokens — palette, typography, spacing, radii, shadows. */
+
+@import "tailwindcss";
+
+/* One typeface: Martian Mono (variable, 200-700). Body, chrome, headings,
+   everything. Hierarchy comes from weight, size, tracking, and colour —
+   not from mixing in an italic serif. */
+@import "@fontsource-variable/martian-mono";
+
+:root {
+  /* Palette — one warm-neutral ink scale + one accent. No neon, no cyan-on-dark, no purple gradient. */
+  --bg:         oklch(13% 0.006 80);
+  --bg-1:       oklch(17% 0.008 80);
+  --bg-2:       oklch(21% 0.010 80);
+  --bg-3:       oklch(26% 0.012 80);
+
+  --line:       oklch(29% 0.012 80);
+  --line-soft:  oklch(23% 0.008 80);
+
+  --ink-1:      oklch(88% 0.010 80);
+  --ink-2:      oklch(68% 0.012 80);
+  --ink-3:      oklch(48% 0.010 78);
+  --ink-4:      oklch(34% 0.008 78);
+
+  --accent:      oklch(97% 0.012 82);
+  --accent-ink:  oklch(13% 0.006 82);
+  --accent-soft: color-mix(in oklch, var(--accent) 8%, transparent);
+  --accent-hair: color-mix(in oklch, var(--accent) 20%, transparent);
+
+  --github:    oklch(78% 0.02 280);
+  --linear:    oklch(76% 0.1 260);
+  --jira:      oklch(74% 0.12 240);
+  --bitbucket: oklch(72% 0.1 225);
+  --error:     oklch(72% 0.16 30);
+
+  /* Legacy token aliases — many components still reference bg-base / text-primary /
+     border-default / accent-muted etc. Map those to the new scale so the migration is
+     incremental, not a big-bang rewrite. */
+  --bg-base:        var(--bg);
+  --bg-surface:     var(--bg-1);
+  --bg-overlay:     var(--bg-2);
+  --bg-highlight:   var(--bg-3);
+
+  --text-primary:   var(--ink-1);
+  --text-secondary: var(--ink-2);
+  --text-tertiary:  var(--ink-3);
+
+  --border-default: var(--line);
+  --border-muted:   var(--line-soft);
+
+  --accent-hover:   var(--accent);
+  --accent-muted:   var(--accent-soft);
+
+  --unread:         var(--accent);
+  --success:        oklch(72% 0.14 145);
+  --warning:        var(--accent);
+  --info:           var(--ink-2);
+
+  /* Typography */
+  --font-mono:   'Martian Mono Variable', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-sans:   var(--font-mono);
+
+  --text-xs:   11px;
+  --text-sm:   12px;
+  --text-base: 13px;
+  --text-lg:   15px;
+
+  /* Spacing / radii — keep existing tokens so old components render. */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 0.75rem;
+  --spacing-lg: 1rem;
+  --spacing-xl: 1.5rem;
+
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+
+  --shadow-sm: 0 1px 2px oklch(0% 0 0 / 0.3);
+  --shadow-md: 0 4px 10px oklch(0% 0 0 / 0.35);
+  --shadow-lg: 0 24px 60px -24px oklch(0% 0 0 / 0.55);
+
+  font-family: var(--font-mono);
+  font-synthesis: none;
+  text-rendering: geometricPrecision;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+[data-theme="light"] {
+  --bg:        #fafaf7;
+  --bg-1:      #ffffff;
+  --bg-2:      #f3f2ee;
+  --bg-3:      #ecebe6;
+
+  --line:      #d8d6cf;
+  --line-soft: #ecebe6;
+
+  --ink-1:     #1c1813;
+  --ink-2:     #5a5650;
+  --ink-3:     #8a857c;
+  --ink-4:     #b3afa6;
+
+  --shadow-sm: 0 1px 2px oklch(0% 0 0 / 0.08);
+  --shadow-md: 0 4px 10px oklch(0% 0 0 / 0.10);
+  --shadow-lg: 0 24px 60px -24px oklch(0% 0 0 / 0.18);
+}

@@ -3,10 +3,13 @@ import { openUrl } from '@tauri-apps/plugin-opener';
 import { useAppStore } from '../store';
 import { sanitizeHtml } from '../lib/sanitize';
 import { api, ReconnectRequiredError } from '../lib/api';
+import { humanizeType } from '../lib/notification-labels';
 import type { Notification, DetailResponse } from '../lib/types';
 import { StatusStrip } from './DetailPane/StatusStrip';
 import { CommentsSection } from './DetailPane/CommentsSection';
 import { ActionsBar } from './DetailPane/ActionsBar';
+import { MetadataGrid } from './DetailPane/MetadataGrid';
+import { InlineComposer } from './DetailPane/InlineComposer';
 
 interface Props {
   notification: Notification | null;
@@ -29,10 +32,6 @@ function formatRelative(iso: string): string {
   const days = Math.round(hrs / 24);
   if (days < 7) return `${days}d ago`;
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-}
-
-function humanizeType(type: string): string {
-  return type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 async function openExternalUrl(url: string) {
@@ -183,24 +182,54 @@ export function DetailPane({ notification }: Props) {
     : '';
   return (
     <div className="detail" data-source={n.source}>
-      <div className="meta">
-        <span className="src">{n.source} · {humanizeType(n.type)}</span>
-        {ref && <span className="ref">{ref}</span>}
-        <span title={formatDateTime(n.updatedAt)}>{formatRelative(n.updatedAt)}</span>
-        <span className="spacer"></span>
+      <div className="detail-header">
         <button
+          className="detail-header-primary"
+          onClick={() => void handleOpen()}
           type="button"
-          className="detail-bookmark"
+          title="Open in browser (⏎)"
+        >
+          Open in browser
+        </button>
+        {n.unread && (
+          <button
+            className="detail-header-ghost"
+            onClick={() => markAsRead(n.id)}
+            type="button"
+            title="Mark read (e)"
+          >
+            Mark read
+          </button>
+        )}
+        <button
+          className="detail-header-icon"
           aria-pressed={!!n.bookmarked}
           onClick={() => void toggleBookmark(n.id)}
-          title={n.bookmarked ? 'Remove bookmark' : 'Bookmark (saves locally)'}
+          type="button"
+          title={n.bookmarked ? 'Remove bookmark (b)' : 'Bookmark (b)'}
         >
           {n.bookmarked ? '★' : '☆'}
         </button>
         <OverflowMenu notification={n} />
       </div>
+      <div className="meta">
+        <span className="src">{n.source} · {humanizeType(n.type)}</span>
+        {ref && <span className="ref">{ref}</span>}
+        <span title={formatDateTime(n.updatedAt)}>{formatRelative(n.updatedAt)}</span>
+      </div>
 
       <h2>{n.title}</h2>
+
+      {details && (
+        <MetadataGrid
+          details={details}
+          repo={n.repo ?? undefined}
+          project={n.project ?? undefined}
+          branch={details.kind === 'github_pr' ? details.baseRef : undefined}
+          author={n.author?.name ?? undefined}
+          updatedAt={n.updatedAt}
+        />
+      )}
 
       {details && <StatusStrip details={details} />}
 
@@ -235,12 +264,19 @@ export function DetailPane({ notification }: Props) {
         />
       )}
 
+      {details && !scopeReconnectUrl && (
+        <InlineComposer
+          initials="·"
+          onFallback={(text) => {
+            void openExternalUrl(n.url);
+            console.info('Inline composer fallback: opened in browser', { textLength: text.length });
+          }}
+        />
+      )}
+
       {details && !scopeReconnectUrl && <ActionsBar notification={n} details={details} />}
 
       <div className="actions">
-        <button className="primary" onClick={() => void handleOpen()} type="button">open</button>
-        {n.unread && <button onClick={() => markAsRead(n.id)} type="button">mark read</button>}
-        <span className="spacer"></span>
         <span className="keys">
           <kbd>⏎</kbd> open · <kbd>c</kbd> comment{isGitHub && details?.kind === 'github_pr' ? ' · ' : ''}
           {details?.kind === 'github_pr' && <><kbd>m</kbd> merge · </>}
