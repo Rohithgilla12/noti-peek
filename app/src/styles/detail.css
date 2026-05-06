@@ -460,3 +460,25 @@
 .detail-overflow-menu button:hover { background: var(--bg-2); }
 .detail-overflow-menu button:disabled { color: var(--ink-3); cursor: not-allowed; }
 .detail-overflow-menu button:disabled:hover { background: transparent; }
+
+.meta-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  padding: 10px 14px 14px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.meta-cell { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.meta-cell-label {
+  font-size: var(--text-xs);
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+  text-transform: uppercase;
+}
+.meta-cell-value {
+  font-size: var(--text-sm);
+  color: var(--ink-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

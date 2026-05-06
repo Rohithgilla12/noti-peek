@@ -7,6 +7,7 @@ import type { Notification, DetailResponse } from '../lib/types';
 import { StatusStrip } from './DetailPane/StatusStrip';
 import { CommentsSection } from './DetailPane/CommentsSection';
 import { ActionsBar } from './DetailPane/ActionsBar';
+import { MetadataGrid } from './DetailPane/MetadataGrid';
 
 interface Props {
   notification: Notification | null;
@@ -220,6 +221,17 @@ export function DetailPane({ notification }: Props) {
       </div>
 
       <h2>{n.title}</h2>
+
+      {details && (
+        <MetadataGrid
+          details={details}
+          repo={n.repo ?? undefined}
+          project={n.project ?? undefined}
+          branch={'baseRef' in (details as object) ? (details as { baseRef?: string }).baseRef : undefined}
+          author={n.author?.name ?? undefined}
+          updatedAt={n.updatedAt}
+        />
+      )}
 
       {details && <StatusStrip details={details} />}
 
