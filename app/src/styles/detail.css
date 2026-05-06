@@ -410,13 +410,6 @@
   flex-direction: column;
 }
 
-.detail-bookmark {
-  all: unset; cursor: pointer;
-  padding: 4px 8px; border-radius: 6px; color: var(--ink-2);
-}
-.detail-bookmark:hover { background: var(--bg-1); color: var(--ink-1); }
-.detail-bookmark[aria-pressed='true'] { color: var(--accent); }
-
 .detail-header {
   display: flex;
   gap: 6px;
