@@ -482,3 +482,33 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.check-pill-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.check-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--text-xs);
+  padding: 2px 8px;
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  background: var(--bg-1);
+  color: var(--ink-2);
+}
+.check-pill-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink-4);
+}
+.check-pill.tone-good .check-pill-dot { background: #41a85f; }
+.check-pill.tone-bad  .check-pill-dot { background: #d04646; }
+.check-pill.tone-warn .check-pill-dot { background: #c8a23a; }
+.check-pill-tail {
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}

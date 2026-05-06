@@ -8,6 +8,37 @@ function Badge({ tone, children }: { tone: 'open' | 'closed' | 'merged' | 'neutr
   return <span className={`status-badge tone-${tone}`}>{children}</span>;
 }
 
+function formatDuration(ms: number | null): string {
+  if (ms === null) return '';
+  const s = Math.round(ms / 1000);
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return `${m}m ${r.toString().padStart(2, '0')}s`;
+}
+
+interface CheckRun {
+  name: string;
+  state: 'success' | 'failure' | 'pending' | 'neutral';
+  durationMs: number | null;
+}
+
+function CheckPill({ run }: { run: CheckRun }) {
+  const tone =
+    run.state === 'success' ? 'good' :
+    run.state === 'failure' ? 'bad' :
+    run.state === 'pending' ? 'warn' : 'neutral';
+  return (
+    <span className={`check-pill tone-${tone}`}>
+      <span className="check-pill-dot" aria-hidden />
+      <span className="check-pill-name">{run.name}</span>
+      {run.durationMs !== null
+        ? <span className="check-pill-tail">{formatDuration(run.durationMs)}</span>
+        : <span className="check-pill-tail">{run.state}</span>}
+    </span>
+  );
+}
+
 export function StatusStrip({ details }: Props) {
   if (details.kind === 'github_issue') {
     return (
@@ -25,6 +56,19 @@ export function StatusStrip({ details }: Props) {
   }
 
   if (details.kind === 'github_pr') {
+    const runs = (details as { checkRuns?: CheckRun[] }).checkRuns;
+    if (runs && runs.length > 0) {
+      return (
+        <div className="status-strip status-strip-checks">
+          <Badge tone={details.merged ? 'merged' : details.state === 'open' ? 'open' : 'closed'}>
+            {details.merged ? 'merged' : details.state}
+          </Badge>
+          <div className="check-pill-row">
+            {runs.map((r) => <CheckPill key={r.name} run={r} />)}
+          </div>
+        </div>
+      );
+    }
     const { checks } = details;
     const checksOk = checks.failed === 0 && checks.pending === 0;
     const checksTone = checks.failed > 0 ? 'bad' : checks.pending > 0 ? 'warn' : 'good';
