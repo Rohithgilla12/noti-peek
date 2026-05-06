@@ -1,0 +1,119 @@
+/* Base — element resets, app shell layout, scrollbars, form controls. */
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+body {
+  /* Transparent so the macOS NSVisualEffectView behind the window
+     shows through. Individual surfaces (stream, detail, footer)
+     keep their solid palette — only the toolbar lets vibrancy
+     bleed through. */
+  background: transparent;
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  font-variation-settings: 'wght' 380;
+}
+
+/* App shell containers */
+.app-shell {
+  background: transparent;
+  color: var(--ink-2);
+}
+.app-main {
+  background: var(--bg);
+}
+
+/* Legacy menubar container — preserved for Settings overlay + any
+   component still referencing it. Rendered as a plain panel now. */
+.menubar-container {
+  height: 100%;
+  background-color: var(--bg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* -------------------------------------------------------- */
+/*  Form controls                                           */
+/* -------------------------------------------------------- */
+select,
+input,
+textarea,
+button {
+  font-family: inherit;
+  font-feature-settings: inherit;
+}
+
+select {
+  background-color: var(--bg-1);
+  color: var(--ink-1);
+  border: 1px solid var(--line);
+}
+select option {
+  background-color: var(--bg-1);
+  color: var(--ink-1);
+}
+
+/* -------------------------------------------------------- */
+/*  Scrollbars — show a very thin, restrained rail.         */
+/* -------------------------------------------------------- */
+::-webkit-scrollbar        { width: 6px; height: 6px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: var(--line-soft); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--line); }
+
+kbd {
+  font: inherit;
+  font-size: 10.5px;
+  background: var(--bg-2);
+  color: var(--ink-1);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 1px 5px;
+}
+
+/* -------------------------------------------------------- */
+/*  App shell layout                                        */
+/* -------------------------------------------------------- */
+.app-shell {
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  grid-template-columns: 240px 1fr;
+  height: 100vh;
+}
+
+.app-shell[data-tab='pulse'] { grid-template-columns: 56px 1fr; }
+
+.app-shell > .topnav        { grid-column: 1 / -1; }
+.app-shell > .update-banner { grid-column: 1 / -1; }
+.app-shell > .sidebar-col   { grid-row: 3; grid-column: 1; min-width: 0; }
+.app-shell > .app-main      { grid-row: 3; grid-column: 2; min-width: 0; }
+.app-shell > footer         { grid-column: 1 / -1; }
+
+.app-main {
+  display: grid;
+  grid-template-columns: minmax(360px, 420px) 1fr;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.app-main[data-single-column='true'] {
+  grid-template-columns: 1fr;
+}
+
+.app-main .stream-col {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  border-right: 1px solid var(--line-soft);
+}
+.app-main .detail-col {
+  min-height: 0;
+  overflow: hidden;
+}
